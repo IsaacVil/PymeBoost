@@ -75,13 +75,13 @@ Graduado de Ingenieria en Computacion TEC, Profesional en Desarrollo de Software
 - No ha invertido en bolsa ni en empresas.
 - Ha utilizado productos bancarios como ahorros automáticos con interés (ej. BCR con ~6% anual).
 - Percibe estos instrumentos como relativamente seguros, pero con limitaciones de liquidez.
-- Es consciente de penalizaciones por retirar dinero antes de tiempo. :contentReference[oaicite:0]{index=0}  
+- Es consciente de penalizaciones por retirar dinero antes de tiempo. 
 
 #### Miedos y preocupaciones
 - Miedo a que la entidad intermediaria (broker o banco) quiebre.
 - Preocupación por tarifas y comisiones que reduzcan ganancias.
 - Desconfianza hacia inversiones en empresas por riesgo de estafa o propuestas poco reales.
-- Necesidad de alta confianza en quien ofrece la inversión. :contentReference[oaicite:1]{index=1}  
+- Necesidad de alta confianza en quien ofrece la inversión.
 
 #### Barreras para invertir
 - Falta de confianza en instituciones o intermediarios.
@@ -117,12 +117,12 @@ Dueño de una pyme (heladería tipo franquicia internacional en Costa Rica), con
 - Maneja una heladería (Yolé), parte de una franquicia internacional.
 - Opera actualmente con dos locales en Costa Rica.
 - La empresa nació como un spin-off financiado internamente desde un holding.
-- Tiene experiencia tanto en aspectos legales como operativos del negocio. :contentReference[oaicite:0]{index=0}  
+- Tiene experiencia tanto en aspectos legales como operativos del negocio.  
 
 #### Experiencia con financiamiento
 - No necesitó financiamiento externo inicial (financiamiento interno entre empresas).
 - El proceso de financiamiento fue relativamente sencillo al ser interno.
-- Ha tenido experiencias con financiamiento externo posteriormente (ej. leasing), donde percibe procesos complejos y lentos. :contentReference[oaicite:1]{index=1}  
+- Ha tenido experiencias con financiamiento externo posteriormente (ej. leasing), donde percibe procesos complejos y lentos. 
 
 #### Fricciones y problemas
 - Procesos burocráticos complejos, especialmente:
@@ -131,7 +131,7 @@ Dueño de una pyme (heladería tipo franquicia internacional en Costa Rica), con
   - Revisión de estados financieros.
   - Validaciones legales extensas.
 - Percepción de pérdida de tiempo en trámites administrativos.
-- Dificultad adicional para pymes que no tienen activos como respaldo. :contentReference[oaicite:2]{index=2}  
+- Dificultad adicional para pymes que no tienen activos como respaldo.
 
 #### Problemas operativos
 - Falta de experiencia inicial en el manejo del negocio (industria de alimentos).
@@ -141,7 +141,7 @@ Dueño de una pyme (heladería tipo franquicia internacional en Costa Rica), con
   - Problemas iniciales con control de stock y demanda.
 - Herramientas actuales (SAP, Oracle) son:
   - Muy complejas
-  - Poco amigables para necesidades simples. :contentReference[oaicite:3]{index=3}  
+  - Poco amigables para necesidades simples. 
 
 #### Qué mejoraría
 - Acceso a asesoría especializada en el tipo de negocio.
@@ -169,18 +169,18 @@ Persona con actitud positiva hacia la inversión y experiencia previa invirtiend
 #### Comportamiento financiero
 - Tiene una mentalidad orientada a invertir y hacer crecer el dinero.
 - Ve la inversión como algo positivo y necesario.
-- Muestra disposición a utilizar su dinero para generar rendimiento. :contentReference[oaicite:0]{index=0}  
+- Muestra disposición a utilizar su dinero para generar rendimiento.  
 
 #### Experiencia con inversiones
 - Ha invertido anteriormente.
 - Ha tenido experiencias positivas en inversión.
-- A pesar de esto, reconoce que no es fácil decidir en qué invertir. :contentReference[oaicite:1]{index=1}  
+- A pesar de esto, reconoce que no es fácil decidir en qué invertir. 
 
 #### Miedos y preocupaciones
 - Principal miedo: perder el dinero.
 - Inseguridad sobre dónde invertir.
 - Necesidad de certeza antes de tomar decisiones financieras.
-- Falta de confianza en las opciones disponibles. :contentReference[oaicite:2]{index=2}  
+- Falta de confianza en las opciones disponibles.
 
 #### Barreras para invertir
 - Falta de información clara y detallada.
@@ -196,7 +196,7 @@ Persona con actitud positiva hacia la inversión y experiencia previa invirtiend
 #### Expectativas de inversión
 - Prefiere retornos rápidos.
 - Tiene menor tolerancia a esperar largos periodos.
-- Aunque entiende que existen plazos, su preferencia es ver resultados en el corto plazo. :contentReference[oaicite:3]{index=3}  
+- Aunque entiende que existen plazos, su preferencia es ver resultados en el corto plazo.  
 
 #### Muy importante
 - Perfil con experiencia y apertura a invertir, pero altamente influenciado por la confianza.
@@ -212,19 +212,19 @@ Persona con interés en invertir y mentalidad abierta hacia instrumentos financi
 #### Comportamiento financiero
 - Considera la inversión como una mejor alternativa que simplemente ahorrar.
 - Entiende que el dinero debe generar rendimiento.
-- Prioriza primero cubrir necesidades básicas antes de invertir. :contentReference[oaicite:0]{index=0}  
+- Prioriza primero cubrir necesidades básicas antes de invertir.
 
 #### Experiencia con inversiones
 - Ha considerado invertir, pero no tiene experiencia directa en inversiones formales.
 - Muestra interés en instrumentos como índices (ej. S&P 500).
-- Tiene una inclinación hacia inversiones más estructuradas o conocidas. :contentReference[oaicite:1]{index=1}  
+- Tiene una inclinación hacia inversiones más estructuradas o conocidas. 
 
 #### Miedos y preocupaciones
 - Falta de conocimiento sobre:
   - Dónde invertir
   - Cómo funcionan los medios o plataformas
 - Necesidad de entender el mercado antes de tomar decisiones.
-- Incertidumbre general sobre las opciones disponibles. :contentReference[oaicite:2]{index=2}  
+- Incertidumbre general sobre las opciones disponibles. 
 
 #### Barreras para invertir
 - Falta de educación financiera práctica.
@@ -241,7 +241,7 @@ Persona con interés en invertir y mentalidad abierta hacia instrumentos financi
 #### Expectativas de inversión
 - Está dispuesto a esperar retornos a largo plazo.
 - Entiende que las inversiones pueden tomar tiempo para generar ganancias.
-- No tiene una expectativa rígida de retorno inmediato. :contentReference[oaicite:3]{index=3}  
+- No tiene una expectativa rígida de retorno inmediato.
 
 #### Muy importante
 - Perfil más abierto a invertir, pero limitado por falta de conocimiento.
@@ -264,7 +264,7 @@ Profesional en el sector financiero (economista con especialización en banca y 
   - Conocer bien los productos financieros.
   - Guía clara durante el proceso de inversión.
   - Ejemplos prácticos para entender mejor las opciones.
-- La atención personalizada es clave para la toma de decisiones. :contentReference[oaicite:0]{index=0}  
+- La atención personalizada es clave para la toma de decisiones.
 
 #### Miedos y preocupaciones de los inversionistas
 - Miedo al riesgo y a perder dinero.
@@ -272,7 +272,7 @@ Profesional en el sector financiero (economista con especialización en banca y 
 - Desconfianza causada por:
   - Experiencias negativas de terceros (familia, amigos).
   - Casos de fraude.
-- Tendencia a preferir opciones seguras como ahorro tradicional (CDP). :contentReference[oaicite:1]{index=1}  
+- Tendencia a preferir opciones seguras como ahorro tradicional (CDP).  
 
 #### Limitaciones de productos financieros tradicionales
 - Barreras de entrada altas:
@@ -280,7 +280,7 @@ Profesional en el sector financiero (economista con especialización en banca y 
   - Requisitos y trámites complejos.
 - Desconexión entre inversión y resultados:
   - Usuarios no entienden cómo su dinero genera retornos.
-- Falta de asesoría adecuada. :contentReference[oaicite:2]{index=2}  
+- Falta de asesoría adecuada. 
 
 #### Qué funciona para mejorar decisiones financieras
 - Información clara y transparente.
@@ -314,7 +314,7 @@ Profesional con conocimiento en el sector financiero y visión macro del comport
   - Presupuesto
   - Ahorro
   - Planificación financiera
-- Esto dificulta la toma de decisiones de inversión. :contentReference[oaicite:0]{index=0}  
+- Esto dificulta la toma de decisiones de inversión.   
 
 #### Miedos y comportamiento del inversionista
 - Miedo generado por falta de conocimiento.
@@ -322,7 +322,7 @@ Profesional con conocimiento en el sector financiero y visión macro del comport
 - Retraso en decisiones financieras debido a:
   - Endeudamiento
   - Falta de planificación
-- Falta de visión a largo plazo (ej. jubilación). :contentReference[oaicite:1]{index=1}  
+- Falta de visión a largo plazo (ej. jubilación).
 
 #### Limitaciones del sistema financiero
 - Bajo nivel de bancarización en algunos segmentos.
@@ -330,7 +330,7 @@ Profesional con conocimiento en el sector financiero y visión macro del comport
   - Personas que no entienden o no adoptan herramientas digitales.
 - Rechazo al cambio en ciertos perfiles (especialmente adultos mayores).
 - Productos financieros no siempre adaptados a todos los perfiles.
-- Complejidad en algunos instrumentos financieros. :contentReference[oaicite:2]{index=2}  
+- Complejidad en algunos instrumentos financieros.
 
 #### Qué funciona para mejorar decisiones financieras
 - Programas de acompañamiento por parte de entidades financieras.
