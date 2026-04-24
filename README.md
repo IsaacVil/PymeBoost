@@ -29,11 +29,328 @@ Interviews Evidence: https://drive.google.com/drive/folders/1gEtpsVFrvbtZznfjenc
 
 ### Profile 1 Young and Middle-Income Individual with Savings 
 
+### Daniel Gonzalez: 
+Estudiante Universatario de la UCR, Economia. 
+
+#### Comportamiento financiero
+- Prefiere ahorrar en lugar de invertir, principalmente por temas de liquidez segun menciona.
+- Ve el ahorro como un fondo de emergencia, donde puede acceder al dinero en cualquier momento.
+- Mantiene un ahorro mensual fijo junto con su novia.
+
+#### Experiencia con inversiones
+- No tiene experiencia invirtiendo en instrumentos reales.
+- Lo más cercano ha sido usar cuentas de ahorro con interés en bancos nacionales.
+- Percibe la inversión como algo que puede salir bien, pero con mayor probabilidad de salir mal.
+
+#### Miedos y preocupaciones
+- Principal miedo: perder el dinero.
+- Preocupación por que la inversión pierda valor o que la empresa desaparezca.
+- Necesita algún tipo de seguridad o garantía para sentirse cómodo invirtiendo.
+
+#### Barreras para invertir
+- Falta de conocimiento, principal obstáculo.
+- Percepción de que se necesita mucho dinero para invertir.
+- Falta de confianza en cursos o fuentes de información.
+
+#### Qué lo haría invertir?
+- Más información clara y confiable.
+- Mejor entendimiento del mercado.
+- Mayor transparencia y seguridad en el proceso.
+- Reducción del riesgo percibido.
+
+#### Muy importante
+- Tiene capacidad de ahorro pero no invierte por miedo.
+- Necesita educación, confianza y seguridad mas que todo en inversiones.
+- La barrera principal no es falta de dinero, sino falta de conocimiento y confianza en el sistema.
+
+### Ricardo Gatjens: 
+Graduado de Ingenieria en Computacion TEC, Profesional en Desarrollo de Software
+
+#### Comportamiento financiero
+- Intenta ahorrar mensualmente, pero el monto varía dependiendo de gastos imprevistos.
+- No tiene una capacidad de ahorro completamente constante.
+- Utiliza herramientas como Excel para llevar control detallado de ingresos y gastos pero le gustaria que se lo llevaran.
+
+#### Experiencia con inversiones
+- No ha invertido en bolsa ni en empresas.
+- Ha utilizado productos bancarios como ahorros automáticos con interés (ej. BCR con ~6% anual).
+- Percibe estos instrumentos como relativamente seguros, pero con limitaciones de liquidez.
+- Es consciente de penalizaciones por retirar dinero antes de tiempo. :contentReference[oaicite:0]{index=0}  
+
+#### Miedos y preocupaciones
+- Miedo a que la entidad intermediaria (broker o banco) quiebre.
+- Preocupación por tarifas y comisiones que reduzcan ganancias.
+- Desconfianza hacia inversiones en empresas por riesgo de estafa o propuestas poco reales.
+- Necesidad de alta confianza en quien ofrece la inversión. :contentReference[oaicite:1]{index=1}  
+
+#### Barreras para invertir
+- Falta de confianza en instituciones o intermediarios.
+- Incertidumbre sobre costos ocultos o comisiones.
+- Riesgo percibido de fraude o mala inversión.
+- No contar con suficiente información confiable sobre oportunidades.
+
+#### Qué lo haría invertir
+- Sistemas de verificación confiables sobre las empresas.
+- Testimonios, reseñas o validación social (reviews, experiencias de otros usuarios).
+- Mayor transparencia en costos, comisiones y procesos.
+- Asesoría financiera profesional o acompañamiento.
+- Tener claridad y control financiero previo (planificación personal).
+
+#### Muy importante
+- Tiene hábitos financieros organizados y controlados.
+- No invierte principalmente por desconfianza en intermediarios y riesgo de fraude.
+- Valora fuertemente la transparencia, validación social y control de información.
+- La confianza no solo depende del producto, sino también del sistema que lo respalda.
+
+---
+
 ### Profile 2 Small or Medium-Sized Business Owner (SME) 
+
+### Gilberth Corrales: 
+
+### Mauricio Ferrandino: 
+
+Descripción:
+Dueño de una pyme (heladería tipo franquicia internacional en Costa Rica), con experiencia en manejo empresarial y formación en derecho. Opera un negocio en el sector de alimentos con múltiples locales y experiencia en procesos administrativos y financieros.
+
+#### Contexto del negocio
+- Maneja una heladería (Yolé), parte de una franquicia internacional.
+- Opera actualmente con dos locales en Costa Rica.
+- La empresa nació como un spin-off financiado internamente desde un holding.
+- Tiene experiencia tanto en aspectos legales como operativos del negocio. :contentReference[oaicite:0]{index=0}  
+
+#### Experiencia con financiamiento
+- No necesitó financiamiento externo inicial (financiamiento interno entre empresas).
+- El proceso de financiamiento fue relativamente sencillo al ser interno.
+- Ha tenido experiencias con financiamiento externo posteriormente (ej. leasing), donde percibe procesos complejos y lentos. :contentReference[oaicite:1]{index=1}  
+
+#### Fricciones y problemas
+- Procesos burocráticos complejos, especialmente:
+  - Permisos sanitarios del Ministerio de Salud.
+- Procesos financieros lentos:
+  - Revisión de estados financieros.
+  - Validaciones legales extensas.
+- Percepción de pérdida de tiempo en trámites administrativos.
+- Dificultad adicional para pymes que no tienen activos como respaldo. :contentReference[oaicite:2]{index=2}  
+
+#### Problemas operativos
+- Falta de experiencia inicial en el manejo del negocio (industria de alimentos).
+- Necesidad de asesoría especializada en etapas tempranas.
+- Complejidad en el manejo de inventarios:
+  - Productos perecederos requieren control preciso.
+  - Problemas iniciales con control de stock y demanda.
+- Herramientas actuales (SAP, Oracle) son:
+  - Muy complejas
+  - Poco amigables para necesidades simples. :contentReference[oaicite:3]{index=3}  
+
+#### Qué mejoraría
+- Acceso a asesoría especializada en el tipo de negocio.
+- Procesos de financiamiento más ágiles y menos burocráticos.
+- Herramientas simples para gestión operativa (especialmente inventario).
+- Automatización de procesos clave como:
+  - Control de stock
+  - Generación automática de órdenes de compra
+
+#### Muy importante
+- Las pymes no solo necesitan financiamiento, sino también eficiencia operativa.
+- Los procesos tradicionales (financieros y regulatorios) son lentos y complejos.
+- Existe una gran oportunidad en simplificar herramientas empresariales.
+- El valor no está solo en el dinero, sino en optimizar procesos críticos del negocio.
+
+---
 
 ### Profile 3 Adult with Low Financial/Digital Knowledge
 
+### Sandra Garzon:
+
+Descripción:
+Persona con actitud positiva hacia la inversión y experiencia previa invirtiendo, pero con inseguridad al momento de tomar decisiones debido a falta de información clara y confianza en las opciones disponibles.
+
+#### Comportamiento financiero
+- Tiene una mentalidad orientada a invertir y hacer crecer el dinero.
+- Ve la inversión como algo positivo y necesario.
+- Muestra disposición a utilizar su dinero para generar rendimiento. :contentReference[oaicite:0]{index=0}  
+
+#### Experiencia con inversiones
+- Ha invertido anteriormente.
+- Ha tenido experiencias positivas en inversión.
+- A pesar de esto, reconoce que no es fácil decidir en qué invertir. :contentReference[oaicite:1]{index=1}  
+
+#### Miedos y preocupaciones
+- Principal miedo: perder el dinero.
+- Inseguridad sobre dónde invertir.
+- Necesidad de certeza antes de tomar decisiones financieras.
+- Falta de confianza en las opciones disponibles. :contentReference[oaicite:2]{index=2}  
+
+#### Barreras para invertir
+- Falta de información clara y detallada.
+- Dificultad para evaluar oportunidades de inversión.
+- Incertidumbre sobre la confiabilidad de las empresas.
+
+#### Qué la haría invertir
+- Información completa y detallada sobre la empresa o inversión.
+- Transparencia total en el proceso.
+- Claridad en cómo funciona la inversión.
+- Seguridad en la decisión.
+
+#### Expectativas de inversión
+- Prefiere retornos rápidos.
+- Tiene menor tolerancia a esperar largos periodos.
+- Aunque entiende que existen plazos, su preferencia es ver resultados en el corto plazo. :contentReference[oaicite:3]{index=3}  
+
+#### Muy importante
+- Perfil con experiencia y apertura a invertir, pero altamente influenciado por la confianza.
+- La información detallada y la transparencia son factores críticos.
+- Existe una tensión entre querer invertir y el miedo a perder.
+- Alta preferencia por retornos rápidos, lo que puede influir en el diseño del producto.
+
+### Arturo Carranza:
+
+Descripción:
+Persona con interés en invertir y mentalidad abierta hacia instrumentos financieros, pero con conocimiento limitado sobre cómo hacerlo. Tiene una visión más proactiva que otros perfiles, aunque aún enfrenta barreras informativas.
+
+#### Comportamiento financiero
+- Considera la inversión como una mejor alternativa que simplemente ahorrar.
+- Entiende que el dinero debe generar rendimiento.
+- Prioriza primero cubrir necesidades básicas antes de invertir. :contentReference[oaicite:0]{index=0}  
+
+#### Experiencia con inversiones
+- Ha considerado invertir, pero no tiene experiencia directa en inversiones formales.
+- Muestra interés en instrumentos como índices (ej. S&P 500).
+- Tiene una inclinación hacia inversiones más estructuradas o conocidas. :contentReference[oaicite:1]{index=1}  
+
+#### Miedos y preocupaciones
+- Falta de conocimiento sobre:
+  - Dónde invertir
+  - Cómo funcionan los medios o plataformas
+- Necesidad de entender el mercado antes de tomar decisiones.
+- Incertidumbre general sobre las opciones disponibles. :contentReference[oaicite:2]{index=2}  
+
+#### Barreras para invertir
+- Falta de educación financiera práctica.
+- Desconocimiento de plataformas o canales de inversión.
+- Complejidad percibida del ecosistema financiero actual.
+
+#### Qué lo haría invertir
+- Testimonios y validación social (boca a boca).
+- Confianza generada por otras personas que ya han tenido éxito.
+- Buena experiencia de usuario en la plataforma.
+- Servicio al cliente confiable y profesional.
+- Percepción de seriedad en la empresa o aplicación.
+
+#### Expectativas de inversión
+- Está dispuesto a esperar retornos a largo plazo.
+- Entiende que las inversiones pueden tomar tiempo para generar ganancias.
+- No tiene una expectativa rígida de retorno inmediato. :contentReference[oaicite:3]{index=3}  
+
+#### Muy importante
+- Perfil más abierto a invertir, pero limitado por falta de conocimiento.
+- Tiene mentalidad de crecimiento (prefiere invertir sobre ahorrar).
+- La confianza se construye a través de validación social y experiencia de usuario.
+- Representa un usuario potencialmente fácil de convertir con la educación y guía adecuada.
+
+---
+
+
 ### Profile 4 Financial Advisor / Banking Professional
+
+### Yeimi Villalta: 
+
+Descripción:
+Profesional en el sector financiero (economista con especialización en banca y mercado de capitales), con más de 10 años de experiencia en el Banco Central de Costa Rica, específicamente en el área de activos y pasivos.
+
+#### Perspectiva sobre los usuarios
+- Los usuarios necesitan:
+  - Conocer bien los productos financieros.
+  - Guía clara durante el proceso de inversión.
+  - Ejemplos prácticos para entender mejor las opciones.
+- La atención personalizada es clave para la toma de decisiones. :contentReference[oaicite:0]{index=0}  
+
+#### Miedos y preocupaciones de los inversionistas
+- Miedo al riesgo y a perder dinero.
+- Alta aversión al riesgo en la población general.
+- Desconfianza causada por:
+  - Experiencias negativas de terceros (familia, amigos).
+  - Casos de fraude.
+- Tendencia a preferir opciones seguras como ahorro tradicional (CDP). :contentReference[oaicite:1]{index=1}  
+
+#### Limitaciones de productos financieros tradicionales
+- Barreras de entrada altas:
+  - Montos mínimos elevados.
+  - Requisitos y trámites complejos.
+- Desconexión entre inversión y resultados:
+  - Usuarios no entienden cómo su dinero genera retornos.
+- Falta de asesoría adecuada. :contentReference[oaicite:2]{index=2}  
+
+#### Qué funciona para mejorar decisiones financieras
+- Información clara y transparente.
+- Acompañamiento personalizado durante todo el proceso.
+- Explicación detallada de los instrumentos financieros.
+- Educación práctica sobre cómo invertir.
+
+#### Brechas identificadas
+- Falta de educación financiera accesible para la población general.
+- Bajo conocimiento sobre:
+  - Herramientas de inversión disponibles.
+  - Plataformas digitales financieras.
+- Falta de confianza en canales no oficiales.
+- Necesidad de promover el uso de entidades acreditadas.
+
+#### Muy importante
+- El principal problema no es la falta de productos, sino la falta de educación financiera y acompañamiento.
+- La confianza se construye con transparencia, educación y respaldo institucional.
+- Existe una gran oportunidad en simplificar la inversión y educar al usuario.
+- Los canales oficiales y la credibilidad institucional son determinantes para la adopción.
+
+### Carlos Calvo:
+
+Descripción:
+Profesional con conocimiento en el sector financiero y visión macro del comportamiento de los inversionistas. Enfocado en educación financiera, planificación a largo plazo y relación entre entidades financieras y clientes. Actualmente trabaja como Analista de Riesgo de Mercado e Inversiones en el Banco Nacional.
+
+#### Perspectiva sobre los usuarios
+- Principal preocupación: no saber dónde invertir el dinero.
+- Existe una baja cultura financiera en la población.
+- Las personas no dominan conceptos básicos como:
+  - Presupuesto
+  - Ahorro
+  - Planificación financiera
+- Esto dificulta la toma de decisiones de inversión. :contentReference[oaicite:0]{index=0}  
+
+#### Miedos y comportamiento del inversionista
+- Miedo generado por falta de conocimiento.
+- Tendencia a tomar malas decisiones por asesoría incorrecta.
+- Retraso en decisiones financieras debido a:
+  - Endeudamiento
+  - Falta de planificación
+- Falta de visión a largo plazo (ej. jubilación). :contentReference[oaicite:1]{index=1}  
+
+#### Limitaciones del sistema financiero
+- Bajo nivel de bancarización en algunos segmentos.
+- Barreras tecnológicas:
+  - Personas que no entienden o no adoptan herramientas digitales.
+- Rechazo al cambio en ciertos perfiles (especialmente adultos mayores).
+- Productos financieros no siempre adaptados a todos los perfiles.
+- Complejidad en algunos instrumentos financieros. :contentReference[oaicite:2]{index=2}  
+
+#### Qué funciona para mejorar decisiones financieras
+- Programas de acompañamiento por parte de entidades financieras.
+- Capacitaciones, charlas y educación continua.
+- Actualización constante sobre el contexto económico.
+- Generar confianza y respaldo institucional al cliente.
+- No dejar solo al usuario durante el proceso de inversión.
+
+#### Brechas identificadas
+- Falta de educación financiera desde etapas tempranas.
+- Persistencia del mito de que invertir requiere grandes cantidades de dinero.
+- Desconocimiento de que existen opciones accesibles (desde montos bajos).
+- Falta de comprensión del perfil de riesgo y su relación con productos financieros.
+
+#### Muy importante
+- El problema central es la educación financiera deficiente.
+- La mayoría de las personas podrían invertir, pero no lo hacen por desconocimiento.
+- Existe una gran oportunidad en educar y guiar al usuario desde lo básico.
+- El acompañamiento y la personalización según perfil de riesgo son críticos.
+- Romper el mito de inversión = grandes montos es clave para la adopción.
 
 ---
 
