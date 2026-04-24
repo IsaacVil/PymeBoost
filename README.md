@@ -30,7 +30,7 @@ Interviews Evidence: https://drive.google.com/drive/folders/1gEtpsVFrvbtZznfjenc
 ### Profile 1 Young and Middle-Income Individual with Savings 
 
 ### Daniel Gonzalez: 
-Estudiante Universatario de la UCR, Economia. 
+Estudiante de la UCR, Economia. 
 
 #### Comportamiento financiero
 - Prefiere ahorrar en lugar de invertir, principalmente por temas de liquidez segun menciona.
@@ -355,6 +355,124 @@ Profesional con conocimiento en el sector financiero y visión macro del comport
 ---
 
 # Goal Maps
+
+A continuacion las personas o sistemas involucrados en el goal map.
+
+## Goal Map – PymeBoost
+
+### Objetivo del Goal Map
+El inversionista recibe un rédito (retorno) de su inversión en un proceso específico de una pyme, de forma segura, transparente y confiable.
+
+---
+
+## Actores involucrados
+
+### Inversionistas
+Perfiles:
+- Personas con capacidad de ahorro pero sin experiencia invirtiendo.
+- Usuarios con interés en invertir pero con falta de conocimiento.
+- Inversionistas con experiencia previa pero con desconfianza.
+- Usuarios con preferencia por liquidez o retornos rápidos.
+
+Características:
+- Buscan hacer crecer su dinero.
+- Tienen miedo a perder su inversión.
+- Necesitan confianza, transparencia y seguridad.
+- Requieren educación financiera y acompañamiento.
+- Valoran validación social (testimonios, reseñas).
+- Algunos prefieren inversiones a corto plazo, otros aceptan largo plazo.
+
+---
+
+### PYMEs (Receptoras de inversión)
+Perfiles:
+- Dueños de pequeñas y medianas empresas.
+- Negocios en crecimiento o expansión.
+- Empresas con necesidades específicas de optimización (ej. marketing, inventario, operaciones).
+
+Características:
+- Necesitan financiamiento para procesos concretos.
+- Enfrentan burocracia y dificultad para acceder a financiamiento tradicional.
+- Requieren eficiencia operativa además de capital.
+- Pueden carecer de experiencia en ciertas áreas del negocio.
+- Buscan soluciones prácticas y aplicables.
+
+---
+
+### Plataforma PymeBoost
+Rol:
+- Intermediario entre inversionistas y pymes.
+
+Responsabilidades:
+- Validar que las pymes sean legítimas y confiables.
+- Definir y estructurar oportunidades de inversión en procesos específicos.
+- Gestionar el flujo de inversión.
+- Garantizar transparencia en el proceso.
+- Proveer información clara y accesible.
+- Generar confianza mediante validación, seguimiento y comunicación.
+- Facilitar la devolución del rédito al inversionista.
+
+---
+
+### Especialistas / Operadores del proceso
+Perfiles:
+- Expertos en áreas específicas como marketing, operaciones, inventario, etc..
+
+Rol:
+- Ejecutar el proceso en el que se invierte.
+- Asegurar que la inversión genere impacto real en la pyme.
+- Optimizar procesos para generar resultados medibles.
+
+---
+
+### Entidades financieras / Sistema financiero
+Perfiles:
+- Bancos, fondos de inversión, instituciones financieras.
+
+Rol:
+- Referente de confianza y comparación para el usuario.
+- Proveen estándares de:
+  - Seguridad
+  - Regulación
+  - Validación de perfiles de riesgo
+
+Limitaciones identificadas:
+- Procesos burocráticos.
+- Barreras de entrada altas.
+- Falta de accesibilidad para usuarios promedio.
+
+---
+
+### Sistema de validación y confianza
+Componentes:
+- Verificación legal de pymes.
+- Evaluación de riesgo.
+- Testimonios y reseñas de usuarios.
+- Transparencia en métricas y resultados.
+- Acompañamiento y asesoría.
+
+Rol:
+- Reducir el miedo del inversionista.
+- Aumentar la confianza en la plataforma.
+- Evitar fraudes o malas inversiones.
+
+---
+
+### Sistema de educación financiera
+Rol:
+- Proveer información clara sobre:
+  - Cómo invertir
+  - Riesgos
+  - Retornos esperados
+- Guiar al usuario en la toma de decisiones.
+- Reducir la barrera de entrada al mundo de inversión.
+
+---
+
+## Resultado Final
+- El inversionista recibe su capital invertido más un rédito.
+- La pyme mejora un proceso clave de su operación.
+- Se genera confianza en el sistema para futuras inversiones.
 
 ---
 
