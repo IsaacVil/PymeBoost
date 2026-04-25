@@ -406,14 +406,12 @@ Profesional con conocimiento en el sector financiero y visión macro del comport
 
 ---
 
-# Goal Maps
-
-A continuacion las personas o sistemas involucrados en el goal map.
-
 ## Goal Map – PymeBoost
 
 ### Objetivo del Goal Map
 El inversionista recibe un rédito (retorno) de su inversión en un proceso específico de una pyme, de forma segura, transparente y confiable.
+
+Link Goal Map: https://miro.com/welcomeonboard/bE9nK2REazQvVmdmQlh0c2oySzJodWNiOXhvb1hlR2dvZkR2OWVPQVl4aGN3a3kzaWc2WkFGeVRuN2hLazBhTDU3cDVnNVhiR3RUa1FFRDlKbHBuTS82RUxGd1EyNUpQcEQzUjBLMkdsNjhFRkhNNjNFQmprRGQ1QmVXMFFoZlhhWWluRVAxeXRuUUgwWDl3Mk1qRGVRPT0hdjE=?share_link_id=688081622938
 
 ---
 
