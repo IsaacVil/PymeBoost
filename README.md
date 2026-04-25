@@ -108,6 +108,58 @@ Graduado de Ingenieria en Computacion TEC, Profesional en Desarrollo de Software
 
 ### Gilberth Corrales: 
 
+### Bernal Campos:
+
+Descripción:
+Empresario con más de 35 años de experiencia en desarrollo de pymes, especializado en ventas, administración y crecimiento empresarial. Enfocado en estructuración de negocios, eficiencia operativa y crecimiento sostenible. Dueño de Cawhi Consultores.
+
+### Contexto del negocio
+- Empresa desarrollada de forma orgánica sin necesidad de financiamiento externo.
+- Experiencia en capacitación, ventas y desarrollo empresarial.
+- Ha trabajado con múltiples instituciones y grandes empresas.
+- Enfocado en hacer crecer pymes basándose en experiencia práctica. 
+
+### Experiencia con financiamiento
+- No ha requerido financiamiento externo para su negocio.
+- En caso de necesitarlo, recurriría a entidades como FODEMIPYME.
+- Prefiere entidades con mayor flexibilidad en criterios de evaluación. 
+
+### Fricciones y problemas
+- Alta burocracia en procesos financieros:
+  - Exceso de trámites y documentación.
+  - Costos asociados a la gestión de documentos.
+  - Pérdida de tiempo que afecta la operación del negocio.
+- Problemas con tiempos:
+  - Documentos que vencen durante el proceso.
+  - Procesos largos e ineficientes.
+- Costos ocultos por no poder atender el negocio durante trámites.
+
+### Problemas estructurales de las pymes
+- Crecimiento desorganizado:
+  - Las pymes crecen de forma orgánica sin estructura clara.
+- Falta de:
+  - Estructura financiera
+  - Estructura de ventas
+  - Procesos definidos
+- Toma de decisiones basada en experiencia, no en metodología.
+- Falta de planificación estratégica desde etapas tempranas. 
+
+### Qué mejoraría
+- Procesos financieros más simples y rápidos.
+- Reducción de burocracia.
+- Mayor claridad en requisitos desde el inicio.
+- Empresas más ordenadas internamente:
+  - Finanzas claras
+  - Control de ingresos y gastos
+- Uso de herramientas (incluyendo tecnología) como apoyo, no sustituto de criterio.
+
+### Muy Importante
+- El principal problema no es solo el acceso a financiamiento, sino la falta de estructura interna en las pymes.
+- La burocracia representa un costo real para las empresas.
+- Existe una oportunidad en simplificar procesos financieros y administrativos.
+- El crecimiento sin estructura es uno de los mayores riesgos en pymes.
+- La tecnología es útil, pero debe ser utilizada con criterio y no como dependencia.
+
 ### Mauricio Ferrandino: 
 
 Descripción:
