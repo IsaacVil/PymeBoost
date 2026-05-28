@@ -220,31 +220,6 @@ Los advisors registrados pagan una membresía mensual de 15 dólares, la cual le
 
 Este modelo híbrido de membresías y comisiones permite que PymeBoost mantenga un ecosistema sostenible, donde tanto las empresas como los advisors reciben herramientas, seguridad y acompañamiento continuo durante todo el proceso de colaboración.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ---
 
 ## Authors
