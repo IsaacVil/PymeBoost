@@ -241,4 +241,195 @@ Prototipo Figma:
 
 ---
 
-# Backnnd
+# Backend
+
+## Technology Stack
+
+- API type: REST API, HTTPS
+- API standard: OpenAPI 3.1
+- API gateway: Google Cloud API Gateway
+- Hosting: Google Cloud Run
+- Architecture: Monorepo with Domain-Driven Design (DDD) and Event Driven Design
+- Coding language: Python 3.12
+- Web framework: FastAPI 0.115
+- Unit testing framework: Pytest 8.3
+- Data validation framework: Pydantic 2.7
+- Asynchronous operations & notifications: Google Cloud Pub/Sub and Google Cloud Tasks
+- Document & file storage: Google Cloud Storage
+- OCR processing: Google Cloud Document AI
+- Secret management: Google Secret Manager
+- Code repository: GitHub (monorepo shared with the frontend)
+- CI/CD automation: GitHub Actions
+- Environments: Development, Stage, Production
+- Environment deployments: GitHub Environments
+- Observability: Google Cloud Operations Suite (Cloud Logging + Cloud Monitoring)
+- Authentication verification: Auth0 (JWT token validation with syncrony from the frontend)
+- Service architecture: Domain-driven services, Event Driven Design, Monorepo
+- Database: Google Cloud SQL (PostgreSQL 16)
+- Encryption key management: Google Cloud KMS
+- Session cache: Google Cloud Memorystore (Redis)
+- Agent orchestration framework: LangGraph (LangChain) 0.2
+
+---
+
+## Security
+
+### Authentication & Authorization
+- Authentication delegated to Auth0 with Google OAuth 
+- JWT tokens validated on every request; expiration: 1 hour, automatic rotation with refresh token
+- Roles and permissions validated at the backend level: `Manager` and `Customs Agent` with the same permission codes defined in the frontend
+- Per-endpoint authorization enforced using permission claims from the JWT payload
+
+### Transport
+- All communication between backend services and GCP managed services (Cloud SQL, Storage, Pub/Sub) is secured via HTTPS/TLS 1.3 using Google-managed certificates
+
+### Encryption at Rest
+- The Encryption algorithm will use AES-256 to storage sensitive content in google cloud sql.
+- Encryption keys are managed through Google Cloud KMS (Customer-Managed Encryption Keys - CMEK).
+- Encryption is handled transparently by the cloud provider; no application-level encryption of the database is performed.
+
+### Secrets
+- All secrets managed in Google Secret Manager; never stored in the repository or hardcoded as environment variables.
+ 
+ ### API Surface
+- General maximum payload size: 10 MB; exception on the document upload endpoint: 50 MB
+- Rate limit: maximum 100 concurrent requests per user
+- Input validation with Pydantic on all endpoints
+- OWASP API Top 10 protections applied
+
+### Network
+- Backend deployed within a private Virtual Private Cloud on Google Cloud Platform.
+- Google Cloud SQL configured with no public IP, accessible only within the VPC
+- Google Cloud Armor configured as firewall for the API Gateway
+
+---
+
+## Observability
+
+### Logs
+* Format: Structured JSON with trace_id, request_id, user_id, user_role, timestamp, level, message, service, enviroment, version, endpoint, method, statuscode
+* Destination: Google Cloud Logging (same as frontend)
+* Correlation: X-Trace-ID header propagated across all requests (unified with frontend logs)
+
+### Metrics
+* What to measure: Latency (P95, P99), error rate, CPU utilization, memory usage, Pub/Sub queue depth
+* Destination: Google Cloud Monitoring
+* Tool: Google Cloud Monitoring dashboards
+ 
+### Distributed Traces
+* Instrumentation: OpenTelemetry SDK for Python (FastAPI)
+* Destination: Google Cloud Trace
+* Scope: Trace every HTTP request from entry to exit, including Cloud SQL queries and Pub/Sub messages
+ 
+### Application Patterns
+ 
+* Health Checks: /health/live (liveness), /health/ready (readiness) endpoints checked every 30 seconds by Cloud Run
+* Correlation IDs: X-Trace-ID injected into all logs, metrics, and spans; same ID across Frontend and Backend
+* Service Level Indcators: 
+  - Availability: 99.9% (max 43 min downtime/month)
+  - Latency: 95% of requests < 500ms
+  - Error rate: < 0.5%
+ 
+### Events to Register
+ 
+* User login (success/failure), JWT validation failures, unauthorized access attempts
+* DUA created/updated/validated, document uploaded, OCR processing (started/completed), DUA generation completed
+* API requests (received/completed), database queries, Pub/Sub messages (enqueued/processed)
+* Exceptions/errors, health check results, performance degradation
+ 
+### Centralization
+ 
+* Events Platform: Google Cloud Operations Suite (Cloud Logging + Cloud Monitoring + Cloud Trace)
+* Log Storage: Cloud Logging (structured logs retained 1 year; audit logs follow the retention schedule: Year 1 hot storage, Year 2 cool storage, Year 3+ archive, purged after 5 years via Cloud Scheduler)
+* Dashboard Tool: Google Cloud Monitoring Dashboards 
+* Frontend Synchronization: Same X-Trace-ID and Cloud Logging workspace for full-stack tracing
+
+---
+
+## Infrastructure  (DevOps)
+
+### CI/CD Tool
+* GitHub Actions: Automates build, test, and deployment from code repository
+* Trigger: Automatic on push to develop (Dev) and main (Staging → Prod)
+ 
+### Deployment Tool
+* Terraform: Infrastructure as Code for Google Cloud resources (Cloud Run, Cloud SQL, Cloud Storage, Secret Manager)
+* Environments: 
+  - Dev: Cloud Run with 1 minimum instances (automatic deploy)
+  - Staging: Cloud Run with 2 minimum instances (automatic deploy)
+  - Prod: Cloud Run with auto-scaling from 1 to 10 instances (manual approval required, blue-green deployment). We intentionally keep the maximum number of instances low to optimize costs. At this stage of the project, we do not expect traffic levels that would require more than 10 instances. Based on our estimates, a single instance can handle approximately 5–20 requests per second, making a limit of 10 instances sufficient—and likely conservative—for the expected user base during the first year.
+
+### Container Registry
+* Google Artifact Registry: Store Docker images with automatic vulnerability scanning and binary authorization (approval)
+
+---
+
+## Availability
+
+### SLA (Service Level Agreement) Target For The Business
+* 99.9% uptime: Maximum 8.7 hours downtime per year
+* Applies to production environment only
+
+### Component SLAs & Recovery From the Providers
+
+| Component | Native SLA | Recovery Strategy |
+|-----------|-----------|-------------------|
+| **Google Cloud Run** | 99.95% | Multi-region deployment (us-central1 + us-west1); auto-failover < 1 min |
+| **Google Cloud SQL** | 99.99% (HA) | Cloud SQL HA with automatic failover and automated backups; RTO < 30 sec |
+| **Google Cloud Storage** | 99.99% | Geo-redundant storage; automatic failover to secondary region |
+| **Google Secret Manager** | 99.99% | Geo-replicated; retry with backoff on transient failures |
+| **Google Cloud API Gateway** | 99.95% | Premium tier; circuit breaker for backend failures |
+| **Google Cloud Pub/Sub** | 99.99% | Dead Letter Policy for failed messages; exponential backoff retry |
+| **Google Cloud Document AI** | 99.9% | Retry with exponential backoff; degraded mode returns partial data |
+| **Google Vertex AI (Gemini)** | 99.9% | Circuit breaker on 3 consecutive failures; fallback to manual review flag |
+| **Auth0** | 99.99% | Managed HA by Auth0; JWT cache allows short-term offline tolerance |
+| **Google Cloud Logging** | 99.95% | Best-effort; non-critical for availability |
+
+### Single Point of Failure Analysis
+
+### Resilience Patterns (Production)
+
+---
+
+## Scalability
+
+### Elements That Scale with Request Volume
+ 
+* Cloud Run: Auto-scale 5-50 instances (trigger: CPU > 70% or request concurrency > 80)
+* Cloud SQL: Vertical scaling; read replicas for read-heavy workloads
+* Pub/Sub: Auto-scales throughput; subscriber concurrency auto-adjusts (max 1000 concurrent pulls per subscription)
+* Background Workers (Cloud Tasks): Auto-scale job processing threads based on queue depth
+* Cloud Memorystore (Redis): Vertical scaling (Basic < Standard < Premium); auto-failover in Standard+ tiers
+* Cloud Storage: Auto-scales (unlimited capacity, unlimited throughput)
+ 
+### Auto-Scaling Triggers
+ 
+* CPU > 70% → add Cloud Run instance
+* Request concurrency > 80 → add Cloud Run instance
+* Pub/Sub queue depth > 100 messages → increase subscriber concurrency
+* Cloud SQL CPU > 80% → scale up (vertical); add read replica if reads spike
+* Max limit: 50 Cloud Run instances (cost control)
+ 
+ ---
+
+## Backend Key Workflows
+### Login
+### Session Cache
+### Set up the generator
+### Upload files to validate a pime
+
+---
+
+## Architecture Diagram in Layers
+
+---
+
+## Design Considerations
+### Algorithm Selection & Parameters
+
+
+---
+
+## Source Code
+
+### Backend (Python/FastAPI - Domain-Driven Design)
