@@ -413,10 +413,72 @@ Prototipo Figma:
  ---
 
 ## Backend Key Workflows
-### Login
-### Session Cache
-### Set up the generator
-### Upload files to validate a pime
+
+### User Domain
+#### Create Account (Pime)
+#### Create Account (Advisor)
+#### Login
+#### Update profile
+#### Change information about a pime
+#### Change information about an advisor
+#### Change industry for an advisor
+#### Session Cache
+
+### Notifications Domain Workflows
+#### Project Status Notifications
+#### Messages Notifications
+
+### Pyme Domain Workflows
+
+#### Set up the generator
+#### Upload files to validate a Pime
+#### SME Verification (files)
+#### SME Diagnostic Assessment
+#### Investment Opportunity Scoring
+#### Business Improvement Roadmap Generation
+#### Advisor Recommendation
+#### Select advisor from the list of recommendations
+#### Propose a Contract between Pime and Advisor
+#### Counter-Proposal Management
+#### Pime Membership Subscriptor (Free for the MVP)
+#### Risk Assessment
+#### ROI Prediction
+
+### Advisor Domain Workflows
+
+#### Advisor Verification
+#### Advisor Reputation Calculation
+#### Advisor Membership Subscriptor (Free for the MVP)
+
+### Project Domain Workflows
+
+#### Create Project
+#### Close Project
+#### Change Project Status
+#### Read Project Status
+#### Project Status Validator
+#### Project Milestone Validation	
+#### Project Health Monitoring	
+#### Project Completion Validation	
+
+### Communication Domain
+
+#### Chat between Advisor and Pime
+#### Meeting Summary Generator	
+
+### Contract Domain
+#### Approved Contract
+#### Propose Contract
+#### Counter-Proposal
+#### Contract Negotiation 
+
+### Review Domain
+#### Leave a Review for a Advisor (that you have already hired in the past)
+#### Leave a Review for a Pime (that you have been hired by in the past)
+
+### Event Domain
+#### Event Audit Logging
+
 
 ---
 
