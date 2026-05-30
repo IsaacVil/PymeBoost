@@ -10,6 +10,15 @@ PymeBoost nace como una solución enfocada específicamente en las PYMES, creand
 
 --- 
 
+## Authors
+ * Isaac Villalobos Bonilla, 2024124285
+ * Christopher Daniel Vargas Villalta, 2024108443
+ * Santiago Espinoza Rendón, 2024156530
+ * Jose Ignacio Paniagua Vargas, 2024163735
+
+
+--- 
+
 ## Funcionamiento de la Plataforma
 
 PymeBoost funciona como una plataforma inteligente de conexión entre PYMES y advisors especializados en distintas áreas empresariales como administración, automatización, marketing, finanzas, recursos humanos, ventas, logística, análisis de datos y optimización operativa.
@@ -511,3 +520,7 @@ Prototipo Figma:
 ## Source Code
 
 ### Backend (Python/FastAPI - Domain-Driven Design)
+
+---
+
+# Data Design
