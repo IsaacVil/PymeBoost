@@ -422,7 +422,6 @@ Prototipo Figma:
 #### Change information about a pime
 #### Change information about an advisor
 #### Change industry for an advisor
-#### Session Cache
 
 ### Notifications Domain Workflows
 #### Project Status Notifications
@@ -438,9 +437,8 @@ Prototipo Figma:
 #### Business Improvement Roadmap Generation
 #### Advisor Recommendation
 #### Select advisor from the list of recommendations
-#### Propose a Contract between Pime and Advisor
-#### Counter-Proposal Management
 #### Pime Membership Subscriptor (Free for the MVP)
+#### Assign Advisor To Project
 #### Risk Assessment
 #### ROI Prediction
 
@@ -454,8 +452,7 @@ Prototipo Figma:
 
 #### Create Project
 #### Close Project
-#### Change Project Status
-#### Read Project Status
+#### Project Status Management
 #### Project Status Validator
 #### Project Milestone Validation	
 #### Project Health Monitoring	
@@ -467,17 +464,16 @@ Prototipo Figma:
 #### Meeting Summary Generator	
 
 ### Contract Domain
-#### Approved Contract
 #### Propose Contract
+#### Management of Contract (Approved or Rejected)
 #### Counter-Proposal
 #### Contract Negotiation 
+#### Contract Expiration (In case of no response, after some time it expires)
 
 ### Review Domain
 #### Leave a Review for a Advisor (that you have already hired in the past)
 #### Leave a Review for a Pime (that you have been hired by in the past)
 
-### Event Domain
-#### Event Audit Logging
 
 
 ---
