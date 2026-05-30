@@ -414,7 +414,10 @@ Prototipo Figma:
 
 ## Backend Key Workflows
 
+
+
 ### User Domain
+
 #### Create Account (Pime)
 #### Create Account (Advisor)
 #### Login
@@ -423,9 +426,14 @@ Prototipo Figma:
 #### Change information about an advisor
 #### Change industry for an advisor
 
+
+
 ### Notifications Domain Workflows
+
 #### Project Status Notifications
 #### Messages Notifications
+
+
 
 ### Pyme Domain Workflows
 
@@ -442,11 +450,15 @@ Prototipo Figma:
 #### Risk Assessment
 #### ROI Prediction
 
+
+
 ### Advisor Domain Workflows
 
 #### Advisor Verification
 #### Advisor Reputation Calculation
 #### Advisor Membership Subscriptor (Free for the MVP)
+
+
 
 ### Project Domain Workflows
 
@@ -458,19 +470,27 @@ Prototipo Figma:
 #### Project Health Monitoring	
 #### Project Completion Validation	
 
+
+
 ### Communication Domain
 
 #### Chat between Advisor and Pime
 #### Meeting Summary Generator	
 
+
+
 ### Contract Domain
+
 #### Propose Contract
 #### Management of Contract (Approved or Rejected)
 #### Counter-Proposal
 #### Contract Negotiation 
 #### Contract Expiration (In case of no response, after some time it expires)
 
+
+
 ### Review Domain
+
 #### Leave a Review for a Advisor (that you have already hired in the past)
 #### Leave a Review for a Pime (that you have been hired by in the past)
 
