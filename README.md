@@ -428,13 +428,112 @@ Prototipo Figma:
 ### User Domain
 
 #### Create Account (Pime)
-#### Create Account (Advisor)
-#### Login
-#### Update profile
-#### Change information about a pime
-#### Change information about an advisor
-#### Change industry for an advisor
 
+Implementation: [src/backend/domains/user/controller_CreateAccPime.py](src/backend/domains/user/controller_CreateAccPime.py)
+
+1. El usuario completa el formulario de registro desde el frontend.
+2. El frontend envía la información a Google Cloud API Gateway mediante un POST.
+3. Google Cloud API Gateway valida que el endpoint exista y verifica límites de tráfico (rate limiting).
+4. Google Cloud API Gateway enruta la solicitud hacia Cloud Run.
+5. FastAPI valida el formato de los datos recibidos.
+6. Se ejecutan validaciones de negocio:
+- Correo no registrado, telefono no registrado previamente.
+- Nombre de empresa válido, cedula juridica valida.
+- Campos obligatorios completos
+7. Se realiza el mapeo hacia las entidades de Domain-Driven Design (se mapea el objeto Pime a un DTO).
+8. Se crea el usuario en Auth0 y hace retrieve del JWT access token.
+9. Se crea el perfil Pyme en la base de datos.
+10. Se genera un evento PymeAccountCreated.
+11. El sistema devuelve confirmación de creación exitosa.
+
+#### Create Account (Advisor)
+
+1. El asesor completa el formulario de registro.
+2. El frontend envía la información mediante un POST a Google Cloud API Gateway.
+3. Google Cloud API Gateway valida el endpoint y aplica rate limiting.
+4. La solicitud es enviada a Cloud Run.
+5. FastAPI valida la estructura de los datos.
+6. Se ejecutan validaciones:
+- Correo único.
+- Especialidad válida elegida de una lista de especializaciones.
+- Información mínima requerida.
+7. Se realiza el mapeo hacia las entidades de Domain-Driven Design.
+8. Se crea el usuario en Auth0 y hace retrieve del JWT access token.
+9. Se crea el perfil Advisor en la base de datos.
+10. Se genera el evento AdvisorAccountCreated.
+11. El sistema devuelve confirmación de registro.
+
+#### Login
+
+1. El usuario envía credenciales desde el frontend al servicio Auth0.
+2. El frontend envía el JWT al backend mediante autorización Bearer.
+3. Google Cloud API Gateway valida el endpoint y aplica rate limiting.
+4. Google Cloud API Gateway enruta la solicitud a Cloud Run.
+5. FastAPI valida el JWT utilizando Auth0 JWKS.
+6. Si es válido, se realiza el mapeo hacia entidades Domain-Driven Design.
+7. Se ejecuta el workflow Session Cache.
+8. Se devuelve la sesión autenticada.
+
+### Session Cache
+1. Un usuario autenticado accede al sistema.
+2. FastAPI obtiene la información del JWT validado.
+3. Se verifica si la sesión existe en Redis.
+4. Si existe:
+- Se reutiliza la sesión almacenada.
+5. Si no existe:
+- Se consulta la información del usuario en la base de datos (mediante su auth0id)
+- Se construye el objeto de sesión.
+- Se almacena en Redis.
+6. La sesión queda disponible para futuros requests.
+7. Se actualiza el TTL (Time To Live) de la sesión cuando exista actividad.
+
+#### Change information about a pime
+
+1. La Pyme solicita modificar información empresarial.
+2. El frontend envía una solicitud PUT autenticada.
+3. Google Cloud API Gateway valida el endpoint y JWT.
+4. Cloud Run recibe la solicitud.
+5. FastAPI valida la identidad del usuario.
+6. Se verifica que el usuario sea propietario de la Pyme.
+7. Se recupera la entidad Pyme desde la base de datos.
+8. Se actualizan los campos permitidos:
+- Foto de perfil
+- Nombre comercial.
+- Descripción.
+- Información de contacto.
+9. Se persisten los cambios.
+10. Se genera un evento PymeInformationUpdated.
+11. El sistema devuelve la información actualizada.
+
+#### Change information about an advisor
+1. El asesor solicita actualizar su información profesional.
+2. El frontend envía una solicitud PUT autenticada.
+3. Google Cloud API Gateway valida endpoint y JWT.
+4. Cloud Run recibe la solicitud.
+5. FastAPI valida el JWT.
+6. Se verifica la propiedad del perfil.
+7. Se recupera la entidad Advisor.
+8. Se actualizan campos permitidos:
+- Foto de perfil
+- Nombre comercial.
+- Descripción.
+- Información de contacto.
+9. Se guardan los cambios.
+10. Se genera un evento AdvisorInformationUpdated.
+11. Se devuelve el perfil actualizado.
+
+#### Change industry for an advisor
+El asesor selecciona nuevas industrias de especialización.
+El frontend envía una solicitud PUT autenticada.
+Google Cloud API Gateway valida endpoint y JWT.
+La solicitud es enviada a Cloud Run.
+FastAPI valida la identidad mediante Auth0.
+Se recupera el perfil Advisor.
+Se validan las industrias seleccionadas contra el catálogo del sistema.
+Se actualizan las industrias asociadas al asesor.
+Se recalculan índices de compatibilidad utilizados por el workflow Advisor Recommendation.
+Se genera un evento AdvisorIndustryUpdated.
+El sistema devuelve confirmación de actualización.
 
 
 ### Notifications Domain Workflows
@@ -446,35 +545,25 @@ Prototipo Figma:
 
 ### Pyme Domain Workflows
 
-#### Set up the generator
-#### Upload files to validate a Pime
-#### SME Verification (files)
-#### SME Diagnostic Assessment
-#### Investment Opportunity Scoring
 #### Business Improvement Roadmap Generation
 #### Advisor Recommendation
-#### Select advisor from the list of recommendations
-#### Pime Membership Subscriptor (Free for the MVP)
-#### Assign Advisor To Project
-#### Risk Assessment
+#### Swipe advisors from recommendations (Approved)
+#### Swipe advisors from recommendations (Rejected)
 #### ROI Prediction
 
 
 
 ### Advisor Domain Workflows
 
-#### Advisor Verification
 #### Advisor Reputation Calculation
-#### Advisor Membership Subscriptor (Free for the MVP)
-
-
+#### Project Milestone Proposal from Advisor
 
 ### Project Domain Workflows
 
-#### Create Project
-#### Close Project
-#### Project Status Management
-#### Project Status Validator
+#### Create Project 
+#### Close Project 
+#### Project Status Management 
+#### Project Status Validator 
 #### Project Milestone Validation	
 #### Project Health Monitoring	
 #### Project Completion Validation	
@@ -484,16 +573,12 @@ Prototipo Figma:
 ### Communication Domain
 
 #### Chat between Advisor and Pime
-#### Meeting Summary Generator	
-
 
 
 ### Contract Domain
 
 #### Propose Contract
-#### Management of Contract (Approved or Rejected)
-#### Counter-Proposal
-#### Contract Negotiation 
+#### Accepted Contract (Swipe Approved)
 #### Contract Expiration (In case of no response, after some time it expires)
 
 
