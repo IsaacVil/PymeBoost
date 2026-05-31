@@ -567,12 +567,11 @@ Implementation: [src/backend/domains/user/controllers/update_advisor_industry_co
 
 #### Project Status Notifications
 #### Messages Notifications
-
+#### Advisor Selection Notifications
 
 
 ### Pyme Domain Workflows
 
-#### Business Improvement Roadmap Generation
 #### Advisor Recommendation
 #### Advisor Recommendation Recalculation (Triggered by AdvisorIndustryUpdated Event)
 #### Advisor Similar Project Retrieval
@@ -582,14 +581,15 @@ Implementation: [src/backend/domains/user/controllers/update_advisor_industry_co
 ### Advisor Domain Workflows
 
 #### Advisor Reputation Calculation
+#### Advisor Base Rate Calculation (el porcentaje que saldra como "cobro base" puede ser negociado en chat luego)
 
 ### Matching Domain Workflows
 
 #### Advisor Swipe Decision
 #### Create Match
 #### Match Expiration
-#### Match Validation
 #### Cancel Match
+#### Finalize Advisor Selection (Marry the prospect)
 
 
 ### Communication Domain Workflows
@@ -603,6 +603,7 @@ Implementation: [src/backend/domains/user/controllers/update_advisor_industry_co
 ### Contract Domain Workflows
 
 #### Propose Contract
+#### Counter Offer (Se puede definir en el chat una vez hay match para bajar la tarifa del advisor)
 #### Accepted Contract 
 #### Reject Contract
 
@@ -611,7 +612,7 @@ Implementation: [src/backend/domains/user/controllers/update_advisor_industry_co
 
 #### Create Project 
 #### Close Project 
-#### Project Milestone Proposal 
+#### Project Milestone Generation
 #### Project Milestone Validation	
 #### Project Health Monitoring	
 #### Project Completion Validation	
@@ -632,9 +633,9 @@ Implementation: [src/backend/domains/user/controllers/update_advisor_industry_co
 #### Event Audit Logging
 #### AdvisorIndustryUpdated Event
 #### MatchCreated Event
-#### ContractAccepted Event
 #### ProjectStatusChanged Event
 #### RecommendationUpdated Event
+#### ProjectAssigned Event
 
 
 
