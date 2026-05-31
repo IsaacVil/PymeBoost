@@ -54,31 +54,13 @@ Una vez que la PYME y el advisor llegan a un acuerdo mediante el sistema de mens
 
 Cada contrato incluye los siguientes campos principales:
 
-* Presupuesto de implementación del proceso.
-* Retainer mensual para el advisor.
-* Comisión de PymeBoost equivalente al 3% del presupuesto base.
+* Comisión de PymeBoost equivalente al 8% del presupuesto base.
 * Fecha de inicio.
 * Fecha límite.
 * Objetivos y métricas esperadas.
-* Plan de acción personalizado.
+* Plan de acción.
 * Duración del contrato.
 
-### Duración de contratos
-
-PymeBoost maneja diferentes gamas de contrato:
-
-- Gama estándar: 1 mes → comisión inicial del 3%.
-- Gama media: 3 meses → comisión del 5%.
-- Gama alta: 6 meses → comisión del 7%.
-- Gama personalizada: contratos ajustables según las necesidades de la empresa.
-
-En los contratos personalizados, la comisión sigue un patrón incremental:
-
-* Se inicia en 3%.
-* Aumenta un 1% por cada mes adicional del contrato.
-* Retainer del advisor
-
-El advisor recibe un retainer mensual durante el tiempo que dure el contrato, funcionando como una compensación periódica por acompañamiento, implementación y seguimiento del proceso.
 
 ### Plan de acción 
 
@@ -97,63 +79,6 @@ Con base en esto, la plataforma genera un plan de acción mínimo de 5 pasos est
 * El advisor puede modificarlo.
 * La PYME puede personalizarlo.
 * Ambas partes pueden adaptarlo conforme avance el proyecto.
-* Pagos y manejo del dinero
-
-PymeBoost administra los pagos directamente dentro de la plataforma mediante métodos de pago digitales.
-
-De forma general:
-
-La PYME realiza los pagos del contrato dentro del ecosistema de PymeBoost.
-La plataforma retiene automáticamente su comisión correspondiente.
-El advisor recibe los pagos mensuales acordados según el avance y duración del contrato.
-
-El sistema busca garantizar:
-
-* Seguridad financiera.
-* Transparencia.
-* Registro de transacciones.
-* Protección para ambas partes.
-
----
-
-## Verificabilidad y Confianza
-
-Uno de los pilares principales de PymeBoost es la seguridad y legitimidad dentro del ecosistema.
-
-**Validación de PYMES**
-
-Para registrarse, las PYMES deben pasar por un proceso de validación utilizando la lista oficial del MEIC de Costa Rica, asegurando que:
-
-* Se trate de negocios reales.
-* Existan formalmente.
-* Cumplan con requisitos básicos de operación.
-
-**Verificación de advisors**
-
-Los advisors también deben completar un proceso de verificación antes de ofrecer servicios en la plataforma.
-
-El proceso incluye:
-
-* Verificación de identidad mediante cédula.
-* Curriculum profesional.
-* Experiencia laboral.
-* Áreas de especialización.
-* Posibles certificaciones o portafolios.
-* Validación manual o semiautomática por parte de la plataforma.
-* Sistema de reputación (Rating y Reviews por parte de las Pymes)
-
-Después de finalizar un contrato:
-
-- Las PYMES pueden calificar al advisor.
-- Se utiliza un sistema de 1 a 5 estrellas.
-- Se incluyen comentarios y retroalimentación.
-
-Esto permite:
-
-* Mantener estándares de calidad.
-* Generar confianza.
-* Facilitar futuras contrataciones.
-* Crear historial profesional verificable.
 
 --- 
 
@@ -180,54 +105,13 @@ PymeBoost incorpora un dashboard donde ambas partes pueden visualizar:
 * Fases completadas.
 * Objetivos pendientes.
 * Métricas de rendimiento.
-* Cronograma del proyecto.
-* Historial de pagos.
 * Reportes de progreso.
-* Reportes exportables
-
-El sistema también permite generar reportes mensuales exportables en:
-
-* PDF.
-* Excel.
-* Estructura básica del reporte
-* Información general del contrato.
-* Advisor asignado.
-* Objetivos definidos.
-* KPIs o métricas.
-* Avance porcentual.
-* Fases completadas.
-* Resultados obtenidos.
-* Recomendaciones.
-* Observaciones finales.
 
 --- 
 
 ## Modelo de Negocio y Generación de Ingresos
 
-PymeBoost genera ingresos mediante dos fuentes principales dentro de su ecosistema. La primera corresponde a las comisiones aplicadas sobre los contratos realizados dentro de la plataforma, las cuales ya fueron mencionadas anteriormente y varían según la duración y tipo de contrato. Estas comisiones permiten sostener el sistema de seguimiento, validación, seguridad y acompañamiento continuo que ofrece la plataforma.
-
-La segunda fuente de ingresos proviene de un sistema de membresías mensuales tanto para las PYMES como para los advisors registrados.
-
-**Plan para PYMES**
-
-Las PYMES deben pagar una membresía mensual de 25 dólares, la cual les permite:
-
-- Acceder a la plataforma.
-- Buscar y contactar advisors.
-- Generar contratos.
-- Utilizar herramientas de seguimiento.
-- Obtener recomendaciones inteligentes mediante IA.
-- Acceder a reportes y dashboards de rendimiento.
-- Plan para Advisors
-
-Los advisors registrados pagan una membresía mensual de 15 dólares, la cual les permite:
-
-- Mantener un perfil profesional dentro de la plataforma.
-- Ser recomendados a PYMES según su especialidad.
-- Gestionar contratos y pagos.
-- Acceder al sistema de reputación y validación.
-
-Este modelo híbrido de membresías y comisiones permite que PymeBoost mantenga un ecosistema sostenible, donde tanto las empresas como los advisors reciben herramientas, seguridad y acompañamiento continuo durante todo el proceso de colaboración.
+PymeBoost genera ingresos mediante una fuente principales dentro de su ecosistema. La primera corresponde a las comisiones aplicadas sobre los contratos realizados dentro de la plataforma, las cuales ya fueron mencionadas anteriormente y varían según la duración y tipo de contrato. Estas comisiones permiten sostener el sistema de seguimiento, validación, seguridad y acompañamiento continuo que ofrece la plataforma.
 
 ---
 
