@@ -427,113 +427,140 @@ Prototipo Figma:
 
 ### User Domain
 
-#### Create Account (Pime)
+#### Create Account (SME)
 
-Implementation: [src/backend/domains/user/controller_CreateAccPime.py](src/backend/domains/user/controller_CreateAccPime.py)
+Implementation: [src/backend/domains/user/controllers/create_sme_account_controller.py](src/backend/domains/user/controllers/create_sme_account_controller.py)
 
-1. El usuario completa el formulario de registro desde el frontend.
-2. El frontend envía la información a Google Cloud API Gateway mediante un POST.
-3. Google Cloud API Gateway valida que el endpoint exista y verifica límites de tráfico (rate limiting).
-4. Google Cloud API Gateway enruta la solicitud hacia Cloud Run.
-5. FastAPI valida el formato de los datos recibidos.
-6. Se ejecutan validaciones de negocio:
-- Correo no registrado, telefono no registrado previamente.
-- Nombre de empresa válido, cedula juridica valida.
-- Campos obligatorios completos
-7. Se realiza el mapeo hacia las entidades de Domain-Driven Design (se mapea el objeto Pime a un DTO).
-8. Se crea el usuario en Auth0 y hace retrieve del JWT access token.
-9. Se crea el perfil Pyme en la base de datos.
-10. Se genera un evento PymeAccountCreated.
-11. El sistema devuelve confirmación de creación exitosa.
+1. The user completes the registration form on the frontend.
+2. The frontend sends the information to Google Cloud API Gateway through a POST request.
+3. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
+4. Google Cloud API Gateway routes the request to Cloud Run.
+5. FastAPI validates the format of the received data.
+6. Business validations are executed:
+   - Email is not already registered.
+   - Phone number is not already registered.
+   - Valid company name.
+   - Required fields are completed (Legal Entity ID, associated bank account).
+7. The request data is mapped into the corresponding Domain-Driven Design DTO.
+8. The user is created in Auth0 and the JWT access token is retrieved.
+9. The SME profile is created in the database.
+10. A `SmeAccountCreated` event is generated.
+11. The system returns a successful account creation confirmation.
+
+---
 
 #### Create Account (Advisor)
 
-1. El asesor completa el formulario de registro.
-2. El frontend envía la información mediante un POST a Google Cloud API Gateway.
-3. Google Cloud API Gateway valida el endpoint y aplica rate limiting.
-4. La solicitud es enviada a Cloud Run.
-5. FastAPI valida la estructura de los datos.
-6. Se ejecutan validaciones:
-- Correo único.
-- Especialidad válida elegida de una lista de especializaciones.
-- Información mínima requerida.
-7. Se realiza el mapeo hacia las entidades de Domain-Driven Design.
-8. Se crea el usuario en Auth0 y hace retrieve del JWT access token.
-9. Se crea el perfil Advisor en la base de datos.
-10. Se genera el evento AdvisorAccountCreated.
-11. El sistema devuelve confirmación de registro.
+Implementation: [src/backend/domains/user/controllers/create_advisor_account_controller.py](src/backend/domains/user/controllers/create_advisor_account_controller.py)
+
+1. The advisor completes the registration form.
+2. The frontend sends the information through a POST request to Google Cloud API Gateway.
+3. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+4. The request is routed to Cloud Run.
+5. FastAPI validates the structure of the received data.
+6. Business validations are executed:
+   - Unique email address.
+   - Valid specialization.
+   - Required profile information is provided.
+7. The request data is mapped into the corresponding Domain-Driven Design DTO.
+8. The user is created in Auth0 and the JWT access token is retrieved.
+9. The Advisor profile is created in the database.
+10. An `AdvisorAccountCreated` event is generated.
+11. The system returns a successful registration confirmation.
+
+---
 
 #### Login
 
-1. El usuario envía credenciales desde el frontend al servicio Auth0.
-2. El frontend envía el JWT al backend mediante autorización Bearer.
-3. Google Cloud API Gateway valida el endpoint y aplica rate limiting.
-4. Google Cloud API Gateway enruta la solicitud a Cloud Run.
-5. FastAPI valida el JWT utilizando Auth0 JWKS.
-6. Si es válido, se realiza el mapeo hacia entidades Domain-Driven Design.
-7. Se ejecuta el workflow Session Cache.
-8. Se devuelve la sesión autenticada.
+Implementation: [src/backend/domains/user/controllers/login_controller.py](src/backend/domains/user/controllers/login_controller.py)
 
-### Session Cache
-1. Un usuario autenticado accede al sistema.
-2. FastAPI obtiene la información del JWT validado.
-3. Se verifica si la sesión existe en Redis.
-4. Si existe:
-- Se reutiliza la sesión almacenada.
-5. Si no existe:
-- Se consulta la información del usuario en la base de datos (mediante su auth0id)
-- Se construye el objeto de sesión.
-- Se almacena en Redis.
-6. La sesión queda disponible para futuros requests.
-7. Se actualiza el TTL (Time To Live) de la sesión cuando exista actividad.
+1. The user sends credentials from the frontend to Auth0.
+2. The frontend sends the JWT to the backend using Bearer authentication.
+3. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+4. Google Cloud API Gateway routes the request to Cloud Run.
+5. FastAPI validates the JWT using Auth0 JWKS.
+6. If the token is valid, the JWT claims are mapped into the corresponding domain session DTO.
+7. The `Session Cache` workflow is executed.
+8. The authenticated session is returned.
 
-#### Change information about a pime
+---
 
-1. La Pyme solicita modificar información empresarial.
-2. El frontend envía una solicitud PUT autenticada.
-3. Google Cloud API Gateway valida el endpoint y JWT.
-4. Cloud Run recibe la solicitud.
-5. FastAPI valida la identidad del usuario.
-6. Se verifica que el usuario sea propietario de la Pyme.
-7. Se recupera la entidad Pyme desde la base de datos.
-8. Se actualizan los campos permitidos:
-- Foto de perfil
-- Nombre comercial.
-- Descripción.
-- Información de contacto.
-9. Se persisten los cambios.
-10. Se genera un evento PymeInformationUpdated.
-11. El sistema devuelve la información actualizada.
+#### Session Cache
 
-#### Change information about an advisor
-1. El asesor solicita actualizar su información profesional.
-2. El frontend envía una solicitud PUT autenticada.
-3. Google Cloud API Gateway valida endpoint y JWT.
-4. Cloud Run recibe la solicitud.
-5. FastAPI valida el JWT.
-6. Se verifica la propiedad del perfil.
-7. Se recupera la entidad Advisor.
-8. Se actualizan campos permitidos:
-- Foto de perfil
-- Nombre comercial.
-- Descripción.
-- Información de contacto.
-9. Se guardan los cambios.
-10. Se genera un evento AdvisorInformationUpdated.
-11. Se devuelve el perfil actualizado.
+Implementation: [src/backend/domains/user/services/session_cache_service.py](src/backend/domains/user/services/session_cache_service.py)
 
-#### Change industry for an advisor
-El asesor selecciona nuevas industrias de especialización.
-El frontend envía una solicitud PUT autenticada.
-Google Cloud API Gateway valida endpoint y JWT.
-La solicitud es enviada a Cloud Run.
-FastAPI valida la identidad mediante Auth0.
-Se recupera el perfil Advisor.
-Se validan las industrias seleccionadas contra el catálogo del sistema.
-Se actualizan las industrias asociadas al asesor.
-Se recalculan índices de compatibilidad utilizados por el workflow Advisor Recommendation.
-Se genera un evento AdvisorIndustryUpdated.
-El sistema devuelve confirmación de actualización.
+1. An authenticated user accesses the system.
+2. FastAPI retrieves information from the validated JWT.
+3. The system checks whether the session already exists in Redis.
+4. If the session exists:
+   - The cached session is reused.
+5. If the session does not exist:
+   - User information is retrieved from the database using the Auth0 ID.
+   - A session object is created.
+   - The session is stored in Redis.
+6. The session becomes available for future requests.
+7. The session TTL (Time To Live) is refreshed whenever user activity is detected.
+
+---
+
+#### Change Information About an SME
+
+Implementation: [src/backend/domains/user/controllers/update_sme_profile_controller.py](src/backend/domains/user/controllers/update_sme_profile_controller.py)
+
+1. The SME requests an update to its business information.
+2. The frontend sends an authenticated PUT request.
+3. Google Cloud API Gateway validates the endpoint and JWT.
+4. Cloud Run receives the request.
+5. FastAPI validates the user's identity.
+6. The system verifies that the user owns the SME profile.
+7. The SME entity is retrieved from the database.
+8. Allowed fields are updated:
+   - Profile picture.
+   - Business name.
+   - Description.
+   - Contact information.
+9. Changes are persisted.
+10. A `SmeInformationUpdated` event is generated.
+11. The updated information is returned.
+
+---
+
+#### Change Information About an Advisor
+
+Implementation: [src/backend/domains/user/controllers/update_advisor_profile_controller.py](src/backend/domains/user/controllers/update_advisor_profile_controller.py)
+
+1. The advisor requests an update to their professional information.
+2. The frontend sends an authenticated PUT request.
+3. Google Cloud API Gateway validates the endpoint and JWT.
+4. Cloud Run receives the request.
+5. FastAPI validates the JWT.
+6. The system verifies profile ownership.
+7. The Advisor entity is retrieved.
+8. Allowed fields are updated:
+   - Profile picture.
+   - Display name.
+   - Description.
+   - Contact information.
+9. Changes are persisted.
+10. An `AdvisorInformationUpdated` event is generated.
+11. The updated profile is returned.
+
+---
+
+#### Change Industry for an Advisor
+
+Implementation: [src/backend/domains/user/controllers/update_advisor_industry_controller.py](src/backend/domains/user/controllers/update_advisor_industry_controller.py)
+
+1. The advisor selects new specialization industries.
+2. The frontend sends an authenticated PUT request.
+3. Google Cloud API Gateway validates the endpoint and JWT.
+4. The request is routed to Cloud Run.
+5. FastAPI validates the user's identity through Auth0.
+6. The Advisor profile is retrieved.
+7. The selected industries are validated against the system catalog.
+8. The advisor's associated industries are updated.
+9. An `AdvisorIndustryUpdated` event is generated.
+10. The system returns a successful update confirmation.
 
 
 ### Notifications Domain Workflows
@@ -547,48 +574,66 @@ El sistema devuelve confirmación de actualización.
 
 #### Business Improvement Roadmap Generation
 #### Advisor Recommendation
-#### Swipe advisors from recommendations (Approved)
-#### Swipe advisors from recommendations (Rejected)
-#### ROI Prediction
-
+#### Advisor Recommendation Recalculation (Triggered by AdvisorIndustryUpdated Event)
+#### Advisor Impact Prediction
 
 
 ### Advisor Domain Workflows
 
 #### Advisor Reputation Calculation
-#### Project Milestone Proposal from Advisor
+
+### Matching Domain Workflows
+
+#### Advisor Swipe Decision
+#### Create Match
+#### Match Expiration
+#### Match Validation
+#### Cancel Match
+
+
+### Communication Domain Workflows
+
+#### Chat Access Validation
+#### Chat Between Advisor and Pyme
+
+
+
+
+### Contract Domain Workflows
+
+#### Propose Contract
+#### Accepted Contract 
+#### Reject Contract
+
 
 ### Project Domain Workflows
 
 #### Create Project 
 #### Close Project 
-#### Project Status Management 
-#### Project Status Validator 
+#### Project Milestone Proposal 
 #### Project Milestone Validation	
 #### Project Health Monitoring	
 #### Project Completion Validation	
+#### Project Status Management
 
 
 
-### Communication Domain
 
-#### Chat between Advisor and Pime
-
-
-### Contract Domain
-
-#### Propose Contract
-#### Accepted Contract (Swipe Approved)
-#### Contract Expiration (In case of no response, after some time it expires)
-
-
-
-### Review Domain
+### Review Domain Workflows
 
 #### Leave a Review for a Advisor (that you have already hired in the past)
 #### Leave a Review for a Pime (that you have been hired by in the past)
 
 
+
+### Event Domain Workflows
+
+#### Event Audit Logging
+#### AdvisorIndustryUpdated Event
+#### MatchCreated Event
+#### ContractAccepted Event
+#### ProjectStatusChanged Event
+#### RecommendationUpdated Event
 
 ---
 
