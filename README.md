@@ -575,6 +575,7 @@ Implementation: [src/backend/domains/user/controllers/update_advisor_industry_co
 #### Business Improvement Roadmap Generation
 #### Advisor Recommendation
 #### Advisor Recommendation Recalculation (Triggered by AdvisorIndustryUpdated Event)
+#### Advisor Similar Project Retrieval
 #### Advisor Impact Prediction
 
 
@@ -634,6 +635,13 @@ Implementation: [src/backend/domains/user/controllers/update_advisor_industry_co
 #### ContractAccepted Event
 #### ProjectStatusChanged Event
 #### RecommendationUpdated Event
+
+
+
+
+#### [QUITAR LUEGO DE REALIZARLO] Reflection Pattern puede aprovechar con el recommendations verificar si tiene projectos similares con Advisor Similar Project Retrieval
+
+
 
 ---
 
