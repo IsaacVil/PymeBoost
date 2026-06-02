@@ -27,7 +27,7 @@ El alcance de la plataforma está enfocado exclusivamente en pequeñas y mediana
 
 Dentro de la plataforma:
 
-* Las PYMES son quienes inician la búsqueda y contacto con advisors.
+* Las PYMES se les recomiendan advisors asociados a sus problemas.
 * Los advisors pueden registrarse y crear perfiles profesionales, pero no buscan oportunidades activamente dentro del sistema.
 
 PymeBoost recomienda advisors según:
@@ -39,7 +39,7 @@ PymeBoost recomienda advisors según:
 
 La comunicación entre ambas partes ocurre mediante un sistema interno de mensajería dentro de la plataforma. A partir de estas conversaciones, la PYME y el advisor pueden discutir necesidades, alcances y expectativas antes de generar formalmente un contrato. Además, con el fin de mantener la transparencia y seguridad dentro del ecosistema, las pymes y los advisors no pueden contactarse fuera de la plataforma. Toda la comunicación se realiza mediante chats internos controlados, donde no está permitido compartir información de contacto personal como correos electrónicos, números telefónicos u otros medios externos de comunicación.
 
-PymeBoost también incorpora recomendaciones inteligentes mediante agentes de IA que ayudan a sugerir:
+Todo lo anterior se hace con base a una descripcion de la empresa, contexto de la empresa, problema a solucionar y objetivos de la empresa. Cuando una PYME se registra en el sistema se le pide una descripcion de todo esto y la IA se encarga del resto. Por ello PymeBoost lo que hace incorporar recomendaciones inteligentes mediante agentes de IA que ayudan a sugerir:
 
 * Advisors adecuados.
 * Posibles procesos de optimización.
@@ -47,6 +47,12 @@ PymeBoost también incorpora recomendaciones inteligentes mediante agentes de IA
 * Objetivos y métricas de seguimiento.
 
 --- 
+
+## Mathching 
+
+
+
+---
 
 ## Contratos
 
@@ -79,6 +85,71 @@ Con base en esto, la plataforma genera un plan de acción mínimo de 5 pasos est
 * El advisor puede modificarlo.
 * La PYME puede personalizarlo.
 * Ambas partes pueden adaptarlo conforme avance el proyecto.
+* Pagos y manejo del dinero
+
+PymeBoost administra los pagos directamente dentro de la plataforma mediante métodos de pago digitales.
+
+De forma general:
+
+La PYME realiza los pagos del contrato dentro del ecosistema de PymeBoost.
+La plataforma retiene automáticamente su comisión correspondiente.
+El advisor recibe los pagos mensuales acordados según el avance y duración del contrato.
+
+El sistema busca garantizar:
+
+* Seguridad financiera.
+* Transparencia.
+* Registro de transacciones.
+* Protección para ambas partes.
+
+---
+
+## Validación de PYMES
+
+Uno de los pilares principales de PymeBoost es la seguridad, legitimidad y automatización inteligente dentro del ecosistema. Por ello las PYMES son verificadas utilizando la lista oficial del MEIC de Costa Rica para asegurar que:
+
+Sean negocios reales.
+Existan formalmente.
+Cumplan requisitos básicos.
+
+Además, PymeBoost utiliza IA para extraer y completar información automáticamente desde documentos empresariales, reduciendo procesos manuales y acelerando el onboarding.
+
+### Verificación Inteligente de Advisors
+
+Los advisors pasan por un proceso de validación apoyado por inteligencia artificial.
+
+La IA extrae información desde LinkedIn, como:
+
+- Experiencia laboral.
+- Industrias.
+- Certificaciones.
+- Especializaciones.
+
+También analiza documentos PDF de casos de éxito (“Use Cases”), extrayendo información como:
+
+- Problema inicial.
+- Solución implementada.
+- Industria y tamaño de la empresa.
+- Métricas antes y después.
+- Impacto generado.
+
+PymeBoost utiliza IA para clasificar el problema de negocio de la PYME y compararlo con proyectos anteriores exitosos de advisors.
+
+Con esto, la plataforma puede:
+
+- Generar roadmaps personalizados esto a la hora de definir los contratos. 
+- Recomendar procesos a optimizar.
+- Estimar mejoras en métricas del negocio.
+- Hacer matches más precisos entre PYMES y advisors.
+- Sistema de Reputación
+
+Después de cada proyecto:
+
+- Las PYMES califican al advisor.
+- Se utiliza un sistema de 1 a 5 estrellas.
+- Se incluyen comentarios y retroalimentación.
+
+Esto ayuda a mantener estándares de calidad y generar confianza dentro de la plataforma.
 
 --- 
 
