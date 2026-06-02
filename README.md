@@ -27,7 +27,7 @@ El alcance de la plataforma está enfocado exclusivamente en pequeñas y mediana
 
 Dentro de la plataforma:
 
-* Las PYMES se les recomiendan advisors asociados a sus problemas.
+* Las PYMES se les recomiendan advisors asociados a sus problemas basandose en un sistema de matching. 
 * Los advisors pueden registrarse y crear perfiles profesionales, pero no buscan oportunidades activamente dentro del sistema.
 
 PymeBoost recomienda advisors según:
@@ -37,7 +37,7 @@ PymeBoost recomienda advisors según:
 * Objetivos empresariales.
 * Historial y reputación del advisor.
 
-La comunicación entre ambas partes ocurre mediante un sistema interno de mensajería dentro de la plataforma. A partir de estas conversaciones, la PYME y el advisor pueden discutir necesidades, alcances y expectativas antes de generar formalmente un contrato. Además, con el fin de mantener la transparencia y seguridad dentro del ecosistema, las pymes y los advisors no pueden contactarse fuera de la plataforma. Toda la comunicación se realiza mediante chats internos controlados, donde no está permitido compartir información de contacto personal como correos electrónicos, números telefónicos u otros medios externos de comunicación.
+La comunicación entre ambas partes ocurre mediante un sistema interno de mensajería dentro de la plataforma. A partir de estas conversaciones, la PYME y el advisor pueden discutir necesidades, alcances y expectativas antes de generar formalmente un contrato, habiendo visualizado previamente el componente de contrato predeterminado de Pymeboost. Además, con el fin de mantener la transparencia y seguridad dentro del ecosistema, las pymes y los advisors no pueden contactarse fuera de la plataforma. Toda la comunicación se realiza mediante chats internos controlados, donde no está permitido compartir información de contacto personal como correos electrónicos, números telefónicos u otros medios externos de comunicación.
 
 Todo lo anterior se hace con base a una descripcion de la empresa, contexto de la empresa, problema a solucionar y objetivos de la empresa. Cuando una PYME se registra en el sistema se le pide una descripcion de todo esto y la IA se encarga del resto. Por ello PymeBoost lo que hace incorporar recomendaciones inteligentes mediante agentes de IA que ayudan a sugerir:
 
@@ -46,21 +46,112 @@ Todo lo anterior se hace con base a una descripcion de la empresa, contexto de l
 * Planes de acción.
 * Objetivos y métricas de seguimiento.
 
+Restricciones:
+- Una PYME solo puede tener un contrato activo a la vez, es decir, solo puede estar en contacto con un advisor y que este implementando un proceso. 
+- El sistema de mensajeria no admite ningun tipo de mensaje relacionado a numeros de telefono, redes sociales o informacion de contacto. 
+
 --- 
 
-## Mathching 
+## Validación 
 
+En esta seccion explicamos a detalle como se hace la validacion de PYMES y advisors.
 
+## Validacion de Pymes
+
+Uno de los pilares principales de PymeBoost es la seguridad, legitimidad y automatización inteligente dentro del ecosistema. Por ello las PYMES son verificadas utilizando la lista oficial del MEIC de Costa Rica para asegurar que:
+
+- Sean negocios reales.
+- Existan formalmente.
+- Cumplan requisitos básicos.
+
+Lo unico que se le solicita a la PYME es la cedula juridica, nosotros validamos que este en la lista del MEIC y a partir de ello ya estaria validada. 
+
+## Verificación Inteligente de Advisors
+
+Los advisors pasan por un proceso de validación apoyado por inteligencia artificial.
+
+La IA extrae información desde LinkedIn, como:
+
+- Experiencia laboral.
+- Industrias.
+- Certificaciones.
+- Especializaciones.
+
+También analiza documentos PDF de casos de éxito (“Use Cases”), extrayendo información como:
+
+- Problema inicial.
+- Solución implementada.
+- Industria y tamaño de la empresa.
+- Métricas antes y después.
+- Impacto generado.
+
+PymeBoost utiliza IA para clasificar el problema de negocio de la PYME y compararlo con proyectos anteriores exitosos de advisors.
+
+Con esto, la plataforma puede:
+
+- Generar roadmaps personalizados esto a la hora de definir los contratos preliminares en el matching.
+- Recomendar procesos a optimizar.
+- Estimar mejoras en métricas del negocio.
+- Hacer matches más precisos entre PYMES y advisors.
+- Sistema de Reputación
+
+Después de cada proyecto:
+
+- Las PYMES califican al advisor.
+- Se utiliza un sistema de 1 a 5 estrellas.
+- Se incluyen comentarios y retroalimentación.
+
+Esto ayuda a mantener estándares de calidad y generar confianza dentro de la plataforma.
 
 ---
 
+## Mathching 
+
+PymeBoost contará con un sistema de matching inspirado en plataformas como Tinder, donde las PYMES podrán visualizar advisors recomendados mediante tarjetas interactivas.
+
+Cada perfil mostrará:
+
+- Nombre del advisor.
+- Industria y especialización.
+- Calificación y reputación.
+- Proyecto similar realizado anteriormente.
+- Compatibilidad PYME–advisor (escala del 1 al 5).
+- Mejora estimada en métricas de negocio.
+- Distribución estimada de ganancias entre PymeBoost y el advisor.
+
+Además, cada tarjeta incluirá dos acciones:
+
+- Swipe Approved → aceptar recomendación.
+- Swipe Rejected → descartar recomendación.
+
+El sistema utilizará IA para generar recomendaciones basadas en proyectos previos exitosos, necesidades de la PYME y métricas históricas de impacto.
+
+---
+
+## Mensajería
+
+La comunicación entre las PYMES y los advisors se realiza mediante un sistema interno de mensajería dentro de PymeBoost.
+
+A través de estos chats, ambas partes pueden discutir necesidades, objetivos, alcances y expectativas antes de formalizar un contrato, habiendo visualizado previamente el componente de contrato predeterminado de la plataforma.
+
+Con el fin de mantener la transparencia y seguridad del ecosistema, no está permitido el contacto fuera de PymeBoost. Toda la comunicación debe realizarse dentro de la plataforma, evitando compartir:
+
+- Correos electrónicos.
+- Números telefónicos.
+- Redes sociales.
+- Otros medios externos de contacto.
+
+Esto permite mantener un entorno más seguro, trazable y confiable tanto para las PYMES como para los advisors.
+
+--- 
+
 ## Contratos
 
-Una vez que la PYME y el advisor llegan a un acuerdo mediante el sistema de mensajes, se puede generar un contrato digital dentro de PymeBoost.
+Una vez que la PYME y el advisor llegan a un acuerdo mediante el sistema de mensajes, se puede generar un contrato digital dentro de PymeBoost. Con la accion de "Marry The Prospect" en el sistema. 
 
 Cada contrato incluye los siguientes campos principales:
 
-* Comisión de PymeBoost equivalente al 8% del presupuesto base.
+* Comisión de PymeBoost equivalente al porcentaje de ganancia alrededor del 10%. 
 * Fecha de inicio.
 * Fecha límite.
 * Objetivos y métricas esperadas.
@@ -85,71 +176,9 @@ Con base en esto, la plataforma genera un plan de acción mínimo de 5 pasos est
 * El advisor puede modificarlo.
 * La PYME puede personalizarlo.
 * Ambas partes pueden adaptarlo conforme avance el proyecto.
-* Pagos y manejo del dinero
+* Division del dinero.
 
-PymeBoost administra los pagos directamente dentro de la plataforma mediante métodos de pago digitales.
-
-De forma general:
-
-La PYME realiza los pagos del contrato dentro del ecosistema de PymeBoost.
-La plataforma retiene automáticamente su comisión correspondiente.
-El advisor recibe los pagos mensuales acordados según el avance y duración del contrato.
-
-El sistema busca garantizar:
-
-* Seguridad financiera.
-* Transparencia.
-* Registro de transacciones.
-* Protección para ambas partes.
-
----
-
-## Validación de PYMES
-
-Uno de los pilares principales de PymeBoost es la seguridad, legitimidad y automatización inteligente dentro del ecosistema. Por ello las PYMES son verificadas utilizando la lista oficial del MEIC de Costa Rica para asegurar que:
-
-Sean negocios reales.
-Existan formalmente.
-Cumplan requisitos básicos.
-
-Además, PymeBoost utiliza IA para extraer y completar información automáticamente desde documentos empresariales, reduciendo procesos manuales y acelerando el onboarding.
-
-### Verificación Inteligente de Advisors
-
-Los advisors pasan por un proceso de validación apoyado por inteligencia artificial.
-
-La IA extrae información desde LinkedIn, como:
-
-- Experiencia laboral.
-- Industrias.
-- Certificaciones.
-- Especializaciones.
-
-También analiza documentos PDF de casos de éxito (“Use Cases”), extrayendo información como:
-
-- Problema inicial.
-- Solución implementada.
-- Industria y tamaño de la empresa.
-- Métricas antes y después.
-- Impacto generado.
-
-PymeBoost utiliza IA para clasificar el problema de negocio de la PYME y compararlo con proyectos anteriores exitosos de advisors.
-
-Con esto, la plataforma puede:
-
-- Generar roadmaps personalizados esto a la hora de definir los contratos. 
-- Recomendar procesos a optimizar.
-- Estimar mejoras en métricas del negocio.
-- Hacer matches más precisos entre PYMES y advisors.
-- Sistema de Reputación
-
-Después de cada proyecto:
-
-- Las PYMES califican al advisor.
-- Se utiliza un sistema de 1 a 5 estrellas.
-- Se incluyen comentarios y retroalimentación.
-
-Esto ayuda a mantener estándares de calidad y generar confianza dentro de la plataforma.
+PymeBoost no administra los pagos a advisors directamente dentro de la plataforma, nosotros solo tomamos el dinero de la membresia y el porcentaje de comision que tomamos del contrato. Osea la plataforma retiene automáticamente su comisión correspondiente.
 
 --- 
 
