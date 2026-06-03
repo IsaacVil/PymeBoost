@@ -27,7 +27,7 @@ El alcance de la plataforma está enfocado exclusivamente en pequeñas y mediana
 
 Dentro de la plataforma:
 
-* Las PYMES se les recomiendan advisors asociados a sus problemas basandose en un sistema de matching. 
+* Las PYMES se les recomiendan advisors asociados a sus problemas basandose en un sistema de matching, que se alimenta por una descripcion o contexto de la emepresa. 
 * Los advisors pueden registrarse y crear perfiles profesionales, pero no buscan oportunidades activamente dentro del sistema.
 
 PymeBoost recomienda advisors según:
@@ -52,25 +52,9 @@ Restricciones:
 
 --- 
 
-## Validación 
+## Validaciones
 
-En esta seccion explicamos a detalle como se hace la validacion de PYMES y advisors.
-
-Comentarios:
-
-Redactar para intro o para un programador o IA lo hago.
-
-Necesitamos que este mas especificado
-
-Ejemplo: Validacion de PYMES, nos falta declaracion de MEIC datos etc, se entrego cedula juridica se escanea formato pdf, que todo coincida mas especifico
-
-Ejemplo: Para los asesores esta hablando de cantidad de anos haciendo que, especificar industria, certificaciones que info se da de la certificacion, evitar que la IA lo haga muy general. Por ejemplo problema inicial 200 palabras.
-
-Definir como se escriben los objetivos
-
-que incluyen los planes de accion 
-
-como se presentan las fases completadas del plan de accion que metricas de exito 
+En esta seccion explicamos a detalle como se hace la validacion de PYMES y advisors, todo desde el registro de la cuenta de la PYME y el advisor. 
 
 ## Validacion de Pymes
 
@@ -80,28 +64,98 @@ Uno de los pilares principales de PymeBoost es la seguridad, legitimidad y autom
 - Existan formalmente.
 - Cumplan requisitos básicos.
 
-Lo unico que se le solicita a la PYME es la cedula juridica, nosotros validamos que este en la lista del MEIC y a partir de ello ya estaria validada. 
+### Registro PYME
 
-## Verificación Inteligente de Advisors
+Para registrarse en la plataforma, la PYME debe ingresar:
 
-Los advisors pasan por un proceso de validación apoyado por inteligencia artificial.
+* Nombre completo de la empresa.
+* Correo electrónico empresarial.
+* Número telefónico.
+* Cédula jurídica.
+* Ubicación física (Opcional).
+* Método de pago:
+  * Tarjeta de crédito o débito.
+  * Información de facturación.
 
-La IA extrae información desde LinkedIn, como:
+El método de pago será utilizado para:
 
-- Experiencia laboral.
-- Industrias.
-- Certificaciones.
-- Especializaciones.
+* Cobro de la membresía mensual de PymeBoost.
+* Cobro de comisiones asociadas a contratos realizados dentro de la plataforma.
 
-También analiza documentos PDF de casos de éxito (“Use Cases”), extrayendo información como:
+Además, la empresa deberá subir su cédula jurídica en formato PDF. La plataforma utilizará IA y procesamiento documental para escanear y validar automáticamente la información del documento.
 
-- Problema inicial.
-- Solución implementada.
-- Industria y tamaño de la empresa.
-- Métricas antes y después.
-- Impacto generado.
+El sistema verificará:
 
-PymeBoost utiliza IA para clasificar el problema de negocio de la PYME y compararlo con proyectos anteriores exitosos de advisors.
+* Que la cédula jurídica coincida con los registros del MEIC.
+* La validez y autenticidad del documento.
+* La fecha de expiración de la licencia o registro de la PYME.
+
+Una vez validada la información y confirmada la existencia de la empresa dentro de la base oficial del MEIC, la PYME quedará habilitada dentro de la plataforma.
+
+
+## Validacion Advisors
+
+Los advisors pasan por un proceso de validación apoyado por inteligencia artificial. Primero se hace un registro regular y despues se hace un analisis de su perfil en LinkedIn mas un analisis de casos de exito para mejorar el perfil del advisor.
+
+### Registro Advisors
+
+El proceso de registro inicial para advisors será rápido y sencillo. Para crear una cuenta, únicamente se solicitará:
+
+- Nombre completo.
+- Correo electrónico.
+- Número telefónico.
+- Perfil de LinkedIn.
+- Documento de identidad (cédula o pasaporte).
+- Método de pago:
+  - Tarjeta de crédito o débito.
+  - Información de facturación.
+
+Una vez creada la cuenta, PymeBoost utilizará inteligencia artificial para enriquecer y validar automáticamente el perfil profesional del advisor. Ademas el metodo de pago es para la membresia que va a pagar el advisor por usar PymeBoost. 
+
+La IA analizará LinkedIn y el curriculum vitae en formato PDF para extraer y verificar información como:
+
+- Años de experiencia laboral.
+- Industrias donde ha trabajado (Listado).
+- Certificaciones y títulos obtenidos.
+- Vigencia y fecha de certificaciones.
+- Áreas de especialización según experiencia previa.
+
+Además, el advisor podrá subir casos de éxito, proyectos anteriores o documentos profesionales en formatos como PDF, PPT o DOCX. Es importante mencionar que estos Use Cases funcionan para mejorar el perfil del advisor en un inicio, sin embargo advisors pequeños o que no posean estos reportes pueden completar el llenado del perfil inicial. 
+
+Para facilitar este proceso, PymeBoost ofrecerá una plantilla estandarizada de “Use Cases”, donde los advisors podrán completar información estructurada como:
+
+Company Information
+* Nombre de la empresa.
+* Industria.
+* Tamaño de la empresa.
+* Cantidad de empleados.
+
+Contexto y Problema
+* Situación inicial 
+* Problema principal del negocio.
+* Objetivos del proyecto.
+
+Solución Implementada
+* Acciones realizadas.
+* Procesos optimizados.
+* Tecnologías o estrategias utilizadas.
+
+Métricas y Resultados
+* Ventas antes y después.
+* Revenue antes y después.
+* Tiempo de operación optimizado.
+* Reducción de costos.
+* Incremento de productividad.
+* Conversión de clientes.
+* Retención de clientes.
+
+Impacto del Negocio
+* Porcentaje de crecimiento generado.
+* KPI’s mejorados.
+* Tiempo estimado para observar resultados.
+* Impacto general en la operación de la empresa.
+
+La IA procesará automáticamente esta información para clasificar la experiencia del advisor, mejorar su perfil y generar matches más precisos con las necesidades de cada PYME.
 
 Con esto, la plataforma puede:
 
@@ -111,11 +165,13 @@ Con esto, la plataforma puede:
 - Hacer matches más precisos entre PYMES y advisors.
 - Sistema de Reputación
 
+### Rating
+
 Después de cada proyecto:
 
 - Las PYMES califican al advisor.
 - Se utiliza un sistema de 1 a 5 estrellas.
-- Se incluyen comentarios y retroalimentación.
+- Se incluyen comentarios y retroalimentación (Maximo 400 palabras)
 
 Esto ayuda a mantener estándares de calidad y generar confianza dentro de la plataforma.
 
@@ -133,7 +189,7 @@ Cada perfil mostrará:
 - Proyecto similar realizado anteriormente.
 - Compatibilidad PYME–advisor (escala del 1 al 5).
 - Mejora estimada en métricas de negocio.
-- Distribución estimada de ganancias entre PymeBoost y el advisor.
+- Distribución estimada de ganancias entre PymeBoost y el advisor con un plan estandar (1 mes)
 
 Además, cada tarjeta incluirá dos acciones:
 
@@ -146,11 +202,31 @@ El sistema utilizará IA para generar recomendaciones basadas en proyectos previ
 
 ## Mensajería
 
-La comunicación entre las PYMES y los advisors se realiza mediante un sistema interno de mensajería dentro de PymeBoost.
+La comunicación entre las PYMES y los advisors se realiza mediante un sistema interno de mensajería dentro de PymeBoost. Esta funcionalidad se habilita una vez que la PYME realiza un “Swipe Approved” sobre un advisor recomendado.
 
-A través de estos chats, ambas partes pueden discutir necesidades, objetivos, alcances y expectativas antes de formalizar un contrato, habiendo visualizado previamente el componente de contrato predeterminado de la plataforma.
+Cada match genera automáticamente un chat privado entre ambas partes. Una PYME puede mantener múltiples chats activos al mismo tiempo, ya que un match no garantiza la asignación del proyecto, sino la oportunidad para que el advisor presente una propuesta y participe en el proceso de selección.
 
-Con el fin de mantener la transparencia y seguridad del ecosistema, no está permitido el contacto fuera de PymeBoost. Toda la comunicación debe realizarse dentro de la plataforma, evitando compartir:
+A través de estos chats, ambas partes pueden discutir:
+
+- Necesidades del negocio.
+- Objetivos del proyecto.
+- Alcances y expectativas.
+- Estrategias de implementación.
+- Tarifas.
+
+Además, junto al chat existirá un componente de negociación donde la PYME podrá enviar propuestas económicas al advisor y negociar tarifas antes de formalizar un contrato.
+
+Una vez que la PYME decide seleccionar oficialmente a un advisor, podrá utilizar el botón:
+
+* “Marry the Prospect” → asigna el proyecto oficialmente al advisor seleccionado.
+
+También existirá la opción:
+
+* “Unmatch” → elimina la conexión entre ambas partes, similar al funcionamiento de Tinder.
+
+Antes de formalizar el acuerdo, ambas partes podrán visualizar un componente de contrato predeterminado generado por PymeBoost y modificarlo segun las necesidades del proyecto.
+
+Con el fin de mantener la transparencia y seguridad del ecosistema, no está permitido el contacto fuera de la plataforma. Toda la comunicación debe realizarse dentro de PymeBoost, evitando compartir:
 
 - Correos electrónicos.
 - Números telefónicos.
@@ -163,16 +239,103 @@ Esto permite mantener un entorno más seguro, trazable y confiable tanto para la
 
 ## Contratos
 
-Una vez que la PYME y el advisor llegan a un acuerdo mediante el sistema de mensajes, se puede generar un contrato digital dentro de PymeBoost. Con la accion de "Marry The Prospect" en el sistema. 
+Una vez que la PYME y el advisor llegan a un acuerdo mediante el sistema de mensajes, se puede generar un contrato digital dentro de PymeBoost. Con la accion de "Marry The Prospect" que mencionamos anteriormente ya se puede realizar un contrato especifico con el advisor o utilizar el estandar que recomienda PymeBoost desde un inicio. 
 
 Cada contrato incluye los siguientes campos principales:
 
-* Comisión de PymeBoost equivalente al porcentaje de ganancia alrededor del 10%. 
+* Presupuesto de implementación del proceso.
+* Retainer mensual para el advisor.
+* Comisión de PymeBoost equivalente al 3% del presupuesto base.
 * Fecha de inicio.
 * Fecha límite.
 * Objetivos y métricas esperadas.
-* Plan de acción.
+* Ganancia Advisor.
 * Duración del contrato.
+* Plan de acción personalizado.
+
+### Objetivos y Métricas Esperadas
+
+Cada contrato dentro de PymeBoost debe definir objetivos claros y métricas específicas que permitan medir el impacto real del proceso implementado por el advisor.
+
+Estas métricas funcionan como referencia para:
+
+- Evaluar el éxito del proyecto.
+- Medir mejoras del negocio.
+- Calcular posibles ganancias variables del advisor.
+- Dar seguimiento al progreso de la PYME.
+
+Las métricas pueden variar dependiendo del tipo de proyecto, industria y necesidades de la empresa.
+
+Ejemplos de métricas
+* Incremento porcentual de ventas.
+* Crecimiento de revenue mensual.
+* Reducción de costos operativos.
+* Disminución de tiempos de proceso.
+* Aumento de productividad.
+* Incremento en retención de clientes.
+* Conversión de leads o ventas.
+* Crecimiento de tráfico digital.
+* Mejora de KPI’s internos.
+
+**Ejemplo practico:**
+
+PYME: 
+* Tienda de ropa con ventas digitales bajas.
+
+Problema identificado:
+* Baja conversión de clientes en campañas publicitarias de Instagram y Facebook.
+
+Objetivo del contrato:
+* Optimizar el proceso de marketing digital y aumentar las ventas provenientes de anuncios pagados.
+
+Métricas definidas:
+
+* Incrementar conversiones de campañas en un 25%.
+* Reducir el costo por adquisición (CPA) en un 15%.
+* Incrementar tráfico web proveniente de redes sociales en un 30%.
+* Aumentar ventas digitales mensuales en un 20%.
+
+Proceso a optimizar:
+
+- Segmentación de anuncios.
+- Embudo de conversión.
+- Estrategia de contenido.
+- Retargeting de clientes.
+- Optimización de landing pages.
+
+Resultados esperados:
+Si las métricas definidas se cumplen dentro del periodo establecido, el advisor podrá recibir el porcentaje de ganancia acordado en el contrato según el impacto generado.
+
+### Ganancia Advisor 
+
+PymeBoost permitirá modelos de compensación basados en resultados, donde el advisor podrá recibir un porcentaje de las ganancias o mejoras generadas a partir del proceso implementado en la PYME segun lo establezca el contrato, estas ganancias se definiran 2 meses despues de haber implementado el proceso.
+
+Este porcentaje se calculará utilizando métricas previamente definidas dentro del contrato, como:
+
+* Incremento de ventas.
+* Reducción de costos.
+* Aumento de productividad.
+* Crecimiento de revenue.
+* Mejora de KPI’s del negocio.
+
+De esta manera, el advisor obtiene beneficios directamente relacionados con el impacto real generado en la empresa.
+
+### Duración de contratos
+
+PymeBoost maneja diferentes gamas de contrato:
+
+- Gama estándar: 1 mes → comisión inicial del 3%.
+- Gama media: 3 meses → comisión del 5%.
+- Gama alta: 6 meses → comisión del 7%.
+- Gama personalizada: contratos ajustables según las necesidades de la empresa.
+
+En los contratos personalizados, la comisión sigue un patrón incremental:
+
+* Se inicia en 3%.
+* Aumenta un 1% por cada mes adicional del contrato.
+* Retainer del advisor
+
+Basicamente el advisor recibe un retainer mensual durante el tiempo que dure el contrato, funcionando como una compensación periódica por acompañamiento, implementación y seguimiento del proceso.
 
 
 ### Plan de acción 
@@ -181,53 +344,239 @@ Uno de los elementos principales del contrato es el plan de acción personalizad
 
 Este plan es generado inicialmente mediante un agente de IA de PymeBoost, el cual analiza:
 
-* Contexto de la PYME.
-* Industria.
-* Objetivos.
-* Problema identificado.
-* Tipo de proceso a implementar.
+- Contexto de la PYME (descripción de la empresa, máximo 300 palabras).
+- Industria.
+- Objetivos y métricas esperadas.
+- Problema identificado.
+- Tipo de proceso a implementar.
 
 Con base en esto, la plataforma genera un plan de acción mínimo de 5 pasos estratégicos. Posteriormente:
 
-* El advisor puede modificarlo.
-* La PYME puede personalizarlo.
-* Ambas partes pueden adaptarlo conforme avance el proyecto.
-* Division del dinero.
+- El advisor puede modificarlo.
+- La PYME puede personalizarlo.
+- Ambas partes pueden adaptarlo conforme avance el proyecto.
 
-PymeBoost no administra los pagos a advisors directamente dentro de la plataforma, nosotros solo tomamos el dinero de la membresia y el porcentaje de comision que tomamos del contrato. Osea la plataforma retiene automáticamente su comisión correspondiente.
+**Ejemplo de Plan de Acción:**
+
+Caso:
+* PYME de ropa con baja conversión en campañas publicitarias de Instagram y Facebook.
+
+Objetivo:
+* Aumentar ventas digitales y optimizar campañas de marketing.
+
+Plan de acción generado por IA:
+* Analizar métricas actuales de campañas y comportamiento de clientes.
+* Optimizar segmentación de anuncios según público objetivo.
+* Rediseñar landing pages para mejorar conversión.
+* Implementar estrategia de retargeting para clientes potenciales.
+* Medir resultados semanalmente y ajustar campañas según KPI’s definidos.
+
+Este plan sirve como guía inicial para el desarrollo del proyecto y seguimiento de resultados dentro de la plataforma.
 
 --- 
 
-## Seguimiento y Fases del Contrato
+## Dashboard de Seguimiento 
 
-A diferencia de otras plataformas donde únicamente se conecta a ambas partes y luego el proceso queda sin supervisión, PymeBoost realiza un seguimiento continuo del contrato y de las fases definidas dentro del plan de acción.
 
-La plataforma supervisa:
+A diferencia de otras plataformas donde únicamente se conecta a ambas partes y luego el proceso queda sin supervisión, PymeBoost realiza un seguimiento continuo del contrato y de las fases definidas dentro del plan de acción. Basicamente PymeBoost incorpora un dashboard inteligente donde tanto la PYME como el advisor pueden monitorear en tiempo real el estado del proyecto, el avance del plan de acción y el cumplimiento de objetivos definidos dentro del contrato.
 
-- Cumplimiento de objetivos.
-- Avance de tareas.
-- Entregables acordados.
-- Métricas de mejora.
-- Participación del advisor.
-- Cumplimiento de fechas límite.
+El dashboard se genera directamente a partir de:
 
-Este seguimiento permite generar mayor seguridad tanto para la PYME como para el advisor, asegurando que el trabajo realmente se implemente y que los resultados puedan medirse de forma objetiva.
+* Objetivos y métricas definidas en el contrato.
+* Fases del plan de acción personalizado.
+* Entregables acordados.
+* KPI’s establecidos para medir impacto.
+* Fechas límite del proyecto.
 
-### Dashboard de seguimiento
+### Informacion del Dashboard
 
-PymeBoost incorpora un dashboard donde ambas partes pueden visualizar:
+* Estado del contrato:
 
-* Estado general del contrato.
-* Fases completadas.
-* Objetivos pendientes.
-* Métricas de rendimiento.
-* Reportes de progreso.
+  * Activo
+  * Cancelado
+  * Por Calificar
+  * Completado
+
+* Porcentaje de avance del proyecto:
+
+  * Calculado automaticamente segun las fases completadas.
+
+* Fases activas y completadas:
+
+  * Objetivos cumplidos.
+  * Objetivos pendientes.
+  * Reportes del advisor.
+  * Evidencia del progreso.
+
+* Objetivos alcanzados:
+
+  * Seguimiento de metas cumplidas durante y despues del proyecto.
+
+* Metricas de rendimiento:
+
+  * KPIs
+  * Conversion
+  * Productividad
+  * Ventas
+  * Retencion
+  * ROI
+
+* Tiempo restante del contrato:
+
+  * Tiempo faltante para finalizar el proyecto.
+
+* Cumplimiento de reportes:
+
+  * Validacion de entregables y reportes definidos en el contrato.
+
+Esto permite que tanto la PYME como el advisor tengan un seguimiento claro, estructurado y transparente del progreso del proyecto y de los resultados obtenidos.
+
+### Ejemplo de Dashboard
+
+Caso: PYME de ropa que busca optimizar su proceso de marketing digital y aumentar ventas provenientes de campañas publicitarias.
+
+Advisor Seleccionado: Especialista en Marketing Digital y Performance Ads.
+
+**Estado General del Proyecto**
+
+| Indicador           | Estado          |
+| ------------------- | --------------- |
+| Estado del contrato | Activo          |
+| Duración            | 3 meses         |
+| Avance del proyecto | 60% completado  |
+| Tiempo restante     | 1 mes y 12 días |
+
+
+#### Fases del Plan de Acción
+
+Fase 1 — Análisis Inicial *(Completada)*
+
+Objetivos Cumplidos
+
+* Auditoría de campañas actuales.
+* Identificación de público objetivo.
+* Análisis de métricas históricas.
+
+Reporte del Advisor
+
+Se detectó mala segmentación en campañas y baja optimización de conversiones.
+
+Fase 2 — Optimización de Campañas *(Completada)*
+
+Objetivos Cumplidos
+
+* Nueva segmentación implementada.
+* Rediseño de anuncios.
+* Configuración de retargeting.
+
+Reporte del Advisor
+
+Se optimizaron campañas enfocadas en clientes recurrentes y audiencias similares.
+
+Fase 3 — Optimización de Landing Pages *(Activa)*
+
+Objetivos Pendientes
+
+* Mejorar velocidad del sitio.
+* Optimizar formularios de compra.
+* Simplificar proceso de checkout.
+
+Reporte Parcial
+
+Se realizaron pruebas A/B en páginas de productos principales.
+
+
+**Objetivos del Proyecto**
+
+Objetivo General
+* Optimizar el proceso de marketing digital y aumentar las ventas provenientes de anuncios pagados.
+
+Objetivos Específicos
+
+* Incremento de tráfico web desde redes sociales.
+* Mayor interacción en campañas.
+* Mejora inicial en conversiones digitales.
+
+
+**Métricas de Rendimiento**
+
+| Métrica                          | Antes | Después |
+| -------------------------------- | ----- | ------- |
+| Conversiones                     | 2.1%  | 3.4%    |
+| CPA                              | $14   | $10     |
+| Tráfico desde Instagram/Facebook | —     | +28%    |
+| Ventas digitales mensuales       | —     | +16%    |
+
+
+**Cumplimiento de Reportes**
+
+Entregables Completados
+
+* Reporte de auditoría inicial.
+* Reporte de campañas optimizadas.
+* Reporte de segmentación de clientes.
+
+Entregables Pendientes
+
+* Reporte final de resultados.
+* Análisis de ROI del proyecto.
+
+Gracias al seguimiento continuo, PymeBoost permite que las PYMES no solo reciban asesoría, sino que también puedan validar el impacto real de la implementación mediante métricas, reportes y objetivos claramente definidos.
+
+### Reportes por Fase
+
+PymeBoost ofrece una plantilla simple de reportes para cada fase del proyecto. Al finalizar una fase, el advisor debe completar un pequeño reporte dentro de la plataforma como entregable oficial.
+
+Cada reporte incluye:
+
+* Nombre de la fase.
+* Estado de la fase:
+
+  * Activa
+  * Completada
+* Descripción de acciones realizadas.
+* Objetivos cumplidos.
+* Resultados obtenidos.
+* Observaciones adicionales.
+
+El advisor debe redactar una descripción breve de máximo 200 palabras explicando el trabajo realizado durante la fase y los resultados obtenidos.
+
+Estos reportes funcionan como evidencia del progreso del proyecto y son visibles tanto para la PYME como para el advisor dentro del dashboard.
+
+Además, al finalizar el contrato, el advisor debe entregar un reporte final general con:
+
+* Resumen completo del proyecto.
+* Resultados finales.
+* Métricas obtenidas.
+* Recomendaciones futuras.
 
 --- 
 
 ## Modelo de Negocio y Generación de Ingresos
 
-PymeBoost genera ingresos mediante una fuente principales dentro de su ecosistema. La primera corresponde a las comisiones aplicadas sobre los contratos realizados dentro de la plataforma, las cuales ya fueron mencionadas anteriormente y varían según la duración y tipo de contrato. Estas comisiones permiten sostener el sistema de seguimiento, validación, seguridad y acompañamiento continuo que ofrece la plataforma.
+PymeBoost genera ingresos mediante dos fuentes principales dentro de su ecosistema. La primera corresponde a las comisiones aplicadas sobre los contratos realizados dentro de la plataforma, las cuales ya fueron mencionadas anteriormente y varían según la duración y tipo de contrato. Estas comisiones permiten sostener el sistema de seguimiento, validación, seguridad y acompañamiento continuo que ofrece la plataforma.
+
+La segunda fuente de ingresos proviene de un sistema de membresías mensuales tanto para las PYMES como para los advisors registrados.
+
+**Plan para PYMES**
+
+Las PYMES deben pagar una membresía mensual de 25 dólares, la cual les permite:
+
+- Acceder a la plataforma.
+- Buscar y contactar advisors.
+- Generar contratos.
+- Utilizar herramientas de seguimiento.
+- Obtener recomendaciones inteligentes mediante IA.
+- Acceder a reportes y dashboards de rendimiento.
+
+Los advisors registrados pagan una membresía mensual de 15 dólares, la cual les permite:
+
+- Mantener un perfil profesional dentro de la plataforma.
+- Ser recomendados a PYMES según su especialidad.
+- Gestionar contratos y pagos.
+- Acceder al sistema de reputación y validación.
+
+Este modelo híbrido de membresías y comisiones permite que PymeBoost mantenga un ecosistema sostenible, donde tanto las empresas como los advisors reciben herramientas, seguridad y acompañamiento continuo durante todo el proceso de colaboración.
 
 ---
 
