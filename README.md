@@ -56,6 +56,22 @@ Restricciones:
 
 En esta seccion explicamos a detalle como se hace la validacion de PYMES y advisors.
 
+Comentarios:
+
+Redactar para intro o para un programador o IA lo hago.
+
+Necesitamos que este mas especificado
+
+Ejemplo: Validacion de PYMES, nos falta declaracion de MEIC datos etc, se entrego cedula juridica se escanea formato pdf, que todo coincida mas especifico
+
+Ejemplo: Para los asesores esta hablando de cantidad de anos haciendo que, especificar industria, certificaciones que info se da de la certificacion, evitar que la IA lo haga muy general. Por ejemplo problema inicial 200 palabras.
+
+Definir como se escriben los objetivos
+
+que incluyen los planes de accion 
+
+como se presentan las fases completadas del plan de accion que metricas de exito 
+
 ## Validacion de Pymes
 
 Uno de los pilares principales de PymeBoost es la seguridad, legitimidad y automatización inteligente dentro del ecosistema. Por ello las PYMES son verificadas utilizando la lista oficial del MEIC de Costa Rica para asegurar que:
