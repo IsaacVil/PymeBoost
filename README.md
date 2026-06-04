@@ -730,13 +730,16 @@ Prototipo Figma:
 | Vercel                        | Latest Stable       | Frontend hosting and deployment       | Enables deployment of Next.js applications with native SSR support, preview deployments, and automatic optimization.                     |
 | GitHub Actions                | Latest Stable       | CI/CD and automation                  | Automates testing, builds, and deployments within the shared monorepo environment.                                                       |
 | GitHub Environments           | Latest Stable       | Environment management                | Supports secure and organized management of Development, Stage, and Production environments.                                             |
-| Google Cloud Platform         | Latest Stable       | Main cloud platform                   | Provides integration with backend services deployed within the project's cloud infrastructure.                                           |
+| Google Cloud Platform         | Latest Stable       | Main cloud platform service                   | Provides integration with backend services deployed within the project's cloud infrastructure.                                           |
 | Google Cloud Operations Suite | Latest Stable       | Observability and monitoring          | Enables monitoring of logs, metrics, and platform stability across the cloud ecosystem.                                                  |
 | Server Side Rendering (SSR)   | Next.js 15          | Hybrid frontend rendering             | Improves initial load performance, dashboard rendering, and overall user experience through server-side rendering.                       |
 | Feature-Based Architecture    | Custom Architecture | Modular frontend organization         | Supports scalability and separation of functionalities such as dashboards, matching, contracts, and messaging.                           |
 | Monorepo Architecture         | GitHub Monorepo     | Shared frontend/backend repository    | Centralizes workflows, CI/CD pipelines, and collaboration between frontend and backend teams.                                            |
 | React Hook Form               | 7.57.0              | Form management                       | Efficiently manages complex forms and input handling within the frontend application.                                                    |
 | Zod                           | 3.23.8              | Data validation and typing            | Provides typed validation and data consistency before sending information to the backend.                                                |
+| GitHub Environments                           | Latest Stable                 | Environment management       | Supports secure and organized management of Development, Stage, and Production environments.                               |
+| Google Cloud Operations Suite                 | Latest Stable                 | Observability and monitoring | Enables monitoring of logs, metrics, errors, and platform stability across the cloud ecosystem.                            |
+| Development / Stage / Production Environments | Standard Environment Strategy | Environment separation       | Allows independent configuration and deployment workflows for development, testing, and production stages of the platform. |
 
 
 
