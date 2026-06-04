@@ -255,7 +255,7 @@ Cada contrato incluye los siguientes campos principales:
 
 ### Objetivos y Métricas Esperadas
 
-Cada contrato dentro de PymeBoost debe definir objetivos claros y métricas específicas que permitan medir el impacto real del proceso implementado por el advisor.
+Cada contrato dentro de PymeBoost debe definir objetivos claros y medibles además de métricas específicas que permitan medir el impacto real del proceso implementado por el advisor.
 
 Estas métricas funcionan como referencia para:
 
@@ -286,7 +286,7 @@ Problema identificado:
 * Baja conversión de clientes en campañas publicitarias de Instagram y Facebook.
 
 Objetivo del contrato:
-* Optimizar el proceso de marketing digital y aumentar las ventas provenientes de anuncios pagados.
+* Optimizar el proceso de marketing digital y aumentar las ventas provenientes de anuncios pagados en un 25%.
 
 Métricas definidas:
 
