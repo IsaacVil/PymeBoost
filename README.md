@@ -709,6 +709,39 @@ Prototipo Figma:
 
 # Frontend
 
+## 1.1 Technology Stack 
+
+## 1.1 Technology Stack
+
+| Technology                    | Version             | Purpose                               | Justification                                                                                                                            |
+| ----------------------------- | ------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| React                         | 19.1.0              | Main UI library                       | Enables the development of dynamic and reusable interfaces for dashboards, chats, and interactive systems within PymeBoost.              |
+| Next.js                       | 15.3.3              | Main frontend framework               | Provides routing, hybrid rendering, and a modern architecture compatible with cloud deployments and enterprise APIs.                     |
+| TypeScript                    | 5.8.3               | Main frontend language                | Improves maintainability, scalability, and reliability through strong typing and integration with the backend OpenAPI 3.1 specification. |
+| Node.js                       | 22.15.0 LTS         | Development runtime                   | Used for builds, tooling, and automation within the frontend ecosystem.                                                                  |
+| TailwindCSS                   | 4.1.8               | Utility-first CSS framework           | Enables rapid development of modern, responsive, and consistent interfaces for dashboards and SaaS systems.                              |
+| Zustand                       | 5.0.5               | Global state management               | Simplifies management of global states such as authentication, chats, and notifications in a lightweight and scalable way.               |
+| TanStack Query                | 5.76.1              | Server state management and caching   | Synchronizes backend data, manages caching, and automatically updates information from APIs.                                             |
+| Auth0                         | Latest Stable       | Authentication and session management | Provides secure authentication and centralized user management integrated with the backend authentication system.                        |
+| Framer Motion                 | 12.15.0             | Animation and transition system       | Enables modern animations and interactive transitions to improve the platform user experience.                                           |
+| ESLint                        | 9.18.0              | Static code analysis                  | Detects errors, enforces development conventions, and improves overall frontend code quality.                                            |
+| Prettier                      | 3.3.3               | Automatic code formatting             | Maintains visual consistency and code standardization across the project and shared monorepo.                                            |
+| Playwright                    | 1.58.2              | End-to-end testing                    | Automates testing for critical flows such as authentication, dashboards, and contracts within the platform.                              |
+| Vercel                        | Latest Stable       | Frontend hosting and deployment       | Enables deployment of Next.js applications with native SSR support, preview deployments, and automatic optimization.                     |
+| GitHub Actions                | Latest Stable       | CI/CD and automation                  | Automates testing, builds, and deployments within the shared monorepo environment.                                                       |
+| GitHub Environments           | Latest Stable       | Environment management                | Supports secure and organized management of Development, Stage, and Production environments.                                             |
+| Google Cloud Platform         | Latest Stable       | Main cloud platform                   | Provides integration with backend services deployed within the project's cloud infrastructure.                                           |
+| Google Cloud Operations Suite | Latest Stable       | Observability and monitoring          | Enables monitoring of logs, metrics, and platform stability across the cloud ecosystem.                                                  |
+| Server Side Rendering (SSR)   | Next.js 15          | Hybrid frontend rendering             | Improves initial load performance, dashboard rendering, and overall user experience through server-side rendering.                       |
+| Feature-Based Architecture    | Custom Architecture | Modular frontend organization         | Supports scalability and separation of functionalities such as dashboards, matching, contracts, and messaging.                           |
+| Monorepo Architecture         | GitHub Monorepo     | Shared frontend/backend repository    | Centralizes workflows, CI/CD pipelines, and collaboration between frontend and backend teams.                                            |
+| React Hook Form               | 7.57.0              | Form management                       | Efficiently manages complex forms and input handling within the frontend application.                                                    |
+| Zod                           | 3.23.8              | Data validation and typing            | Provides typed validation and data consistency before sending information to the backend.                                                |
+
+
+
+
+
 ---
 
 # Backend
