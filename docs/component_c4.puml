@@ -1,0 +1,65 @@
+@startuml PymeBoost_Frontend_C4_Level3
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_TOP_DOWN()
+
+System_Boundary(frontend, "Next.js Frontend Application") {
+    
+    System_Boundary(features, "Features Layer") {
+        Component(matching, "Matching", "components, hooks,\nservices, validators", "Advisor discovery")
+        Component(contracts, "Contracts", "components, hooks,\nservices, validators", "Negotiation")
+        Component(messaging, "Messaging", "components, hooks,\nservices, validators", "Real-time chat")
+        Component(dashboard, "Dashboard", "components, hooks,\nservices, validators", "Tracking")
+        Component(reports, "Reports", "components, hooks,\nservices, validators", "Reporting")
+        Component(auth, "Auth", "components, hooks,\nservices, validators", "Session mgmt")
+    }
+    
+    System_Boundary(shared, "Shared Layer") {
+        Component(ui_components, "UI Components", "Button, Input, Modal,\nCard, Badge", "Reusable primitives")
+        Component(shared_hooks, "Hooks & Guards", "useNotifications,\nAuthGuard", "Cross-feature logic")
+    }
+    
+    System_Boundary(infrastructure, "Infrastructure Layer") {
+        Component(zustand, "Zustand", "authStore,\nnotificationStore,\nuiStore", "Global state")
+        Component(tanstack, "TanStack Query", "useQuery, useMutation,\nCaching", "Server state")
+        Component(apiclient, "ApiClient", "JWT, Errors,\nRetries", "HTTP layer")
+        Component(validators, "Validators", "Zod Schemas", "Data validation")
+    }
+}
+
+System_Ext(backend, "Backend API")
+System_Ext(auth0, "Auth0")
+
+' All features use shared UI and hooks
+Rel_D(matching, ui_components, "uses")
+Rel_D(contracts, ui_components, "uses")
+Rel_D(messaging, ui_components, "uses")
+Rel_D(dashboard, ui_components, "uses")
+Rel_D(reports, ui_components, "uses")
+Rel_D(auth, ui_components, "uses")
+
+Rel_D(matching, shared_hooks, "uses")
+Rel_D(contracts, shared_hooks, "uses")
+Rel_D(messaging, shared_hooks, "uses")
+Rel_D(dashboard, shared_hooks, "uses")
+
+' Features to infrastructure
+Rel_D(matching, zustand, "reads")
+Rel_D(matching, tanstack, "uses")
+Rel_D(contracts, zustand, "reads")
+Rel_D(contracts, tanstack, "uses")
+Rel_D(messaging, zustand, "reads")
+Rel_D(messaging, tanstack, "uses")
+Rel_D(dashboard, zustand, "reads")
+Rel_D(dashboard, tanstack, "uses")
+Rel_D(reports, tanstack, "uses")
+Rel_D(auth, zustand, "writes")
+
+' Infrastructure flow
+Rel_D(shared_hooks, zustand, "uses")
+Rel_D(tanstack, apiclient, "uses")
+Rel_D(apiclient, validators, "validates")
+Rel_D(apiclient, backend, "calls")
+Rel_D(apiclient, auth0, "validates")
+
+@enduml

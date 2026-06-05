@@ -266,7 +266,7 @@ src/
 | `store/notificationStore.ts` | Toast messages, alerts, notifications. |
 | `store/uiStore.ts` | Modal states, sidebars, theme. |
 | `lib/` | Configurations and third-party integrations (queryClient for TanStack Query, axios for HTTP). |
-| `tests/` | Feature and component tests using Playwright and Jest. Organized by feature. |
+| `tests/` | Feature and component tests using Vitest (unit tests) and Playwright (E2E tests). Organized by feature. |
 | `styles/` | Global CSS and CSS variables. |
 | `public/` | Static assets (logos, icons, images). |
 
@@ -833,7 +833,7 @@ Sign Up → Profile Setup → Wait for Matches → Accept Chat → Negotiate Ter
 | **Real-time Updates** | Dashboard, chat | WebSocket for live metric/message updates |
 | **Confirmation Dialogs** | Critical actions | "Are you sure?" before deleting or canceling |
 
-## Key Rules
+### Key Rules
 
 - **Every workflow starts with authentication.** AuthGuard protects all pages.
 - **Forms validate before submission.** Zod schemas prevent invalid data.
@@ -841,16 +841,571 @@ Sign Up → Profile Setup → Wait for Matches → Accept Chat → Negotiate Ter
 - **No silent errors.** Every API error shows a user-friendly message.
 - **Undo where possible.** Swipe rejected? Can swipe right later. Contract pending? Can cancel before signing.
 
+---
+
 ## 1.8 Authentication, Security & Session Management
+
+### Authentication Flow
+
+PymeBoost uses Auth0 for centralized authentication. Frontend delegates login/logout to Auth0; backend validates JWT tokens.
+
+**Authentication Sequence:**
+1. User clicks "Login" → Redirected to Auth0
+2. User enters credentials (email/password or social login)
+3. Auth0 validates and returns JWT token + user metadata
+4. Frontend stores token in `authStore`
+5. All subsequent API requests include JWT in Authorization header
+6. Backend validates JWT on every request
+7. User clicks "Logout" → Token cleared from `authStore` → Redirected to homepage
+
+**Token Storage:**
+- JWT stored in memory (authStore) during session
+- Token refreshed automatically before expiration via Auth0 silent authentication
+- On page refresh, Auth0 callback validates session and restores token
+- No localStorage/sessionStorage (prevents XSS attacks)
+
+---
+
+### Authorization & Permissions
+
+**Permission Model:**
+
+| User Type | Can Do | Cannot Do |
+|-----------|--------|-----------|
+| **PYME (Verified)** | Browse advisors, swipe, message, create contracts, track projects, rate advisors | Access advisor analytics, upload fake documents |
+| **Advisor (Verified)** | Receive matches, message, negotiate contracts, submit reports, view ratings | Browse all PYMES, initiate contacts, accept unverified PYMES |
+| **Unauthenticated** | View homepage, sign up | Access any feature |
+
+**Permission Enforcement:**
+- Frontend: `AuthGuard` redirects unauthenticated users
+- Frontend: Feature components check `authStore.accountType` before rendering admin-only sections
+- Backend: Every endpoint validates JWT + checks `accountType` + verifies resource ownership (can't view other PYME's contracts)
+
+---
+
+### Session Management
+
+**Session Lifecycle:**
+
+| Event | Action |
+|-------|--------|
+| **Login** | Auth0 returns JWT (valid 24 hours). Token stored in authStore |
+| **Active Use** | Auth0 silent authentication refreshes token automatically (5 min before expiration) |
+| **Page Refresh** | Auth0 callback checks session → Restores token if still valid |
+| **Token Expired** | User redirected to login. Clear authStore |
+| **Logout** | Token removed from authStore → User redirected to homepage |
+| **Inactivity Timeout** | Optional: Clear session after 30 min idle (implement via useEffect hook) |
+
+**Token Refresh Strategy:**
+- Frontend monitors token expiration via `useEffect`
+- 5 minutes before expiration, silently refresh via Auth0
+- No user interruption unless internet disconnects
+- If refresh fails, logout user gracefully
+
+---
+
+### Security Measures
+
+### Frontend Security
+
+| Measure | Implementation |
+|---------|-----------------|
+| **XSS Prevention** | No innerHTML. React escapes by default. DOMPurify for user-generated content (chat messages) |
+| **CSRF Protection** | Backend uses SameSite cookies. Frontend sends CSRF token in headers for mutations |
+| **Input Validation** | Zod schemas validate all user input before submission |
+| **Sensitive Data** | JWT in memory only. No passwords ever stored. Mask credit cards in payment forms (show last 4 digits) |
+| **Secure Headers** | Content-Security-Policy, X-Frame-Options, X-Content-Type-Options set by backend |
+| **HTTPS Only** | All traffic encrypted. Backend redirects HTTP → HTTPS |
+
+### API Communication Security
+
+| Measure | Implementation |
+|---------|-----------------|
+| **JWT Authentication** | Every request includes `Authorization: Bearer <token>` header |
+| **Request Signing** | Optional: HMAC signature for sensitive mutations (contracts, payments) |
+| **Rate Limiting** | Backend rate limits API endpoints (100 req/min per user) |
+| **Data Encryption** | Sensitive fields encrypted at rest (credit cards, phone numbers) |
+| **Audit Logging** | Backend logs all sensitive actions (contract created, payment made) |
+
+### Message Security (Chat)
+
+| Measure | Implementation |
+|---------|-----------------|
+| **Blocked Keywords** | Chat validates messages. Blocks external emails, phone numbers, social media links |
+| **Message Encryption** | Optional: E2E encryption for chat messages (TLS transport + database encryption) |
+| **Access Control** | Only matched PYME and Advisor can see each other's messages. Verified via backend |
+
+---
+
+### Data Privacy
+
+**What Data Exists:**
+- PYME: Company name, legal ID, industry, objectives, payment method
+- Advisor: Name, experience, certifications, projects, ratings
+- Contracts: Terms, budget, metrics, reports
+- Chat: Messages, timestamps
+- Payments: Credit card (masked), transaction history
+
+**Data Handling:**
+- No personal data shared between PYME and Advisor without consent (only within contract context)
+- PYME can download own data (GDPR compliance)
+- Advisor ratings visible to other PYMEs but not PYME identities
+- Deleted contracts kept in archive (not shown to users, audit trail for compliance)
+
+---
+
+### Password & Credential Management
+
+- **No passwords stored in frontend.** Auth0 handles credentials.
+- **No secrets in code.** Credentials loaded from Google Secret Manager via environment variables.
+- **Payment credentials:** Credit card info sent to payment processor (Stripe), never stored in PymeBoost database.
+- **API keys:** Backend API keys stored in Google Secret Manager, rotated quarterly.
+
+---
+
+### Compliance & Standards
+
+| Standard | Requirement |
+|----------|------------|
+| **OWASP Top 10** | Implement protections against injection, XSS, broken auth, sensitive data exposure |
+| **GDPR** | Users can export data, delete account (soft delete with audit trail) |
+| **PCI-DSS** | Credit card info handled by Stripe, not stored locally |
+| **WCAG 2.1 AA** | All authentication UI keyboard navigable, screen reader compatible |
+
+---
+
+### Monitoring & Alerts
+
+**What Gets Monitored:**
+- Failed login attempts (alert if >5 in 10 min)
+- Token refresh failures
+- Unauthorized access attempts (401, 403 errors)
+- Suspicious activity (unusual IP, rapid requests)
+- Payment failures
+
+**Alerting:**
+- Frontend: Sentry captures errors, sends to monitoring dashboard
+- Backend: Logs all security events to Cloud Logging
+- Team: On-call engineer notified of critical security issues
+
+---
+
+### Key Rules
+
+- **Auth0 owns authentication.** Frontend never handles passwords.
+- **JWT in memory only.** Never localStorage.
+- **Every API request validated.** JWT + permission check on backend.
+- **No sensitive data in logs.** Never log passwords, credit cards, tokens.
+- **Validate & escape user input.** Frontend (Zod) + Backend (server-side validation).
+- **Blocked keywords in chat.** Prevent contact info sharing outside platform.
+- **Audit trail for sensitive actions.** Track who did what, when.
+- **Refresh tokens silently.** User never sees "session expired" unless truly necessary.
 
 ## 1.9 Testing, Observability & CI/CD
 
+### Testing Strategy
+
+### Unit Tests (Vitest)
+
+**What to test:** Utilities, hooks, validators, services
+
+**Coverage target:** 80% of business logic
+
+**Importance:**
+- ESM-native support for modern JavaScript
+- Perfect integration with Vite and Next.js 15
+- Faster test execution
+- TypeScript out-of-the-box
+
+```
+frontend/src/features/matching/hooks/useAdvisorMatching.ts → frontend/src/tests/features/matching.spec.ts
+frontend/src/features/contracts/validators/contractValidator.ts → frontend/src/tests/features/contracts.spec.ts
+frontend/src/lib/helpers.ts → frontend/src/tests/shared/helpers.spec.ts
+```
+
+**Run locally:** `npm run test` (watch mode)
+**Run once:** `npm run test:run`
+**Coverage report:** `npm run test:coverage`
+
+---
+
+### Integration Tests (Playwright)
+
+**What to test:** Complete user workflows end-to-end
+
+**Critical flows:**
+- PYME signup → onboarding → browse advisors
+- Advisor matching → chat → contract negotiation
+- Contract tracking → phase reporting → completion
+- Error handling (network failures, validation errors)
+
+**Run locally:** `npm run test:e2e`
+
+**Run in CI:** GitHub Actions runs on every PR
+
+---
+
+### Test Organization
+
+| Test Type | Tool | Location | Frequency |
+|-----------|------|----------|-----------|
+| **Unit** | Vitest | `frontend/src/tests/features/`, `frontend/src/tests/shared/` | On save (watch mode) |
+| **Integration** | Playwright | `frontend/tests/e2e/` | Before commit, on PR |
+| **Visual** | Optional (Percy, Chromatic) | CI/CD only | On PR |
+
+---
+
+### Observability
+
+### Frontend Logging & Error Tracking
+
+**Tools:**
+- **Sentry:** Captures all errors, sends to dashboard
+- **Google Cloud Logging:** Logs important events (login, contract created)
+- **Console logs:** Development only (removed in production via tree-shaking)
+
+**What gets logged:**
+
+| Event | Tool | Purpose |
+|-------|------|---------|
+| **Unhandled errors** | Sentry | Catch bugs before users report them |
+| **API errors** | Google Cloud Logging + Sentry | Debug backend issues |
+| **User actions** | Google Cloud Logging | Track feature usage (which advisors get clicked) |
+| **Performance metrics** | Google Cloud Monitoring | Monitor slow pages |
+
+**Error Tracking Pattern:**
+```
+ApiClient catches error
+→ Logs to Sentry + Cloud Logging
+→ Notifies user via toast
+→ Does NOT crash app
+```
+
+### Performance Monitoring
+
+**Metrics tracked:**
+- Page load time (First Contentful Paint, Largest Contentful Paint)
+- API response times
+- JavaScript bundle size
+- Memory usage
+
+**Tools:** Google Cloud Monitoring, Sentry
+
+---
+
+### CI/CD Pipeline
+
+### GitHub Actions Workflows
+
+**On every push to main:**
+
+1. **Lint & Format** (ESLint, Prettier)
+   - Check code style
+   - Fail if errors found
+
+2. **Unit Tests** (Vitest)
+   - Run all unit tests with `npm run test:run`
+   - Report coverage
+   - Fail if <80% coverage
+
+3. **Integration Tests** (Playwright)
+   - Run critical user flows
+   - Fail if any flow breaks
+
+4. **Build** (Next.js)
+   - Build production bundle
+   - Check for TypeScript errors
+   - Verify build succeeds
+
+5. **Deploy to Staging** (Google App Engine)
+   - Deploy to staging environment
+   - Run smoke tests
+   - Notify team if failed
+
+**On PR merge to main:**
+
+6. **Deploy to Production** (Google App Engine)
+   - Deploy to production
+   - Monitor Sentry + Cloud Logging for 10 min
+   - Rollback if critical errors detected
+
+---
+
+### Deployment Environments
+
+| Environment | Purpose | Auto-Deploy | Branch |
+|-------------|---------|------------|--------|
+| **Development** | Local testing | No | Feature branches |
+| **Staging** | Final testing before production | Yes (on push to develop) | `develop` |
+| **Production** | Live users | Manual approval | `main` |
+
+---
+
+### Deployment Strategy
+
+**Rolling deployment:** New code gradually replaces old code (no downtime)
+
+**Rollback:** If critical errors detected post-deploy, one-click rollback to previous version
+
+---
+
+### Quality Gates
+
+Code must pass these checks before merging to main:
+
+| Gate | Tool | Rule |
+|------|------|------|
+| **Lint** | ESLint | No style violations |
+| **Tests** | Vitest | 80%+ coverage, all tests pass |
+| **Build** | Next.js | No TypeScript errors |
+| **E2E** | Playwright | All critical workflows pass |
+| **Security** | Snyk | No critical vulnerabilities |
+| **Performance** | Lighthouse | Core Web Vitals meet targets |
+
+---
+
+### Monitoring Alerts
+
+**Critical alerts (page team immediately):**
+- Unhandled errors spike (>10 in 5 min)
+- API error rate >5%
+- Page load time >3s
+- Failed deployments
+
+**Warning alerts (check next morning):**
+- Sentry error threshold crossed
+- Code coverage dropped below 80%
+- Bundle size increased >10%
+
+---
+
+### Key Rules
+
+- **Test critical workflows.** Unit tests for logic, integration tests for user flows.
+- **100% test pass before merging.** No exceptions.
+- **Monitor in real-time.** Sentry + Cloud Logging always on.
+- **Errors don't crash app.** Graceful error handling with user-friendly messages.
+- **Auto-deploy to staging.** Manual approval for production.
+- **Coverage target 80%.** Acceptable trade-off between speed and reliability.
+- **Rollback one-click away.** If production breaks, roll back immediately.
+
 ## 1.10 Performance Optimization Strategy
+
+### Core Performance Targets
+
+| Metric | Target | Tool |
+|--------|--------|------|
+| **First Contentful Paint (FCP)** | <1.8s | Lighthouse |
+| **Largest Contentful Paint (LCP)** | <2.5s | Lighthouse |
+| **Cumulative Layout Shift (CLS)** | <0.1 | Lighthouse |
+| **JavaScript Bundle** | <150KB (gzipped) | Webpack Bundle Analyzer |
+| **API Response Time** | <500ms | Cloud Monitoring |
+
+---
+
+### Code Splitting
+
+Next.js automatically code-splits by route. Each feature loads only when accessed:
+
+```
+Initial bundle: app shell + authentication (50KB)
+/matching: +40KB (loaded on demand)
+/contracts: +35KB (loaded on demand)
+/dashboard: +30KB (loaded on demand)
+```
+
+**Result:** Users loading the app don't download matching/contracts code until needed.
+
+---
+
+### Image Optimization
+
+**Rules:**
+- Use Next.js `<Image>` component (automatic lazy loading, responsive sizes)
+- Compress images before upload (use TinyPNG)
+- WebP format for advisors avatars, project screenshots
+- Lazy load images below fold (native `loading="lazy"`)
+
+---
+
+### Caching Strategy
+
+| Data | Cache Duration | Tool |
+|------|-----------------|------|
+| **Advisors list** | 5 minutes | TanStack Query |
+| **Active contracts** | 1 minute (refetch on mutation) | TanStack Query |
+| **Chat messages** | Infinite (sync via WebSocket) | TanStack Query |
+| **User profile** | 30 minutes | TanStack Query |
+| **Static assets (CSS, JS)** | 1 year (cache busted on deploy) | Browser cache |
+
+---
+
+### Component Memoization
+
+Prevent unnecessary re-renders:
+
+- **Heavy components:** Use `React.memo()` (MatchingCard, ContractViewer)
+- **Expensive hooks:** Use `useMemo()` for calculations (advisor compatibility score)
+- **Callback stability:** Use `useCallback()` for handlers passed to children
+
+---
+
+### Bundle Analysis
+
+**Track bundle size in CI/CD:**
+- Generate bundle report on every PR
+- Fail if bundle increases >10KB
+- Monitor third-party dependencies bloat
+
+**Tools:** Webpack Bundle Analyzer, Next.js built-in stats
+
+---
+
+### Database Query Optimization
+
+- **Only fetch needed fields** (don't select *)
+- **Paginate results** (advisors list: 20 per page)
+- **Index frequently filtered columns** (advisor specialization, contract status)
+- **Avoid N+1 queries** (use JOINs, not loops)
+
+---
+
+### Network Optimization
+
+- **Compression:** gzip enabled on backend + frontend
+- **HTTP/2:** Enabled by default on Google App Engine
+- **CDN:** Static assets served from Google Cloud CDN (geo-distributed)
+- **Request batching:** Combine multiple requests where possible (e.g., fetch user + contracts in one call)
+
+---
+
+### Real-time Performance
+
+- **WebSocket for chat:** Reduce polling, instant updates
+- **Debounce search inputs:** Wait 300ms before API call (advisor search)
+- **Pagination:** Load 20 advisors per page, not all 1000
+- **Virtual scrolling:** For long lists (if contract history >100 items)
+
+---
+
+### Monitoring Performance
+
+**In production:**
+- Google Cloud Monitoring tracks Core Web Vitals
+- Sentry tracks frontend performance (API times, slow renders)
+- Alerts if FCP >3s or API response >1s
+
+**Locally:**
+- Run `npm run lighthouse` before commits
+- Check bundle size: `npm run analyze`
+
+---
+
+### Key Rules
+
+- **Ship less JavaScript.** Code split by route. Lazy load images.
+- **Cache aggressively.** TanStack Query + browser cache. Refetch on mutations.
+- **Monitor bundle size.** Fail PR if increases >10KB.
+- **Avoid re-renders.** Memoize heavy components. Use useCallback for stability.
+- **Database first.** Optimize queries, pagination, indexes. Don't fix on frontend.
+- **Measure constantly.** Lighthouse, Sentry, Cloud Monitoring in CI/CD and production.
+
+---
 
 ## 1.11 C4 Diagrams
 
+Level 2 visualizes external dependencies that the frontend communicates with. Level 3 visualizes how code is organized internally in layers (Features, Shared, Infrastructure) and how data flows between them.
 
+---
 
+### Level 2: Container Diagram
+
+The container diagram visualizes the Next.js Frontend as a black box within its external ecosystem.
+
+**Main Components:**
+- **Browser:** PYME and Advisor users
+- **Next.js Frontend:** Main React application (SSR)
+- **Auth0:** OAuth 2.0 authentication service
+- **Backend API:** Node.js REST API with JWT validation
+- **Google Cloud Logging:** Observability system (logs, metrics)
+- **Sentry:** Real-time frontend error tracking
+
+**Relationships:**
+- Users access frontend via HTTPS
+- Frontend authenticates with Auth0 via OAuth 2.0
+- Frontend fetches data from Backend API via REST + JWT
+- Frontend sends logs and metrics to Cloud Logging via gRPC
+- Frontend reports errors to Sentry via HTTPS
+
+[Container Diagram](../../docs/images/containers_c4.png)
+
+---
+
+### Component Diagram
+
+The component diagram breaks down the internal architecture of the Next.js Frontend into three vertical layers.
+
+### Features Layer (Top Layer)
+
+Six independent features, each with its own: components, hooks, services, validators.
+
+- **Matching:** Advisor discovery and swipe interface
+- **Contracts:** Negotiation and contract signing
+- **Messaging:** Real-time chat and message history
+- **Dashboard:** Project tracking and metrics display
+- **Reports:** Report generation and viewing
+- **Auth:** Login, logout, session management
+
+**Characteristic:** They don't import from each other. Each feature is an autonomous module.
+
+### Shared Layer (Middle Layer)
+
+Reusable resources shared by all features.
+
+- **UI Components:** Button, Input, Modal, Card, Badge (reusable primitives)
+- **Hooks & Guards:** useNotifications, AuthGuard (cross-feature logic)
+
+**Characteristic:** If 2+ features need something, it lives here. Single point of definition.
+
+### Infrastructure Layer (Bottom Layer)
+
+The base that all features depend on. Handles state, data, HTTP, and validation.
+
+- **Zustand:** authStore, notificationStore, uiStore (global state)
+- **TanStack Query:** useQuery, useMutation, caching (server state)
+- **ApiClient:** JWT injection, error handling, retries (HTTP layer)
+- **Validators:** Zod schemas (data validation)
+
+**Characteristic:** Centralized. A change here propagates automatically to all features.
+
+### Data Flow
+
+```
+Features → Shared Components/Hooks → Infrastructure (Zustand, TanStack Query)
+         → Infrastructure (Zustand, TanStack Query)
+         
+TanStack Query → ApiClient → Backend API / Auth0
+```
+
+[Component Diagram](../../docs/images/component_c4.png)
+
+---
+
+### Key Insights
+
+**From Level 2:**
+- Frontend is a client that depends on Auth0, Backend, Cloud Logging, Sentry
+- All communications are secure (HTTPS, OAuth 2.0, JWT)
+- Observability and error tracking are integrated from the start
+
+**From Level 3:**
+- Features are independent but share UI and hooks via the Shared layer
+- Infrastructure is the immutable base that all features depend on
+- Zustand manages global state (auth, notifications, UI)
+- TanStack Query manages server data with automatic caching
+- ApiClient centralizes JWT injection, error handling, and logging
+- Validators ensure data integrity at the boundary (API ↔ App)
+- A change in Infrastructure automatically affects all features (no duplication)
 
 ---
 

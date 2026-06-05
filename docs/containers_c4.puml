@@ -1,0 +1,26 @@
+@startuml PymeBoost_Frontend_C4_Level2
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+Person(pyme, "PYME User", "Browses advisors,\nmanages contracts")
+Person(advisor, "Advisor User", "Receives matches,\nmanages projects")
+
+System_Boundary(frontend_boundary, "PymeBoost Frontend") {
+    Container(nextjs, "Next.js Frontend", "React 19, TypeScript, SSR", "Matching, Contracts,\nMessaging, Dashboard,\nReports, Auth")
+}
+
+System_Ext(auth0, "Auth0", "Authentication & Session Management", "JWT tokens,\nUser credentials")
+System_Ext(backend, "Backend API", "Node.js REST API", "Advisors, Contracts,\nMessages, Dashboards,\nReports")
+System_Ext(cloudlogging, "Google Cloud Logging", "Observability & Monitoring", "Application events,\nMetrics, Performance")
+System_Ext(sentry, "Sentry", "Error Tracking & Monitoring", "Frontend errors,\nPerformance issues,\nUser sessions")
+
+Rel(pyme, nextjs, "Uses via Browser", "HTTPS")
+Rel(advisor, nextjs, "Uses via Browser", "HTTPS")
+
+Rel(nextjs, auth0, "Authenticates user", "OAuth 2.0")
+Rel(nextjs, backend, "Fetches/Sends data", "REST API + JWT")
+Rel(nextjs, cloudlogging, "Sends logs & metrics", "gRPC")
+Rel(nextjs, sentry, "Reports errors & perf", "HTTPS")
+
+@enduml
