@@ -559,7 +559,7 @@ Components are built from primitives, not extended:
 All state updates use immutable patterns (spread operator, Zustand setters, React hooks). Mutating state directly:
 - Breaks Zustand reactivity
 - Causes stale UI renders
-- Creates race conditions in async workflows
+- Creates race conditions in async workflows 
 
 Zustand and React enforce this automatically through their APIs.
 
@@ -579,6 +579,85 @@ Zustand and React enforce this automatically through their APIs.
 **Without these patterns:** Each layer would duplicate auth checking, error handling, validation, and event logic. Adding a new feature would require copying code from 3+ places, guaranteeing bugs.
 
 ## 1.6  State Management & API Communication
+
+### Global State (Zustand)
+ 
+Three Zustand stores hold state shared across all features:
+ 
+| Store | Data | Why It Matters |
+|-------|------|--------|
+| **authStore** | User, token, account type, permissions | Every feature needs to know who you are and what you can do |
+| **notificationStore** | Toast messages, alerts | When contracts are accepted or errors happen, all features need to notify users |
+| **uiStore** | Sidebar open/closed, modal visibility, theme | UI state doesn't belong on the backend; it's purely client-side |
+ 
+Features access stores via hooks (e.g., `useAuthStore()`). State changes only through explicit actions, never direct mutations.
+ 
+Zustand is lightweight, no boilerplate, no prop drilling through 5+ component levels.
+ 
+---
+ 
+## Server State (TanStack Query)
+ 
+All data from the backend (advisors, contracts, messages, dashboards) is cached and kept in sync via TanStack Query.
+ 
+**How it works:**
+1. Service fetches from API
+2. Response validated with Zod (no invalid data enters state)
+3. Hook wraps service call with TanStack Query caching
+4. Component calls hook, receives ready-to-use data
+**Three data types:**
+- **Initial fetch:** useQuery caches and deduplicates requests
+- **Mutations:** Create/update/delete via useMutation
+- **Refetch:** After mutations, queries are invalidated to refetch fresh data
+
+ TanStack Query basically handles caching, deduplication, background updates, and stale data automatically. Components never manage backend data manually.
+ 
+## API Communication Layer
+ 
+Single centralized `ApiClient` handles all HTTP communication:
+- Injects JWT token into every request from authStore
+- Handles errors (401 → logout user, 5xx → retry with backoff)
+- Logs requests/responses to observability system
+- No service duplicates auth or error logic
+All services call through `apiClient`. No direct fetch() calls.
+ 
+**Why centralized:** JWT injection, error handling, retries, and logging happen once, not duplicated across 10+ service files.
+ 
+## Data Validation (Zod)
+ 
+Every response from the backend is validated against a Zod schema before entering state or components.
+ 
+Invalid data is rejected immediately. Components never receive unvalidated data.
+ 
+**Why mandatory:** Bad backend data (missing fields, wrong types) crashes features silently. Zod catches it at the boundary.
+ 
+## Mutations (Create, Update, Delete)
+ 
+When data changes (new contract, updated metrics), mutations trigger:
+1. Send change to backend
+2. On success, invalidate related queries to refetch fresh data
+3. Publish notification to notificationStore
+Queries automatically refetch and components re-render with new data.
+ 
+**Why invalidate:** No manual state updates. Backend is source of truth; invalidation keeps client in sync.
+ 
+## State Distribution Summary
+ 
+| State Type | Managed By | Where | When to Use |
+|-----------|-----------|-------|-----------|
+| **Global (auth, notifications, UI)** | Zustand | `src/store/` | Info needed across multiple features |
+| **Backend data** | TanStack Query | Services via hooks | Advisors, contracts, messages, dashboards |
+| **Form/UI toggles** | React useState | Component | Temporary, not shared (form inputs, dropdowns) |
+ 
+## Key Rules
+ 
+- **Zustand only for global state.** Auth, notifications, UI toggles. Not backend data.
+- **TanStack Query for all backend data.** One service per feature. Query invalidation on mutations.
+- **Zod validates every API response.** No unvalidated data enters state.
+- **ApiClient is the single HTTP entry point.** JWT injection, error handling, logging centralized.
+- **No prop drilling.** Use hooks to access global or server state.
+- **Components never call API directly.** Always through services and hooks.
+ 
 
 ## 1.7 Workflows & Interaction Flows
 
