@@ -657,9 +657,140 @@ Queries automatically refetch and components re-render with new data.
 - **ApiClient is the single HTTP entry point.** JWT injection, error handling, logging centralized.
 - **No prop drilling.** Use hooks to access global or server state.
 - **Components never call API directly.** Always through services and hooks.
- 
+
+---
 
 ## 1.7 Workflows & Interaction Flows
+
+PymeBoost has four main user workflows that drive the platform. Each workflow spans multiple features and involves specific interaction patterns.
+
+### 1. PYME Registration & Onboarding
+
+**Users:** New PYME owners
+
+**Flow:**
+1. User lands on homepage
+2. Clicks "Sign Up as PYME"
+3. Redirected to Auth0 login/signup
+4. Completes basic info (email, company name, phone)
+5. Uploads legal document (cédula jurídica as PDF)
+6. AI validates document against MEIC registry
+7. Completes company context form (300 words max)
+8. Dashboard shows "Account pending verification"
+9. Backend validates document → Account activated
+10. User redirected to Matching feature
+
+**Key Interactions:**
+- Form validation with Zod before submission
+- File upload with progress indicator
+- Real-time status updates via notifications
+- AuthGuard redirects unauthenticated users to login
+
+**Features Involved:** Auth, Dashboard
+
+### 2. Advisor Discovery & Matching (Swipe Interface)
+
+**Users:** PYME looking for advisors
+
+**Flow:**
+1. User navigates to Matching page
+2. AI generates personalized advisor recommendations
+3. User sees advisor cards (Tinder-like)
+4. User swipes right (approved) or left (rejected)
+5. Right swipe creates a match → Chat opens automatically
+6. Left swipe discards recommendation → Next card loads
+
+**Key Interactions:**
+- Card animations (swipe, fade, slide)
+- Real-time compatibility score display
+- Previous project showcase on each card
+- Estimated metrics improvement visible
+- One-tap messaging after approval
+
+**Features Involved:** Matching, Messaging
+
+### 3. Contract Negotiation & Signing
+
+**Users:** PYME and Advisor negotiating terms
+
+**Flow:**
+1. PYME and Advisor chat about project details
+2. PYME clicks "Negotiate Tariff"
+3. Modal opens with contract template
+4. PYME adjusts: budget, duration, metrics, deliverables
+5. PYME sends proposal to Advisor
+6. Advisor reviews proposal in chat
+7. Advisor accepts or counter-offers
+8. Both agree on terms
+9. PYME clicks "Marry The Prospect"
+10. Contract becomes active → Dashboard tracking begins
+
+**Key Interactions:**
+- Form fields for tariff, duration, metrics
+- Real-time validation of contract terms
+- Visual summary of proposed terms
+- Notification when Advisor responds
+- One-click contract finalization
+
+**Features Involved:** Messaging, Contracts, Dashboard
+
+### 4. Project Tracking & Reporting
+
+**Users:** PYME and Advisor monitoring active contract
+
+**Flow:**
+1. Contract is active → Dashboard visible to both
+2. Dashboard shows: progress %, phases, metrics, timeline
+3. Advisor completes phase → Submits phase report
+4. Report visible on dashboard immediately
+5. Metrics auto-update based on reported data
+6. PYME sees progress in real-time
+7. Project ends → PYME rates Advisor
+8. Rating stored in Advisor profile
+9. Contract closed → Accessible in history
+
+**Key Interactions:**
+- Progress bar updates on phase completion
+- Metric charts showing before/after
+- Phase timeline with completed/pending indicators
+- Report submission form with validation
+- Rating modal at project end
+- History accessible from dashboard
+
+**Features Involved:** Dashboard, Reports, Contracts
+
+### User Journey by Account Type
+
+**PYME Journey**
+```
+Sign Up → Onboarding → Browse Advisors → Swipe & Match → Chat → Negotiate → Sign Contract → Track Progress → Rate Advisor → View History
+```
+
+**Advisor Journey**
+```
+Sign Up → Profile Setup → Wait for Matches → Accept Chat → Negotiate Terms → Sign Contract → Work & Report → Receive Rating → View Analytics
+```
+
+## Interaction Patterns
+
+| Pattern | Where | Purpose |
+|---------|-------|---------|
+| **Modal Forms** | Contract negotiation, phase reports | Focused input without page navigation |
+| **Toast Notifications** | Every feature | Status updates (contract accepted, phase done, error) |
+| **Loading States** | Data fetching | Spinner or skeleton while data loads |
+| **Empty States** | No data yet | Friendly message + CTA (e.g., "No contracts yet. Browse advisors") |
+| **Inline Validation** | Forms | Real-time feedback (red border + error text) |
+| **Swipe Animations** | Matching | Smooth card transitions (right = approve, left = reject) |
+| **Real-time Updates** | Dashboard, chat | WebSocket for live metric/message updates |
+| **Confirmation Dialogs** | Critical actions | "Are you sure?" before deleting or canceling |
+
+## Key Rules
+
+- **Every workflow starts with authentication.** AuthGuard protects all pages.
+- **Forms validate before submission.** Zod schemas prevent invalid data.
+- **Notifications inform all state changes.** Contract accepted? Match created? User gets toast.
+- **No silent errors.** Every API error shows a user-friendly message.
+- **Undo where possible.** Swipe rejected? Can swipe right later. Contract pending? Can cancel before signing.
 
 ## 1.8 Authentication, Security & Session Management
 
