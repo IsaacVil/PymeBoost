@@ -495,49 +495,18 @@ Components avoid fixed widths; use max-width containers (`max-w-4xl`, `max-w-6xl
 
 PymeBoost employs strategic, essential OOP design patterns to maintain a modular, testable, and maintainable frontend. Patterns are applied only where they solve real architectural problems—no over-engineering.
 
-### Core Architectural Pattern
-
-**Feature-Based MVC with Hooks:**
-- **Model:** Services + Zod schemas (data layer)
-- **View:** React components (UI layer)  
-- **Controller:** Custom hooks (business logic layer)
-
-Components receive processed data from hooks. Hooks orchestrate business logic and call services. Services handle API communication exclusively.
-
 ### Design Patterns by Responsibility
 
-| Class / Interface | Location | Responsibility | Pattern | Justification |
-|------------------|----------|----------------|---------|--------------|
-| AuthGuard | [src/shared/guards/AuthGuard.tsx](src/shared/guards/AuthGuard.tsx) | Protects private routes; validates active session before rendering | Guard | Enforces authentication boundary; prevents unauthorized route access without coupling auth logic to every page |
-| authStore | [src/store/authStore.ts](src/store/authStore.ts) | Manages global auth state (user, token, permissions) | Singleton | Single source of truth for auth across all features; Zustand enforces one instance automatically |
-| notificationStore | [src/store/notificationStore.ts](src/store/notificationStore.ts) | Publishes system-wide toasts, alerts, notifications | Observer (Pub-Sub) | Decouples notification producers from consumers; any feature can notify without importing UI components |
-| ApiClient | [src/lib/ApiClient.ts](src/lib/ApiClient.ts) | Base HTTP client with reusable request/response logic | Template Method | Centralizes error handling, JWT injection, retry logic; child clients (matchingService, contractService) reuse the flow |
-| MatchingService | [src/features/matching/services/matchingService.ts](src/features/matching/services/matchingService.ts) | Determines advisor recommendation strategy based on context | Strategy | Enables pluggable matching algorithms (AI-based, rule-based, manual) without modifying calling code |
-| useAdvisorMatching | [src/features/matching/hooks/useAdvisorMatching.ts](src/features/matching/hooks/useAdvisorMatching.ts) | Creates and manages matching workflow logic | Factory | Encapsulates setup of TanStack Query, form state, service calls; components use a ready-made hook instead of assembling pieces |
-| ContractValidator | [src/features/contracts/validators/contractValidator.ts](src/features/contracts/validators/contractValidator.ts) | Validates contract terms, negotiation constraints | Strategy | Different contract types (fixed-price, hourly, milestone) have different validation rules applied through Zod schemas |
-| QueryClientFactory | [src/lib/queryClient.ts](src/lib/queryClient.ts) | Initializes and configures TanStack Query | Factory | Centralizes cache settings, retry logic, staleTime; ensures consistent query behavior across all API calls |
-
-### Why These Patterns Are Essential to PymeBoost
-
-**1. Guard Pattern (AuthGuard)**
-PymeBoost handles sensitive advisor-SME relationships and contracts. The Guard pattern **prevents unauthorized access at the route level before any logic executes**. Without it, business logic must check auth repeatedly across features, creating security gaps. AuthGuard is a single point of enforcement.
-
-**2. Singleton Pattern (authStore, queryClient)**
-Auth state must be consistent everywhere: contracts, messaging, dashboards. Singleton ensures **one authoritative source of truth**. If authStore were instantiated multiple times, token mismatches would break features silently. Zustand's design enforces this automatically, making it safe.
-
-**3. Observer Pattern (notificationStore)**
-When an advisor accepts a contract or a project milestone updates, multiple UI components must react without knowing about each other. Observer **decouples event producers from consumers**. Without it, components would need direct imports of other components or prop drilling through 5+ levels, creating fragile code.
-
-**4. Template Method Pattern (ApiClient)**
-Every API call in PymeBoost needs: JWT injection, error handling, rate limiting, retry logic. Template Method **defines the common flow once, reused by all services**. Without it, duplicate error handling across 10+ services creates bugs when one gets fixed and others don't.
-
-**5. Strategy Pattern (MatchingService, ContractValidator)**
-Advisor matching can be rule-based, AI-powered, or manual. Contract validation differs for fixed-price vs. hourly rates. Strategy **allows interchangeable algorithms without modifying components**. Without it, adding a new matching algorithm requires touching the component layer.
-
-**6. Factory Pattern (useAdvisorMatching, QueryClientFactory)**
-Creating a matching workflow requires: API calls, TanStack Query setup, form state, validation, notifications. Factory **encapsulates this complexity**. Components use `useAdvisorMatching()` instead of assembling 20 pieces—reducing code, bugs, and cognitive load.
-
----
+| Class / Interface | Location | Responsibility | Pattern | Why It's Vital |
+|------------------|----------|----------------|---------|----------------|
+| AuthGuard | [src/shared/guards/AuthGuard.tsx](src/shared/guards/AuthGuard.tsx) | Protects private routes; validates active session before rendering | Guard | **Security at a single point.** PymeBoost handles sensitive advisor-SME relationships and contracts. Without Guard, every component must check auth, creating security gaps. Guard enforces authorization before any logic executes. |
+| authStore | [src/store/authStore.ts](src/store/authStore.ts) | Manages global auth state (user, token, permissions) | Singleton | **One authoritative source.** Auth state must be consistent across all features (contracts, messaging, dashboards). Multiple instances = token mismatches = silent feature breakage. Zustand enforces one instance automatically. |
+| notificationStore | [src/store/notificationStore.ts](src/store/notificationStore.ts) | Publishes system-wide toasts, alerts, notifications | Observer (Pub-Sub) | **Decouples event producers from consumers.** When contracts are accepted or milestones update, 5+ features must react without knowing each other. Without Observer, features need direct imports or prop drilling through 5+ levels = fragile code. |
+| ApiClient | [src/lib/ApiClient.ts](src/lib/ApiClient.ts) | Base HTTP client with reusable request/response logic | Template Method | **Eliminates duplicate error handling.** Every API call needs JWT injection, error handling, rate limiting, retries. Template Method defines the flow once, reused by all services. Without it, duplicate logic across 10+ services means bugs fixed in one place don't propagate. |
+| MatchingService | [src/features/matching/services/matchingService.ts](src/features/matching/services/matchingService.ts) | Determines advisor recommendation strategy based on context | Strategy | **Swappable algorithms without code changes.** Matching can be rule-based, AI-powered, or manual. Strategy allows new algorithms without modifying components. Without it, adding a matching type requires touching component and service layers. |
+| useAdvisorMatching | [src/features/matching/hooks/useAdvisorMatching.ts](src/features/matching/hooks/useAdvisorMatching.ts) | Creates and manages matching workflow logic | Factory | **Encapsulates workflow complexity.** Setup requires: TanStack Query config, form state, Zod validation, service calls. Factory gives components `useAdvisorMatching()` instead of assembling 20 pieces—reduces bugs and cognitive load. |
+| ContractValidator | [src/features/contracts/validators/contractValidator.ts](src/features/contracts/validators/contractValidator.ts) | Validates contract terms, negotiation constraints | Strategy | **Runtime validation of critical business rules.** Fixed-price, hourly, and milestone contracts have different constraints. Strategy centralizes validation logic; invalid data never reaches components or state. |
+| QueryClientFactory | [src/lib/queryClient.ts](src/lib/queryClient.ts) | Initializes and configures TanStack Query | Factory | **Consistent caching across all features.** Factory centralizes cache settings, retry logic, staleTime. Without it, some features cache aggressively while others refetch constantly = data inconsistency and poor UX. |
 
 ### Code Layer Structure: How Patterns Enforce Separation
 
@@ -593,22 +562,6 @@ All state updates use immutable patterns (spread operator, Zustand setters, Reac
 - Creates race conditions in async workflows
 
 Zustand and React enforce this automatically through their APIs.
-
----
-
-### Critical Rules Enforcing Pattern Integrity
-
-| Rule | Pattern Connection | Why It Matters for PymeBoost |
-|------|-------------------|------------------------------|
-| One responsibility per file | SRP, Interface Segregation | If `authService` also handles notifications, fixing an auth bug risks breaking notifications |
-| No business logic in components | Template Method, Factory | Logic duplication across components creates inconsistency (e.g., two matching screens with different retry logic) |
-| Validate all API input with Zod | Strategy, Dependency Inversion | Invalid contract data from backend breaks advisor's financial calculations downstream |
-| No prop drilling beyond 2 levels | Observer, Singleton | Passing contract data through 5+ components couples them; one change breaks the entire chain |
-| Keep components under 300 lines | Composition | Large components mask violations of SRP and are hard to test; split into focused pieces |
-| Hooks are pure functions | Factory, Dependency Inversion | Hooks with side effects are unpredictable; side effects belong in `useEffect` only |
-| All errors logged to Sentry | Observability pattern | Silent failures in matching algorithms or contract validation destroy user trust |
-
----
 
 ### Example: Matching Flow Pattern Integration
 
