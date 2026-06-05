@@ -73,6 +73,8 @@ The architecture supports:
 - Scalable module growth: new features added without affecting existing ones.
 - Simplified testing: feature-specific tests remain isolated.
 
+---
+
 ### Core Features
 
 PymeBoost is built around these core features:
@@ -83,6 +85,8 @@ PymeBoost is built around these core features:
 - **Dashboard:** Project overview, metrics, milestones, status tracking.
 - **Reports:** Report generation, viewing, download, sharing.
 - **Auth:** User authentication, login, logout, session management.
+
+---
 
 ### Complete Folder Structure
 
@@ -232,6 +236,7 @@ src/
     ├── logo.png
     └── icons/
 ```
+---
 
 ### Folder Responsibilities
  
@@ -264,7 +269,9 @@ src/
 | `tests/` | Feature and component tests using Playwright and Jest. Organized by feature. |
 | `styles/` | Global CSS and CSS variables. |
 | `public/` | Static assets (logos, icons, images). |
- 
+
+---
+
 ### Naming Conventions
  
 **Components:**
@@ -285,6 +292,7 @@ src/
 **Stores:**
 - camelCase with `Store` suffix: `authStore.ts`, `notificationStore.ts`, `uiStore.ts`
 
+---
 
 ### Feature Internal Structure
 
@@ -327,6 +335,8 @@ Features communicate through:
 
 Features do NOT import from each other's folders. If feature A needs functionality from feature B, that logic belongs in the shared layer or backend API.
 
+---
+
 ### Key Rules
  
 - Each feature is independent: its own components, hooks, services, types, validators.
@@ -342,16 +352,16 @@ Features do NOT import from each other's folders. If feature A needs functionali
 ---
 
 ## 1.3 Component System & UI Architecture
+ 
+PymeBoost uses feature-first component organization where components live within their feature domain. Components belong to the feature that owns them. Shared primitives (Button, Input, Modal, etc.) live in `frontend/src/shared/components/ui/`.
+ 
+If a component is used by 2+ features → `frontend/src/shared/components/ui/`. 
 
-### Component Organization: Feature-First
- 
-PymeBoost uses **feature-first component organization** where components live within their feature domain. Components belong to the feature that owns them. Shared primitives (Button, Input, Modal, etc.) live in `shared/components/ui/`.
- 
-**Decision Rule:** If a component is used by 2+ features → `shared/components/ui/`. If used by 1 feature → `features/[feature]/components/`.
+If used by 1 feature → `frontend/src/features/[feature]/components/`.
  
 ### Component Layers
  
-**Layer 1: Primitives** (Feature-specific, presentational)
+**Layer 1**: Primitives (Feature-specific, presentational)
 - Single-responsibility components that accept data via props.
 - Examples: `MatchingCard`, `ContractViewer`, `ChatBubble`, `MetricsChart`.
 **Layer 2: Compound Components** (Assembled, reusable within feature)
@@ -364,6 +374,8 @@ PymeBoost uses **feature-first component organization** where components live wi
 **Shared Primitives** (`shared/components/ui/`)
 - Foundational elements used across features: Button, Input, Badge, Modal, Card, Dialog, Select, Checkbox, Avatar, Textarea, Toast, Tooltip.
 - Use Radix UI for behavior and TailwindCSS for styling.
+
+---
 
 ### Feature Component Structure
  
@@ -379,6 +391,8 @@ PymeBoost uses **feature-first component organization** where components live wi
 - `MessageBubble` (Primitive): Single message.
 - `ChatPanel` (Compound): MessageList + MessageInput combined.
 - `ChatPage` (Container): Manages real-time updates.
+
+---
  
 ### Composition Patterns
  
@@ -390,16 +404,21 @@ PymeBoost uses **feature-first component organization** where components live wi
  
 **No Cross-Feature Imports:** Features never import from other features. If two features need the same component, it moves to `shared/components/ui/`.
  
+--- 
+
 ### Responsive Design
  
-All components use TailwindCSS responsive utilities with mobile-first approach.
+All components use TailwindCSS responsive utilities with desktop-first approach. PymeBoost is designed for web platforms (advisors and SME managers use desktop/laptop).
  
 **Breakpoints:**
-- Mobile: < 640px
-- Tablet: 640px - 1024px  
-- Desktop: > 1024px
-Components avoid fixed widths; use max-width containers (`max-w-4xl`, `max-w-6xl`).
- 
+- Desktop: > 1024px (primary design target)
+- Tablet: 640px - 1024px (secondary, graceful degradation)
+- Mobile: < 640px (limited support for mobile browsers)
+
+Components are designed for desktop experience first; gracefully adapt to smaller screens using TailwindCSS breakpoints. Use max-width containers (`max-w-4xl`, `max-w-6xl`) to keep layouts readable on large screens.
+
+---
+
 ### Styling Rules
  
 - All components use **TailwindCSS utilities only**; no external stylesheets or CSS-in-JS.
@@ -409,6 +428,8 @@ Components avoid fixed widths; use max-width containers (`max-w-4xl`, `max-w-6xl
 - Cards: `p-6 shadow-sm border border-slate-200 rounded-lg`.
 - Modals: `bg-black/50` overlay, flexbox centered.
  
+---
+
 ### Accessibility
  
 - All interactive elements use Radix UI (ARIA attributes, keyboard navigation, focus management).
@@ -508,6 +529,8 @@ PymeBoost employs strategic, essential OOP design patterns to maintain a modular
 | ContractValidator | [frontend/src/features/contracts/validators/contractValidator.ts](frontend/src/features/contracts/validators/contractValidator.ts) | Validates contract terms, negotiation constraints | Strategy | **Runtime validation of critical business rules.** Fixed-price, hourly, and milestone contracts have different constraints. Strategy centralizes validation logic; invalid data never reaches components or state. |
 | QueryClientFactory | [frontend/src/lib/queryClient.ts](frontend/src/lib/queryClient.ts) | Initializes and configures TanStack Query | Factory | **Consistent caching across all features.** Factory centralizes cache settings, retry logic, staleTime. Without it, some features cache aggressively while others refetch constantly = data inconsistency and poor UX. |
 
+---
+
 ### Code Layer Structure: How Patterns Enforce Separation
 
 **Components** (`features/[feature]/components/`):
@@ -529,6 +552,8 @@ PymeBoost employs strategic, essential OOP design patterns to maintain a modular
 - Zod schemas define **Strategy**: different contract types validate differently.
 - Runtime validation ensures no invalid data reaches components or state.
 
+---
+
 ### State Distribution: Patterns in Practice
 
 **Global State (Zustand) — Singleton Pattern:**
@@ -547,12 +572,16 @@ PymeBoost employs strategic, essential OOP design patterns to maintain a modular
 - Form inputs, UI toggles, loading states—never persisted beyond component.
 - Keeps global state clean and predictable.
 
+---
+
 ### Composition Over Inheritance
 
 Components are built from primitives, not extended:
 - `ContractSection` = `ContractViewer` + `ContractTerms` + `ActionButtons` (composition, not inheritance).
 - `Button` component accepts `variant` prop instead of creating `PrimaryButton`, `SecondaryButton` subclasses.
 - **Why:** Composition is flexible; inheritance creates rigid hierarchies prone to fragility.
+
+---
 
 ### Immutability & State Safety
 
@@ -562,6 +591,8 @@ All state updates use immutable patterns (spread operator, Zustand setters, Reac
 - Creates race conditions in async workflows 
 
 Zustand and React enforce this automatically through their APIs.
+
+---
 
 ### Example: Matching Flow Pattern Integration
 
@@ -577,6 +608,8 @@ Zustand and React enforce this automatically through their APIs.
 8. **Advisor is notified** → Chat feature listens to notification event, updates UI
 
 **Without these patterns:** Each layer would duplicate auth checking, error handling, validation, and event logic. Adding a new feature would require copying code from 3+ places, guaranteeing bugs.
+
+---
 
 ## 1.6  State Management & API Communication
 
@@ -596,7 +629,7 @@ Zustand is lightweight, no boilerplate, no prop drilling through 5+ component le
  
 ---
  
-## Server State (TanStack Query)
+### Server State (TanStack Query)
  
 All data from the backend (advisors, contracts, messages, dashboards) is cached and kept in sync via TanStack Query.
  
@@ -610,9 +643,11 @@ All data from the backend (advisors, contracts, messages, dashboards) is cached 
 - **Mutations:** Create/update/delete via useMutation
 - **Refetch:** After mutations, queries are invalidated to refetch fresh data
 
- TanStack Query basically handles caching, deduplication, background updates, and stale data automatically. Components never manage backend data manually.
+TanStack Query basically handles caching, deduplication, background updates, and stale data automatically. Components never manage backend data manually.
+
+---
  
-## API Communication Layer
+### API Communication Layer
  
 Single centralized `ApiClient` handles all HTTP communication:
 - Injects JWT token into every request from authStore
@@ -622,16 +657,20 @@ Single centralized `ApiClient` handles all HTTP communication:
 All services call through `apiClient`. No direct fetch() calls.
  
 **Why centralized:** JWT injection, error handling, retries, and logging happen once, not duplicated across 10+ service files.
+
+---
  
-## Data Validation (Zod)
+### Data Validation (Zod)
  
 Every response from the backend is validated against a Zod schema before entering state or components.
  
 Invalid data is rejected immediately. Components never receive unvalidated data.
  
 **Why mandatory:** Bad backend data (missing fields, wrong types) crashes features silently. Zod catches it at the boundary.
+
+---
  
-## Mutations (Create, Update, Delete)
+### Mutations (Create, Update, Delete)
  
 When data changes (new contract, updated metrics), mutations trigger:
 1. Send change to backend
@@ -641,7 +680,7 @@ Queries automatically refetch and components re-render with new data.
  
 **Why invalidate:** No manual state updates. Backend is source of truth; invalidation keeps client in sync.
  
-## State Distribution Summary
+### State Distribution Summary
  
 | State Type | Managed By | Where | When to Use |
 |-----------|-----------|-------|-----------|
@@ -649,7 +688,7 @@ Queries automatically refetch and components re-render with new data.
 | **Backend data** | TanStack Query | Services via hooks | Advisors, contracts, messages, dashboards |
 | **Form/UI toggles** | React useState | Component | Temporary, not shared (form inputs, dropdowns) |
  
-## Key Rules
+### Key Rules
  
 - **Zustand only for global state.** Auth, notifications, UI toggles. Not backend data.
 - **TanStack Query for all backend data.** One service per feature. Query invalidation on mutations.
@@ -688,6 +727,8 @@ PymeBoost has four main user workflows that drive the platform. Each workflow sp
 
 **Features Involved:** Auth, Dashboard
 
+---
+
 ### 2. Advisor Discovery & Matching (Swipe Interface)
 
 **Users:** PYME looking for advisors
@@ -708,6 +749,8 @@ PymeBoost has four main user workflows that drive the platform. Each workflow sp
 - One-tap messaging after approval
 
 **Features Involved:** Matching, Messaging
+
+---
 
 ### 3. Contract Negotiation & Signing
 
@@ -734,6 +777,8 @@ PymeBoost has four main user workflows that drive the platform. Each workflow sp
 
 **Features Involved:** Messaging, Contracts, Dashboard
 
+---
+
 ### 4. Project Tracking & Reporting
 
 **Users:** PYME and Advisor monitoring active contract
@@ -759,7 +804,9 @@ PymeBoost has four main user workflows that drive the platform. Each workflow sp
 
 **Features Involved:** Dashboard, Reports, Contracts
 
-### User Journey by Account Type
+---
+
+### User Journey
 
 **PYME Journey**
 ```
@@ -770,6 +817,8 @@ Sign Up → Onboarding → Browse Advisors → Swipe & Match → Chat → Negoti
 ```
 Sign Up → Profile Setup → Wait for Matches → Accept Chat → Negotiate Terms → Sign Contract → Work & Report → Receive Rating → View Analytics
 ```
+
+---
 
 ## Interaction Patterns
 
