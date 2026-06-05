@@ -711,8 +711,6 @@ Prototipo Figma:
 
 ## 1.1 Technology Stack 
 
-## 1.1 Technology Stack
-
 | Technology                    | Version             | Purpose                               | Justification                                                                                                                            |
 | ----------------------------- | ------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | React                         | 19.1.0              | Main UI library                       | Enables the development of dynamic and reusable interfaces for dashboards, chats, and interactive systems within PymeBoost.              |
@@ -732,7 +730,7 @@ Prototipo Figma:
 | GitHub Environments           | Latest Stable       | Environment management                | Supports secure and organized management of Development, Stage, and Production environments.                                             |
 | Google Cloud Platform         | Latest Stable       | Main cloud platform service                   | Provides integration with backend services deployed within the project's cloud infrastructure.                                           |
 | Google Cloud Operations Suite | Latest Stable       | Observability and monitoring          | Enables monitoring of logs, metrics, and platform stability across the cloud ecosystem.                                                  |
-| Server Side Rendering (SSR)   | Next.js 15          | Hybrid frontend rendering             | Improves initial load performance, dashboard rendering, and overall user experience through server-side rendering.                       |
+| Client-Side Rendering (CSR) | Next.js 15 | Frontend rendering strategy | Enables dynamic and highly interactive user experiences directly in the browser for dashboards, chats, matching systems, and real-time platform interactions. |
 | Feature-Based Architecture    | Custom Architecture | Modular frontend organization         | Supports scalability and separation of functionalities such as dashboards, matching, contracts, and messaging.                           |
 | Monorepo Architecture         | GitHub Monorepo     | Shared frontend/backend repository    | Centralizes workflows, CI/CD pipelines, and collaboration between frontend and backend teams.                                            |
 | React Hook Form               | 7.57.0              | Form management                       | Efficiently manages complex forms and input handling within the frontend application.                                                    |
@@ -741,7 +739,114 @@ Prototipo Figma:
 | Google Cloud Operations Suite                 | Latest Stable                 | Observability and monitoring | Enables monitoring of logs, metrics, errors, and platform stability across the cloud ecosystem.                            |
 | Development / Stage / Production Environments | Standard Environment Strategy | Environment separation       | Allows independent configuration and deployment workflows for development, testing, and production stages of the platform. |
 
+---
 
+## 1.2 Frontend Architecture & Folder Structure
+
+PymeBoost frontend will follow a modular and scalable architecture based on **Next.js App Router** and a **Feature-Based Structure**. The application will be organized by business domains and functionalities instead of technical layers, improving maintainability, scalability, and collaboration between development teams.
+
+The frontend will be developed as a modern SaaS platform with:
+
+* Hybrid rendering using SSR and client-side rendering.
+* Modular reusable components.
+* Centralized state management.
+* Scalable API integration.
+* Isolated feature modules.
+
+This architecture allows the platform to scale efficiently as new modules such as dashboards, advisor matching, contracts, messaging, AI integrations, and reporting systems are added.
+
+
+### Architectural Principles
+
+| Principle                  | Description                                                                                                                            |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Feature-Based Architecture | The project is organized by functionalities such as dashboard, contracts, matching, and messaging instead of purely technical folders. |
+| Component Reusability      | Shared UI components are centralized to maintain consistency across the platform.                                                      |
+| Separation of Concerns     | Business logic, API communication, UI components, and state management are separated into independent modules.                         |
+| Scalability                | The structure supports adding new modules and features without affecting existing functionality.                                       |
+| Cloud-Oriented Frontend    | The frontend is designed to integrate efficiently with cloud-hosted backend services and APIs.                                         |
+| Monorepo Compatibility     | The architecture is compatible with the shared frontend/backend monorepo strategy used in the project.                                 |
+
+### Proposed Folder Structure
+
+```txt
+src/
+│
+├── app/
+│   ├── dashboard/
+│   ├── contracts/
+│   ├── matching/
+│   ├── messaging/
+│   ├── reports/
+│   ├── auth/
+│   └── settings/
+│
+├── components/
+│   ├── ui/
+│   ├── layouts/
+│   ├── charts/
+│   └── shared/
+│
+├── features/
+│   ├── dashboard/
+│   ├── contracts/
+│   ├── matching/
+│   ├── messaging/
+│   └── reports/
+│
+├── services/
+│   ├── api/
+│   ├── auth/
+│   └── storage/
+│
+├── store/
+│   ├── auth/
+│   ├── ui/
+│   └── notifications/
+│
+├── hooks/
+│
+├── lib/
+│
+├── types/
+│
+├── validators/
+│
+└── tests/
+```
+
+### Folder Responsibilities
+
+| Folder        | Responsibility                                                |
+| ------------- | ------------------------------------------------------------- |
+| `app/`        | Next.js App Router pages and route structure.                 |
+| `components/` | Reusable UI and shared visual components.                     |
+| `features/`   | Business-domain modules and feature-specific logic.           |
+| `services/`   | API communication, authentication, and external integrations. |
+| `store/`      | Global frontend state management using Zustand.               |
+| `hooks/`      | Custom reusable React hooks.                                  |
+| `lib/`        | Utility functions and shared configurations.                  |
+| `types/`      | Global TypeScript interfaces and types.                       |
+| `validators/` | Zod validation schemas and form validation logic.             |
+| `tests/`      | End-to-end and frontend testing structure.                    |
+
+### Rendering Strategy
+
+PymeBoost frontend will use a Client-Side Rendering (CSR) strategy supported by Next.js.
+
+This approach allows the platform to provide highly interactive and dynamic user experiences directly in the browser, especially for dashboards, chats, matching systems, notifications, and real-time interactions.
+
+The frontend will consume backend APIs dynamically and update the interface in real time without requiring full page reloads.
+
+CSR was selected because the platform focuses primarily on authenticated SaaS functionality rather than public SEO-oriented content.
+
+### Benefits of the Architecture
+
+* Improves long-term maintainability.
+* Simplifies scaling of new frontend modules.
+* Reduces coupling between features.
+* Facilitates collaboration inside the shared monorepo.
+* Aligns with the backend Domain-Driven and cloud-oriented architecture.
 
 
 
