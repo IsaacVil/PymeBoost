@@ -720,133 +720,339 @@ Prototipo Figma:
 | TailwindCSS                   | 4.1.8               | Utility-first CSS framework           | Enables rapid development of modern, responsive, and consistent interfaces for dashboards and SaaS systems.                              |
 | Zustand                       | 5.0.5               | Global state management               | Simplifies management of global states such as authentication, chats, and notifications in a lightweight and scalable way.               |
 | TanStack Query                | 5.76.1              | Server state management and caching   | Synchronizes backend data, manages caching, and automatically updates information from APIs.                                             |
-| Auth0                         | Latest Stable       | Authentication and session management | Provides secure authentication and centralized user management integrated with the backend authentication system.                        |
+| Auth0                         | 3.1.1               | Authentication and session management | Provides secure authentication and centralized user management integrated with the backend authentication system with JWT validation.    |
 | Framer Motion                 | 12.15.0             | Animation and transition system       | Enables modern animations and interactive transitions to improve the platform user experience.                                           |
 | ESLint                        | 9.18.0              | Static code analysis                  | Detects errors, enforces development conventions, and improves overall frontend code quality.                                            |
 | Prettier                      | 3.3.3               | Automatic code formatting             | Maintains visual consistency and code standardization across the project and shared monorepo.                                            |
-| Playwright                    | 1.58.2              | End-to-end testing                    | Automates testing for critical flows such as authentication, dashboards, and contracts within the platform.                              |
-| Vercel                        | Latest Stable       | Frontend hosting and deployment       | Enables deployment of Next.js applications with native SSR support, preview deployments, and automatic optimization.                     |
-| GitHub Actions                | Latest Stable       | CI/CD and automation                  | Automates testing, builds, and deployments within the shared monorepo environment.                                                       |
-| GitHub Environments           | Latest Stable       | Environment management                | Supports secure and organized management of Development, Stage, and Production environments.                                             |
-| Google Cloud Platform         | Latest Stable       | Main cloud platform service                   | Provides integration with backend services deployed within the project's cloud infrastructure.                                           |
-| Google Cloud Operations Suite | Latest Stable       | Observability and monitoring          | Enables monitoring of logs, metrics, and platform stability across the cloud ecosystem.                                                  |
-| Client-Side Rendering (CSR) | Next.js 15 | Frontend rendering strategy | Enables dynamic and highly interactive user experiences directly in the browser for dashboards, chats, matching systems, and real-time platform interactions. |
-| Feature-Based Architecture    | Custom Architecture | Modular frontend organization         | Supports scalability and separation of functionalities such as dashboards, matching, contracts, and messaging.                           |
-| Monorepo Architecture         | GitHub Monorepo     | Shared frontend/backend repository    | Centralizes workflows, CI/CD pipelines, and collaboration between frontend and backend teams.                                            |
-| React Hook Form               | 7.57.0              | Form management                       | Efficiently manages complex forms and input handling within the frontend application.                                                    |
-| Zod                           | 3.23.8              | Data validation and typing            | Provides typed validation and data consistency before sending information to the backend.                                                |
-| GitHub Environments                           | Latest Stable                 | Environment management       | Supports secure and organized management of Development, Stage, and Production environments.                               |
-| Google Cloud Operations Suite                 | Latest Stable                 | Observability and monitoring | Enables monitoring of logs, metrics, errors, and platform stability across the cloud ecosystem.                            |
-| Development / Stage / Production Environments | Standard Environment Strategy | Environment separation       | Allows independent configuration and deployment workflows for development, testing, and production stages of the platform. |
+| React Hook Form               | 7.57.0              | Form management and validation        | Efficiently manages complex forms and input handling with minimal re-renders; integrates seamlessly with Zod validation schemas.         |
+| Zod                           | 3.23.8              | Data validation and typing            | Provides typed validation and data consistency before sending information to the backend; runtime schema validation for API DTOs.       |
+| Vitest                        | 2.1.8               | Unit and integration testing          | Fast, ESM-native test framework integrated with Vite; enables rapid testing for components, hooks, and utilities.                        |
+| Playwright                    | 1.58.2              | End-to-end testing                    | Automates testing for critical flows such as authentication, dashboards, and contracts within the platform across multiple browsers.     |
+| Radix UI                      | Latest Stable (13.x)| Accessible component primitives       | Provides unstyled, accessible component foundational elements (Dialog, Select, Tooltip, etc.) for building accessible interfaces.       |
+| @radix-ui/react-dialog        | Latest Stable (13.x)| Accessible dialog component           | Foundation for modals, alerts, and forms with full keyboard navigation and screen reader support (WCAG 2.1 AA).                       |
+| Fetch API                     | Browser Native      | HTTP client for API communication     | Native browser API used via TanStack Query for making requests to backend REST APIs; no external dependency required.                   |
+| Vercel                        | Latest Stable       | Frontend hosting and deployment       | Enables deployment of Next.js applications with native SSR/CSR support, preview deployments, and automatic optimization.                |
+| GitHub Actions                | Latest Stable       | CI/CD and automation                  | Automates testing, builds, and deployments within the shared monorepo environment with GitHub Environments.                             |
+| GitHub Environments           | Latest Stable       | Environment management                | Supports secure and organized management of Development, Stage, and Production environments with secrets and deployment approvals.      |
+| Google Cloud Platform         | Latest Stable       | Main cloud platform service           | Provides integration with backend services (Cloud Run, Cloud SQL) and serves as primary cloud infrastructure.                            |
+| Google Cloud Operations Suite | Latest Stable       | Backend observability and monitoring  | Cloud Logging, Cloud Monitoring, Cloud Trace for backend services, infrastructure metrics, and distributed tracing.                      |
+| Sentry                        | 8.x                 | Frontend error tracking and monitoring| Real-time error capture, source map integration, user session tracking, and performance monitoring specific to client-side errors.      |
+| Client-Side Rendering (CSR)   | Next.js 15          | Frontend rendering strategy           | Enables dynamic and highly interactive user experiences directly in the browser for dashboards, chats, matching systems, and real-time interactions. |
+| Feature-Based Architecture    | Custom Architecture | Modular frontend organization         | Supports scalability and separation of functionalities such as dashboards, matching, contracts, and messaging without technical coupling. |
+| Monorepo Architecture         | GitHub Monorepo     | Shared frontend/backend repository    | Centralizes workflows, CI/CD pipelines, and collaboration between frontend and backend teams with unified version control.              |
+| Development / Stage / Production Environments | Standard Environment Strategy | Environment separation | Allows independent configuration and deployment workflows for development, testing, and production stages of the platform. |
 
 ---
 
-## 1.2 Frontend Architecture & Folder Structure
+## 1.2 Feature-Based Architecture & Folder Structure
 
-PymeBoost frontend will follow a modular and scalable architecture based on **Next.js App Router** and a **Feature-Based Structure**. The application will be organized by business domains and functionalities instead of technical layers, improving maintainability, scalability, and collaboration between development teams.
+PymeBoost frontend follows a **feature-based architecture** where the application is organized by business domains and features rather than technical layers. Each feature is self-contained with its own components, hooks, services, and state management, improving scalability and team autonomy.
 
-The frontend will be developed as a modern SaaS platform with:
+The architecture supports:
 
-* Hybrid rendering using SSR and client-side rendering.
-* Modular reusable components.
-* Centralized state management.
-* Scalable API integration.
-* Isolated feature modules.
+- Feature ownership: each team can develop, test, and deploy features independently.
+- Reduced cross-feature dependencies: features interact only through well-defined interfaces.
+- Clear responsibility boundaries: each feature knows its own logic, data, and UI.
+- Scalable module growth: new features added without affecting existing ones.
+- Simplified testing: feature-specific tests remain isolated.
 
-This architecture allows the platform to scale efficiently as new modules such as dashboards, advisor matching, contracts, messaging, AI integrations, and reporting systems are added.
+### Core Features
 
+PymeBoost is built around these core features:
 
-### Architectural Principles
+- **Matching:** Advisor discovery, recommendations, swipe decisions, match creation.
+- **Contracts:** Contract negotiation, proposal submission, acceptance, tracking.
+- **Messaging:** Real-time chat between PYME and advisors, message history.
+- **Dashboard:** Project overview, metrics, milestones, status tracking.
+- **Reports:** Report generation, viewing, download, sharing.
+- **Auth:** User authentication, login, logout, session management.
 
-| Principle                  | Description                                                                                                                            |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Feature-Based Architecture | The project is organized by functionalities such as dashboard, contracts, matching, and messaging instead of purely technical folders. |
-| Component Reusability      | Shared UI components are centralized to maintain consistency across the platform.                                                      |
-| Separation of Concerns     | Business logic, API communication, UI components, and state management are separated into independent modules.                         |
-| Scalability                | The structure supports adding new modules and features without affecting existing functionality.                                       |
-| Cloud-Oriented Frontend    | The frontend is designed to integrate efficiently with cloud-hosted backend services and APIs.                                         |
-| Monorepo Compatibility     | The architecture is compatible with the shared frontend/backend monorepo strategy used in the project.                                 |
+### Complete Folder Structure
 
-### Proposed Folder Structure
+Each feature is a complete, self-contained module with its own layers:
 
 ```txt
 src/
-│
 ├── app/
-│   ├── dashboard/
-│   ├── contracts/
-│   ├── matching/
-│   ├── messaging/
-│   ├── reports/
-│   ├── auth/
-│   └── settings/
-│
-├── components/
-│   ├── ui/
-│   ├── layouts/
-│   ├── charts/
-│   └── shared/
+│   ├── layout.tsx
+│   ├── page.tsx
+│   ├── globals.css
+│   └── (auth)/
+│       ├── login/
+│       │   └── page.tsx
+│       └── callback/
+│           └── page.tsx
 │
 ├── features/
-│   ├── dashboard/
-│   ├── contracts/
 │   ├── matching/
+│   │   ├── components/
+│   │   │   ├── MatchingCard.tsx
+│   │   │   ├── MatchingGrid.tsx
+│   │   │   └── MatchingFilters.tsx
+│   │   ├── hooks/
+│   │   │   └── useAdvisorMatching.ts
+│   │   ├── services/
+│   │   │   └── matchingService.ts
+│   │   ├── types/
+│   │   │   └── matching.ts
+│   │   ├── validators/
+│   │   │   └── matchingValidator.ts
+│   │   └── page.tsx
+│   │
+│   ├── contracts/
+│   │   ├── components/
+│   │   │   ├── ContractViewer.tsx
+│   │   │   ├── ContractNegotiation.tsx
+│   │   │   └── ContractTerms.tsx
+│   │   ├── hooks/
+│   │   │   └── useContractNegotiation.ts
+│   │   ├── services/
+│   │   │   └── contractService.ts
+│   │   ├── types/
+│   │   │   └── contract.ts
+│   │   ├── validators/
+│   │   │   └── contractValidator.ts
+│   │   └── page.tsx
+│   │
 │   ├── messaging/
-│   └── reports/
+│   │   ├── components/
+│   │   │   ├── ChatPanel.tsx
+│   │   │   ├── MessageList.tsx
+│   │   │   └── MessageInput.tsx
+│   │   ├── hooks/
+│   │   │   └── useChat.ts
+│   │   ├── services/
+│   │   │   └── chatService.ts
+│   │   ├── types/
+│   │   │   └── chat.ts
+│   │   ├── validators/
+│   │   │   └── chatValidator.ts
+│   │   └── page.tsx
+│   │
+│   ├── dashboard/
+│   │   ├── components/
+│   │   │   ├── DashboardStats.tsx
+│   │   │   ├── ProjectTimeline.tsx
+│   │   │   └── PerformanceMetrics.tsx
+│   │   ├── hooks/
+│   │   │   └── useDashboard.ts
+│   │   ├── services/
+│   │   │   └── dashboardService.ts
+│   │   ├── types/
+│   │   │   └── dashboard.ts
+│   │   ├── validators/
+│   │   │   └── dashboardValidator.ts
+│   │   └── page.tsx
+│   │
+│   ├── reports/
+│   │   ├── components/
+│   │   │   ├── ReportViewer.tsx
+│   │   │   └── ReportGenerator.tsx
+│   │   ├── hooks/
+│   │   │   └── useReports.ts
+│   │   ├── services/
+│   │   │   └── reportService.ts
+│   │   ├── types/
+│   │   │   └── report.ts
+│   │   └── page.tsx
+│   │
+│   └── auth/
+│       ├── components/
+│       │   ├── LoginForm.tsx
+│       │   └── LogoutButton.tsx
+│       ├── hooks/
+│       │   └── useAuth.ts
+│       ├── services/
+│       │   └── authService.ts
+│       ├── types/
+│       │   └── auth.ts
+│       └── page.tsx
 │
-├── services/
-│   ├── api/
-│   ├── auth/
-│   └── storage/
+├── shared/
+│   ├── components/
+│   │   ├── ui/
+│   │   │   ├── Button.tsx
+│   │   │   ├── Input.tsx
+│   │   │   ├── Badge.tsx
+│   │   │   ├── Modal.tsx
+│   │   │   ├── Card.tsx
+│   │   │   └── Dialog.tsx
+│   │   ├── layouts/
+│   │   │   ├── DashboardLayout.tsx
+│   │   │   └── AuthLayout.tsx
+│   │   └── Navigation.tsx
+│   ├── hooks/
+│   │   └── useNotifications.ts
+│   ├── types/
+│   │   └── common.ts
+│   └── utils/
+│       └── helpers.ts
 │
 ├── store/
-│   ├── auth/
-│   ├── ui/
-│   └── notifications/
-│
-├── hooks/
+│   ├── authStore.ts
+│   ├── notificationStore.ts
+│   └── uiStore.ts
 │
 ├── lib/
+│   ├── queryClient.ts
+│   └── axios.ts
 │
-├── types/
+├── tests/
+│   ├── features/
+│   │   ├── matching.spec.ts
+│   │   ├── contracts.spec.ts
+│   │   ├── messaging.spec.ts
+│   │   └── auth.spec.ts
+│   └── shared/
+│       ├── Button.spec.ts
+│       └── helpers.spec.ts
 │
-├── validators/
+├── styles/
+│   ├── globals.css
+│   └── variables.css
 │
-└── tests/
+└── public/
+    ├── logo.png
+    └── icons/
 ```
 
 ### Folder Responsibilities
+ 
+| Folder | Responsibility |
+|--------|----------------|
+| `app/` | Next.js App Router pages and route structure. Contains layout.tsx for root layout and route-based pages. |
+| `features/matching/` | Advisor discovery and matching logic. Components for cards, grids, and filters. |
+| `features/contracts/` | Contract lifecycle management. Components for viewing, negotiating, and tracking contracts. |
+| `features/messaging/` | Real-time chat between PYME and advisors. Components for chat panel, message list, and input. |
+| `features/dashboard/` | Project overview and metrics. Components for stats, timelines, and performance tracking. |
+| `features/reports/` | Report generation and viewing. Components for report viewer and generator. |
+| `features/auth/` | User authentication and session management. Components for login and logout. |
+| `features/[feature]/components/` | UI components specific to that feature. Used only within that feature. |
+| `features/[feature]/hooks/` | Business logic hooks that implement workflows. Called by components. |
+| `features/[feature]/services/` | API communication functions. Called by hooks. One service per feature. |
+| `features/[feature]/types/` | TypeScript interfaces specific to the feature. |
+| `features/[feature]/validators/` | Zod validation schemas for feature data. |
+| `features/[feature]/page.tsx` | Route page component for that feature. |
+| `shared/components/` | Reusable UI components used across multiple features. |
+| `shared/components/ui/` | Basic UI primitives (Button, Input, Badge, Modal, Card, Dialog, etc.). |
+| `shared/components/layouts/` | Layout wrappers shared across features (DashboardLayout, AuthLayout). |
+| `shared/hooks/` | Common hooks reused across features (useNotifications, etc.). |
+| `shared/types/` | Global TypeScript types used across all features. |
+| `shared/utils/` | Utility functions and helpers. |
+| `store/` | Zustand global state stores. Not feature-specific. |
+| `store/authStore.ts` | User authentication, permissions, JWT token. |
+| `store/notificationStore.ts` | Toast messages, alerts, notifications. |
+| `store/uiStore.ts` | Modal states, sidebars, theme. |
+| `lib/` | Configurations and third-party integrations (queryClient for TanStack Query, axios for HTTP). |
+| `tests/` | Feature and component tests using Playwright and Jest. Organized by feature. |
+| `styles/` | Global CSS and CSS variables. |
+| `public/` | Static assets (logos, icons, images). |
+ 
+### Naming Conventions
+ 
+**Components:**
+- PascalCase: `MatchingCard.tsx`, `ContractViewer.tsx`, `DashboardStats.tsx`
+- Descriptive names matching functionality.
+**Hooks:**
+- camelCase with `use` prefix: `useAdvisorMatching.ts`, `useChat.ts`, `useDashboard.ts`
+- Function name describes the hook's purpose.
+**Services:**
+- camelCase with `Service` suffix: `matchingService.ts`, `contractService.ts`, `chatService.ts`
+- One service file per feature.
+**Types/Interfaces:**
+- PascalCase: `Advisor.ts`, `Contract.ts`, `Message.ts`
+- File name matches the main interface it exports.
+**Validators:**
+- camelCase with `Validator` suffix: `matchingValidator.ts`, `contractValidator.ts`
+- Contains Zod schemas for validation.
+**Stores:**
+- camelCase with `Store` suffix: `authStore.ts`, `notificationStore.ts`, `uiStore.ts`
 
-| Folder        | Responsibility                                                |
-| ------------- | ------------------------------------------------------------- |
-| `app/`        | Next.js App Router pages and route structure.                 |
-| `components/` | Reusable UI and shared visual components.                     |
-| `features/`   | Business-domain modules and feature-specific logic.           |
-| `services/`   | API communication, authentication, and external integrations. |
-| `store/`      | Global frontend state management using Zustand.               |
-| `hooks/`      | Custom reusable React hooks.                                  |
-| `lib/`        | Utility functions and shared configurations.                  |
-| `types/`      | Global TypeScript interfaces and types.                       |
-| `validators/` | Zod validation schemas and form validation logic.             |
-| `tests/`      | End-to-end and frontend testing structure.                    |
 
-### Rendering Strategy
+### Feature Internal Structure
 
-PymeBoost frontend will use a Client-Side Rendering (CSR) strategy supported by Next.js.
+Each feature follows this internal layer pattern:
 
-This approach allows the platform to provide highly interactive and dynamic user experiences directly in the browser, especially for dashboards, chats, matching systems, notifications, and real-time interactions.
+- **components/:** UI components specific to the feature. Used only within that feature.
+- **hooks/:** Business logic hooks that implement workflows. Called by components.
+- **services/:** API communication functions. Called by hooks. One service per feature.
+- **types/:** TypeScript interfaces and types specific to the feature.
+- **validators/:** Zod schemas for validating feature data.
+- **[FeatureName]Page.tsx:** Main page component for the feature route.
 
-The frontend will consume backend APIs dynamically and update the interface in real time without requiring full page reloads.
+### Shared Layer
 
-CSR was selected because the platform focuses primarily on authenticated SaaS functionality rather than public SEO-oriented content.
+Shared resources live in `src/shared/` and are reused across features:
 
-### Benefits of the Architecture
+- **components/ui/:** Basic reusable UI elements (Button, Input, Badge, Modal, etc.).
+- **components/layouts/:** Layout wrappers shared across features.
+- **hooks/:** Common hooks like useNotifications.
+- **types/:** Global TypeScript types used across features.
+- **utils/:** Helper functions and utilities.
 
-* Improves long-term maintainability.
-* Simplifies scaling of new frontend modules.
-* Reduces coupling between features.
-* Facilitates collaboration inside the shared monorepo.
-* Aligns with the backend Domain-Driven and cloud-oriented architecture.
+### Global State Management
+
+Global state (not feature-specific) lives in `src/store/`:
+
+- **authStore.ts:** User authentication, permissions, JWT token.
+- **notificationStore.ts:** Toast messages, alerts, notifications.
+- **uiStore.ts:** Modal states, sidebars, theme.
+
+Features can read from these stores but should not modify them directly. State updates go through custom hooks.
+
+### Feature Communication
+
+Features communicate through:
+
+- **Shared stores:** Features read from authStore to check permissions or user info.
+- **Shared types:** Features import type definitions from shared/types/ for common data structures.
+- **API responses:** Features get data from backend APIs, not from other features directly.
+
+Features do NOT import from each other's folders. If feature A needs functionality from feature B, that logic belongs in the shared layer or backend API.
+
+### Routing Structure
+
+Each feature has its own route in `src/app/`:
+
+- `/dashboard` → features/dashboard/DashboardPage.tsx
+- `/matching` → features/matching/MatchingPage.tsx
+- `/contracts` → features/contracts/ContractsPage.tsx
+- `/messaging` → features/messaging/MessagingPage.tsx
+- `/reports` → features/reports/ReportsPage.tsx
+- `/auth` → features/auth/AuthPage.tsx
+
+### Key Rules
+ 
+- Each feature is independent: its own components, hooks, services, types, validators.
+- Features never import from other features' folders. Use shared/ or the backend API instead.
+- Shared components and utilities go in `shared/`.
+- Global app state (auth, notifications, UI) goes in `store/`.
+- Each feature service handles only that feature's API calls.
+- Hooks handle business logic and coordinate between components and services.
+- Components handle only UI rendering and user event delegation.
+- All API responses are validated with Zod before use.
+- Tests are colocated with features in `tests/features/`.
+
+## 1.3 Project Scaffold & Folder Structure
+
+## 1.4 Component System & UI Architecture
+
+## 1.5 Visual Design System & Branding
+
+## 1.6 Design Patterns & Engineering Standards
+
+## 1.7  State Management & API Communication
+
+## 1.8 Workflows & Interaction Flows
+
+## 1.9 Authentication, Security & Session Management
+
+## 1.10 Testing, Observability & CI/CD
+
+## 1.11 Performance Optimization Strategy
+
+## 1.12 C4 Diagrams
+
 
 
 
