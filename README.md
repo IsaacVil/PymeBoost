@@ -517,66 +517,113 @@ Components receive processed data from hooks. Hooks orchestrate business logic a
 | ContractValidator | [src/features/contracts/validators/contractValidator.ts](src/features/contracts/validators/contractValidator.ts) | Validates contract terms, negotiation constraints | Strategy | Different contract types (fixed-price, hourly, milestone) have different validation rules applied through Zod schemas |
 | QueryClientFactory | [src/lib/queryClient.ts](src/lib/queryClient.ts) | Initializes and configures TanStack Query | Factory | Centralizes cache settings, retry logic, staleTime; ensures consistent query behavior across all API calls |
 
-### SOLID Principles Applied
+### Why These Patterns Are Essential to PymeBoost
 
-**Single Responsibility:**
-- `MatchingCard` renders only; `matchingService` handles only API calls; `useAdvisorMatching` manages only workflow orchestration.
+**1. Guard Pattern (AuthGuard)**
+PymeBoost handles sensitive advisor-SME relationships and contracts. The Guard pattern **prevents unauthorized access at the route level before any logic executes**. Without it, business logic must check auth repeatedly across features, creating security gaps. AuthGuard is a single point of enforcement.
 
-**Dependency Inversion:**
-- Features depend on service abstractions, not concrete implementations. Services are injectable into hooks for testability.
+**2. Singleton Pattern (authStore, queryClient)**
+Auth state must be consistent everywhere: contracts, messaging, dashboards. Singleton ensures **one authoritative source of truth**. If authStore were instantiated multiple times, token mismatches would break features silently. Zustand's design enforces this automatically, making it safe.
 
-**Interface Segregation:**
-- Services export only required functions. `matchingService` does not export contract-related methods.
+**3. Observer Pattern (notificationStore)**
+When an advisor accepts a contract or a project milestone updates, multiple UI components must react without knowing about each other. Observer **decouples event producers from consumers**. Without it, components would need direct imports of other components or prop drilling through 5+ levels, creating fragile code.
 
-**Open/Closed:**
-- New advisor matching strategies added via `MatchingService` without modifying existing components.
+**4. Template Method Pattern (ApiClient)**
+Every API call in PymeBoost needs: JWT injection, error handling, rate limiting, retry logic. Template Method **defines the common flow once, reused by all services**. Without it, duplicate error handling across 10+ services creates bugs when one gets fixed and others don't.
 
-### Code Layer Structure
+**5. Strategy Pattern (MatchingService, ContractValidator)**
+Advisor matching can be rule-based, AI-powered, or manual. Contract validation differs for fixed-price vs. hourly rates. Strategy **allows interchangeable algorithms without modifying components**. Without it, adding a new matching algorithm requires touching the component layer.
+
+**6. Factory Pattern (useAdvisorMatching, QueryClientFactory)**
+Creating a matching workflow requires: API calls, TanStack Query setup, form state, validation, notifications. Factory **encapsulates this complexity**. Components use `useAdvisorMatching()` instead of assembling 20 pieces—reducing code, bugs, and cognitive load.
+
+---
+
+### Code Layer Structure: How Patterns Enforce Separation
 
 **Components** (`features/[feature]/components/`):
-- Pure presentation; no API calls, business logic, or state side effects.
-- Accept props; delegate all logic to hooks.
+- Pure presentation; no API calls, business logic, or state mutations.
+- Supported by **Composition pattern**: build complex UIs from simple, reusable pieces.
+- Example: `MatchingCard` knows only props; `MatchingGrid` composes `MatchingCard` instances.
 
 **Hooks** (`features/[feature]/hooks/`):
-- Orchestrate features: combine TanStack Query, Zustand reads, form handling, service calls.
-- Called by components only.
+- Implement business workflows using **Factory pattern**.
+- Orchestrate: TanStack Query (server state), Zustand reads, Zod validation, service calls.
+- Example: `useAdvisorMatching()` returns ready-to-use state and handlers.
 
 **Services** (`features/[feature]/services/`):
-- Pure API communication; validate all responses with Zod before returning.
+- Pure API communication, enforced by **Dependency Inversion**.
+- All responses validated with Zod before returning.
+- Example: `matchingService.getAdvisors()` returns validated DTO, never raw API data.
 
 **Validators** (`features/[feature]/validators/`):
-- Zod schemas define data shape and runtime validation rules for DTOs.
+- Zod schemas define **Strategy**: different contract types validate differently.
+- Runtime validation ensures no invalid data reaches components or state.
 
-### State Distribution
+### State Distribution: Patterns in Practice
 
-**Global State (Zustand):**
-- `authStore`: user, token, permissions
-- `notificationStore`: toast queue, alerts
-- `uiStore`: modals, sidebars, theme
+**Global State (Zustand) — Singleton Pattern:**
+- `authStore`: Single instance manages user, token, permissions globally.
+  - **Why Singleton:** Any feature reading auth must see the same state. Multiple instances = data inconsistency.
+- `notificationStore`: Single instance publishes toasts, alerts system-wide.
+  - **Why Singleton + Observer:** Matches created, contracts accepted, milestones met → all features receive notifications from one source.
+- `uiStore`: Single instance manages modal states, sidebar visibility, theme.
 
-**Server State (TanStack Query):**
-- All API data: advisors, contracts, messages, projects.
-- Automatic cache, refetch, deduplication.
+**Server State (TanStack Query) — Factory + Cache Strategy:**
+- All API data (advisors, contracts, messages) cached and managed via **QueryClientFactory**.
+- **Why Factory:** Ensures consistent cache settings, retry behavior, staleTime across all queries.
+- Automatic refetch, deduplication, background updates reduce stale data bugs.
 
 **Local State (React `useState`):**
-- Form inputs, UI toggles, temporary UI state only.
+- Form inputs, UI toggles, loading states—never persisted beyond component.
+- Keeps global state clean and predictable.
 
-### Composition & Immutability
+### Composition Over Inheritance
 
-- Build complex components from primitives: `ContractSection = ContractViewer + ContractTerms + ActionButtons`.
-- Extend via props (variants), not duplication: single `Button` component with `variant` prop.
-- All state updates immutable (spread operator, Zustand, React enforce this).
+Components are built from primitives, not extended:
+- `ContractSection` = `ContractViewer` + `ContractTerms` + `ActionButtons` (composition, not inheritance).
+- `Button` component accepts `variant` prop instead of creating `PrimaryButton`, `SecondaryButton` subclasses.
+- **Why:** Composition is flexible; inheritance creates rigid hierarchies prone to fragility.
 
-### Key Rules
+### Immutability & State Safety
 
-- One responsibility per file
-- No business logic in components; no UI rendering in services
-- Validate all API responses and user input with Zod
-- No prop drilling beyond 2 levels; use hooks or stores for deeper data
-- Keep components under 300 lines; split if larger
-- No hardcoded values; use constants
-- Hooks are pure; side effects via `useEffect` only
-- All errors logged to Sentry; never silent failures
+All state updates use immutable patterns (spread operator, Zustand setters, React hooks). Mutating state directly:
+- Breaks Zustand reactivity
+- Causes stale UI renders
+- Creates race conditions in async workflows
+
+Zustand and React enforce this automatically through their APIs.
+
+---
+
+### Critical Rules Enforcing Pattern Integrity
+
+| Rule | Pattern Connection | Why It Matters for PymeBoost |
+|------|-------------------|------------------------------|
+| One responsibility per file | SRP, Interface Segregation | If `authService` also handles notifications, fixing an auth bug risks breaking notifications |
+| No business logic in components | Template Method, Factory | Logic duplication across components creates inconsistency (e.g., two matching screens with different retry logic) |
+| Validate all API input with Zod | Strategy, Dependency Inversion | Invalid contract data from backend breaks advisor's financial calculations downstream |
+| No prop drilling beyond 2 levels | Observer, Singleton | Passing contract data through 5+ components couples them; one change breaks the entire chain |
+| Keep components under 300 lines | Composition | Large components mask violations of SRP and are hard to test; split into focused pieces |
+| Hooks are pure functions | Factory, Dependency Inversion | Hooks with side effects are unpredictable; side effects belong in `useEffect` only |
+| All errors logged to Sentry | Observability pattern | Silent failures in matching algorithms or contract validation destroy user trust |
+
+---
+
+### Example: Matching Flow Pattern Integration
+
+**How patterns work together for advisor matching:**
+
+1. **User navigates to Matching** → `AuthGuard` validates session (Guard pattern)
+2. **Component calls hook** → `useAdvisorMatching()` factory sets up the workflow
+3. **Hook initiates query** → `QueryClientFactory` provides configured client (Factory)
+4. **Hook calls service** → `matchingService` applies Strategy (rule-based vs. AI)
+5. **Service fetches data** → `ApiClient` injects JWT, handles errors (Template Method)
+6. **Response validated** → Zod schema validates advisor DTO (Strategy)
+7. **Match created event** → `notificationStore` publishes to all features (Observer/Singleton)
+8. **Advisor is notified** → Chat feature listens to notification event, updates UI
+
+**Without these patterns:** Each layer would duplicate auth checking, error handling, validation, and event logic. Adding a new feature would require copying code from 3+ places, guaranteeing bugs.
 
 ## 1.6  State Management & API Communication
 
