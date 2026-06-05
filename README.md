@@ -493,90 +493,90 @@ Components avoid fixed widths; use max-width containers (`max-w-4xl`, `max-w-6xl
 
 ## 1.5 Design Patterns & Engineering Standards
 
-### Core Patterns
+PymeBoost employs strategic, essential OOP design patterns to maintain a modular, testable, and maintainable frontend. Patterns are applied only where they solve real architectural problems—no over-engineering.
 
-**MVC-like Architecture (Feature-Based):**
+### Core Architectural Pattern
+
+**Feature-Based MVC with Hooks:**
 - **Model:** Services + Zod schemas (data layer)
-- **View:** React components (UI layer)
+- **View:** React components (UI layer)  
 - **Controller:** Custom hooks (business logic layer)
 
-Components receive data from hooks. Hooks call services. Services call APIs.
+Components receive processed data from hooks. Hooks orchestrate business logic and call services. Services handle API communication exclusively.
 
-**Dependency Injection:**
-- Services are parameters to hooks, not hardcoded imports.
-- Example: `useAdvisorMatching(matchingService)` instead of importing matchingService inside the hook.
-- Enables testing with mock services.
+### Design Patterns by Responsibility
 
-**Factory Pattern:**
-- Custom hooks are factories: `useAdvisorMatching()` creates and manages matching logic.
-- Services are factories: `matchingService.getAdvisors()` creates API calls.
+| Class / Interface | Location | Responsibility | Pattern | Justification |
+|------------------|----------|----------------|---------|--------------|
+| AuthGuard | [src/shared/guards/AuthGuard.tsx](src/shared/guards/AuthGuard.tsx) | Protects private routes; validates active session before rendering | Guard | Enforces authentication boundary; prevents unauthorized route access without coupling auth logic to every page |
+| authStore | [src/store/authStore.ts](src/store/authStore.ts) | Manages global auth state (user, token, permissions) | Singleton | Single source of truth for auth across all features; Zustand enforces one instance automatically |
+| notificationStore | [src/store/notificationStore.ts](src/store/notificationStore.ts) | Publishes system-wide toasts, alerts, notifications | Observer (Pub-Sub) | Decouples notification producers from consumers; any feature can notify without importing UI components |
+| ApiClient | [src/lib/ApiClient.ts](src/lib/ApiClient.ts) | Base HTTP client with reusable request/response logic | Template Method | Centralizes error handling, JWT injection, retry logic; child clients (matchingService, contractService) reuse the flow |
+| MatchingService | [src/features/matching/services/matchingService.ts](src/features/matching/services/matchingService.ts) | Determines advisor recommendation strategy based on context | Strategy | Enables pluggable matching algorithms (AI-based, rule-based, manual) without modifying calling code |
+| useAdvisorMatching | [src/features/matching/hooks/useAdvisorMatching.ts](src/features/matching/hooks/useAdvisorMatching.ts) | Creates and manages matching workflow logic | Factory | Encapsulates setup of TanStack Query, form state, service calls; components use a ready-made hook instead of assembling pieces |
+| ContractValidator | [src/features/contracts/validators/contractValidator.ts](src/features/contracts/validators/contractValidator.ts) | Validates contract terms, negotiation constraints | Strategy | Different contract types (fixed-price, hourly, milestone) have different validation rules applied through Zod schemas |
+| QueryClientFactory | [src/lib/queryClient.ts](src/lib/queryClient.ts) | Initializes and configures TanStack Query | Factory | Centralizes cache settings, retry logic, staleTime; ensures consistent query behavior across all API calls |
 
-### SOLID Principles
+### SOLID Principles Applied
 
-**Single Responsibility Principle:**
-- Each file has one reason to change.
-- `MatchingCard` renders only; `matchingService` handles only API calls; `useAdvisorMatching` manages only matching logic.
+**Single Responsibility:**
+- `MatchingCard` renders only; `matchingService` handles only API calls; `useAdvisorMatching` manages only workflow orchestration.
 
 **Dependency Inversion:**
-- Features depend on service abstractions (interfaces), not concrete implementations.
-- Allows swapping real APIs for mocks during testing.
+- Features depend on service abstractions, not concrete implementations. Services are injectable into hooks for testability.
 
 **Interface Segregation:**
-- Services export only the functions they need.
-- No bloated "god services"; split by feature.
+- Services export only required functions. `matchingService` does not export contract-related methods.
 
-### Code Structure
+**Open/Closed:**
+- New advisor matching strategies added via `MatchingService` without modifying existing components.
+
+### Code Layer Structure
 
 **Components** (`features/[feature]/components/`):
-- Presentational components only: accept props, render UI.
-- No API calls, no business logic.
+- Pure presentation; no API calls, business logic, or state side effects.
+- Accept props; delegate all logic to hooks.
 
 **Hooks** (`features/[feature]/hooks/`):
-- Orchestrate business logic, state, and API calls.
-- Call services, manage hooks from Zustand and TanStack Query.
+- Orchestrate features: combine TanStack Query, Zustand reads, form handling, service calls.
+- Called by components only.
 
 **Services** (`features/[feature]/services/`):
-- Pure API communication.
-- Validate responses with Zod before returning.
+- Pure API communication; validate all responses with Zod before returning.
 
-**Types** (`features/[feature]/types/`):
-- Define data shapes with TypeScript interfaces.
-- Create Zod schemas for runtime validation.
+**Validators** (`features/[feature]/validators/`):
+- Zod schemas define data shape and runtime validation rules for DTOs.
 
-### State Management
-
-**Server State (TanStack Query):**
-- All API data cached and managed by TanStack Query.
-- Automatic refetching, deduplication, background updates.
+### State Distribution
 
 **Global State (Zustand):**
-- Only for truly global data: auth (user, token), notifications, UI modals.
-- Feature-specific state stays in hooks.
+- `authStore`: user, token, permissions
+- `notificationStore`: toast queue, alerts
+- `uiStore`: modals, sidebars, theme
+
+**Server State (TanStack Query):**
+- All API data: advisors, contracts, messages, projects.
+- Automatic cache, refetch, deduplication.
 
 **Local State (React `useState`):**
-- Component-level state only (form inputs, toggles, local UI state).
+- Form inputs, UI toggles, temporary UI state only.
 
-### Composition Over Inheritance
+### Composition & Immutability
 
-- Build complex components from primitives: `ChatPanel = MessageList + MessageInput + Header`.
-- Extend behavior via props (variants), not by copying code.
-- Example: Single Badge component with `status` prop instead of `BadgeActive`, `BadgePending`, `BadgeComplete`.
-
-### Immutability
-
-- All state updates use immutable patterns (spread operator, never mutate).
-- Zustand and React enforce this automatically.
+- Build complex components from primitives: `ContractSection = ContractViewer + ContractTerms + ActionButtons`.
+- Extend via props (variants), not duplication: single `Button` component with `variant` prop.
+- All state updates immutable (spread operator, Zustand, React enforce this).
 
 ### Key Rules
 
 - One responsibility per file
-- No business logic in components; no UI in services
+- No business logic in components; no UI rendering in services
 - Validate all API responses and user input with Zod
-- No prop drilling beyond 2 levels; use hooks or stores
+- No prop drilling beyond 2 levels; use hooks or stores for deeper data
 - Keep components under 300 lines; split if larger
 - No hardcoded values; use constants
-- Functions pure; side effects in hooks only
-- Errors logged to Sentry; never silent failures
+- Hooks are pure; side effects via `useEffect` only
+- All errors logged to Sentry; never silent failures
 
 ## 1.6  State Management & API Communication
 
