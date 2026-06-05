@@ -1033,25 +1033,108 @@ Each feature has its own route in `src/app/`:
 - All API responses are validated with Zod before use.
 - Tests are colocated with features in `tests/features/`.
 
-## 1.3 Project Scaffold & Folder Structure
+## 1.3 Component System & UI Architecture
 
-## 1.4 Component System & UI Architecture
+### Component Organization: Feature-First
+ 
+PymeBoost uses **feature-first component organization** where components live within their feature domain. Components belong to the feature that owns them. Shared primitives (Button, Input, Modal, etc.) live in `shared/components/ui/`.
+ 
+**Decision Rule:** If a component is used by 2+ features → `shared/components/ui/`. If used by 1 feature → `features/[feature]/components/`.
+ 
+### Component Layers
+ 
+**Layer 1: Primitives** (Feature-specific, presentational)
+- Single-responsibility components that accept data via props.
+- Examples: `MatchingCard`, `ContractViewer`, `ChatBubble`, `MetricsChart`.
+**Layer 2: Compound Components** (Assembled, reusable within feature)
+- Combine primitives into larger, reusable units within the same feature.
+- Examples: `MatchingGrid`, `ChatPanel`, `ContractSection`.
+**Layer 3: Containers/Pages** (Logic-aware, orchestrators)
+- Connect to hooks, API calls, and global state.
+- Pass processed data to primitives and compounds.
+- Examples: `MatchingPage`, `ContractPage`, `DashboardPage`.
+**Shared Primitives** (`shared/components/ui/`)
+- Foundational elements used across features: Button, Input, Badge, Modal, Card, Dialog, Select, Checkbox, Avatar, Textarea, Toast, Tooltip.
+- Use Radix UI for behavior and TailwindCSS for styling.
 
-## 1.5 Visual Design System & Branding
+### Feature Component Structure
+ 
+**Matching Example:**
+- `MatchingCard` (Primitive): Single advisor card.
+- `MatchingGrid` (Compound): Grid of advisor cards.
+- `MatchingPage` (Container): Manages data fetching and state.
+**Contracts Example:**
+- `ContractViewer` (Primitive): Contract display.
+- `ContractSection` (Compound): Groups related contract elements.
+- `ContractPage` (Container): Manages negotiation state.
+**Messaging Example:**
+- `MessageBubble` (Primitive): Single message.
+- `ChatPanel` (Compound): MessageList + MessageInput combined.
+- `ChatPage` (Container): Manages real-time updates.
+ 
+### Composition Patterns
+ 
+**Props-Based Variants:** Components accept props to adapt appearance. Single Badge component with `status` prop instead of separate `BadgeActive`, `BadgePending`, `BadgeComplete`.
+ 
+**Compound Components:** Complex features organize sub-components that work together. Example: ChatPanel combines MessageList and MessageInput.
+ 
+**Headless Components:** Shared primitives use Radix UI for behavior (keyboard navigation, accessibility) and TailwindCSS for styling. Feature components compose these headless primitives.
+ 
+**No Cross-Feature Imports:** Features never import from other features. If two features need the same component, it moves to `shared/components/ui/`.
+ 
+### Responsive Design
+ 
+All components use TailwindCSS responsive utilities with mobile-first approach.
+ 
+**Breakpoints:**
+- Mobile: < 640px
+- Tablet: 640px - 1024px  
+- Desktop: > 1024px
+Components avoid fixed widths; use max-width containers (`max-w-4xl`, `max-w-6xl`).
+ 
+### Styling Rules
+ 
+- All components use **TailwindCSS utilities only**; no external stylesheets or CSS-in-JS.
+- Shared primitives establish baseline styles; feature components extend them.
+- Form inputs: `px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500`.
+- Buttons: `primary` (blue-600), `secondary` (slate-200), `ghost` (transparent).
+- Cards: `p-6 shadow-sm border border-slate-200 rounded-lg`.
+- Modals: `bg-black/50` overlay, flexbox centered.
+ 
+### Accessibility
+ 
+- All interactive elements use Radix UI (ARIA attributes, keyboard navigation, focus management).
+- Form labels linked to inputs via `htmlFor`.
+- Focus states visually clear on all interactive elements.
+- Color paired with icons or text (not sole indicator of state).
+- Semantic HTML: `<button>`, `<a>`, `<form>`.
+- Minimum contrast ratio 4.5:1 (WCAG AA).
+- Full keyboard navigation support.
+ 
+### Key Rules
+ 
+- Each feature owns its components; no cross-feature imports.
+- Shared primitives only in `shared/components/ui/`.
+- Primitives: pure presentation. Containers: state and API calls.
+- All interactive elements require ARIA attributes and keyboard support.
+- One responsibility per component; split if blurred.
 
-## 1.6 Design Patterns & Engineering Standards
 
-## 1.7  State Management & API Communication
+## 1.4 Visual Design System & Branding
 
-## 1.8 Workflows & Interaction Flows
+## 1.5 Design Patterns & Engineering Standards
 
-## 1.9 Authentication, Security & Session Management
+## 1.6  State Management & API Communication
 
-## 1.10 Testing, Observability & CI/CD
+## 1.7 Workflows & Interaction Flows
 
-## 1.11 Performance Optimization Strategy
+## 1.8 Authentication, Security & Session Management
 
-## 1.12 C4 Diagrams
+## 1.9 Testing, Observability & CI/CD
+
+## 1.10 Performance Optimization Strategy
+
+## 1.11 C4 Diagrams
 
 
 
