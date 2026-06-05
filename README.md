@@ -339,6 +339,8 @@ Features do NOT import from each other's folders. If feature A needs functionali
 - All API responses are validated with Zod before use.
 - Tests are colocated with features in `tests/features/`.
 
+---
+
 ## 1.3 Component System & UI Architecture
 
 ### Component Organization: Feature-First
@@ -425,10 +427,156 @@ Components avoid fixed widths; use max-width containers (`max-w-4xl`, `max-w-6xl
 - All interactive elements require ARIA attributes and keyboard support.
 - One responsibility per component; split if blurred.
 
+---
 
 ## 1.4 Visual Design System & Branding
 
+### Color Palette
+
+| Color | Hex | Tailwind | Usage |
+|-------|-----|----------|-------|
+| Primary Purple | #A855F7 | `purple-500` | CTAs, highlights, active states |
+| Dark Background | #0F172A | `slate-950` | Main background |
+| Dark Surface | #1E293B | `slate-800` | Cards, panels |
+| Accent Gold | #FBBF24 | `amber-400` | Ratings, warnings |
+| Text Light | #F1F5F9 | `slate-100` | Primary text |
+| Text Muted | #94A3B8 | `slate-400` | Secondary text |
+| Border | #334155 | `slate-700` | Borders, dividers |
+
+### Typography
+
+| Element | Font | Size | Weight |
+|---------|------|------|--------|
+| H1 | Poppins | 40px | 700 |
+| H2 | Poppins | 28px | 700 |
+| H3 | Poppins | 20px | 600 |
+| Body | Inter | 16px | 400 |
+| Small | Inter | 14px | 400 |
+| Mono | JetBrains Mono | 14px | 400 |
+
+### Spacing
+
+- Padding: `p-4` (16px), `p-6` (24px), `p-8` (32px)
+- Margin: `m-4`, `m-6`, `m-8`
+- Gap: `gap-4`, `gap-6`, `gap-8`
+
+### Components
+
+**Buttons:**
+- Primary: `bg-purple-500 text-white hover:bg-purple-600 rounded-md px-4 py-2`
+- Secondary: `bg-slate-800 text-slate-100 border border-slate-700 rounded-md px-4 py-2`
+
+**Cards:**
+- `bg-slate-800 border border-slate-700 rounded-lg p-6 shadow-lg`
+
+**Inputs:**
+- `bg-slate-900 border border-slate-700 text-slate-100 px-3 py-2 rounded-md focus:ring-2 focus:ring-purple-500/20`
+
+**Modals:**
+- `bg-slate-800 rounded-lg p-8 border border-slate-700 with bg-black/60 overlay`
+
+### Icons & Images
+
+- Icon library: Heroicons (24px)
+- Avatars: 64px (matching/contracts), 48px (chat)
+
+### Standards
+
+- Purple primary only; gold accent for highlights/ratings
+- Dark backgrounds, light text
+- WCAG AA contrast (4.5:1 minimum)
+- Focus states: `focus:ring-2 focus:ring-purple-500`
+- Semantic HTML and full keyboard navigation
+- No hardcoded colors; use Tailwind only
+
+---
+
 ## 1.5 Design Patterns & Engineering Standards
+
+### Core Patterns
+
+**MVC-like Architecture (Feature-Based):**
+- **Model:** Services + Zod schemas (data layer)
+- **View:** React components (UI layer)
+- **Controller:** Custom hooks (business logic layer)
+
+Components receive data from hooks. Hooks call services. Services call APIs.
+
+**Dependency Injection:**
+- Services are parameters to hooks, not hardcoded imports.
+- Example: `useAdvisorMatching(matchingService)` instead of importing matchingService inside the hook.
+- Enables testing with mock services.
+
+**Factory Pattern:**
+- Custom hooks are factories: `useAdvisorMatching()` creates and manages matching logic.
+- Services are factories: `matchingService.getAdvisors()` creates API calls.
+
+### SOLID Principles
+
+**Single Responsibility Principle:**
+- Each file has one reason to change.
+- `MatchingCard` renders only; `matchingService` handles only API calls; `useAdvisorMatching` manages only matching logic.
+
+**Dependency Inversion:**
+- Features depend on service abstractions (interfaces), not concrete implementations.
+- Allows swapping real APIs for mocks during testing.
+
+**Interface Segregation:**
+- Services export only the functions they need.
+- No bloated "god services"; split by feature.
+
+### Code Structure
+
+**Components** (`features/[feature]/components/`):
+- Presentational components only: accept props, render UI.
+- No API calls, no business logic.
+
+**Hooks** (`features/[feature]/hooks/`):
+- Orchestrate business logic, state, and API calls.
+- Call services, manage hooks from Zustand and TanStack Query.
+
+**Services** (`features/[feature]/services/`):
+- Pure API communication.
+- Validate responses with Zod before returning.
+
+**Types** (`features/[feature]/types/`):
+- Define data shapes with TypeScript interfaces.
+- Create Zod schemas for runtime validation.
+
+### State Management
+
+**Server State (TanStack Query):**
+- All API data cached and managed by TanStack Query.
+- Automatic refetching, deduplication, background updates.
+
+**Global State (Zustand):**
+- Only for truly global data: auth (user, token), notifications, UI modals.
+- Feature-specific state stays in hooks.
+
+**Local State (React `useState`):**
+- Component-level state only (form inputs, toggles, local UI state).
+
+### Composition Over Inheritance
+
+- Build complex components from primitives: `ChatPanel = MessageList + MessageInput + Header`.
+- Extend behavior via props (variants), not by copying code.
+- Example: Single Badge component with `status` prop instead of `BadgeActive`, `BadgePending`, `BadgeComplete`.
+
+### Immutability
+
+- All state updates use immutable patterns (spread operator, never mutate).
+- Zustand and React enforce this automatically.
+
+### Key Rules
+
+- One responsibility per file
+- No business logic in components; no UI in services
+- Validate all API responses and user input with Zod
+- No prop drilling beyond 2 levels; use hooks or stores
+- Keep components under 300 lines; split if larger
+- No hardcoded values; use constants
+- Functions pure; side effects in hooks only
+- Errors logged to Sentry; never silent failures
 
 ## 1.6  State Management & API Communication
 
