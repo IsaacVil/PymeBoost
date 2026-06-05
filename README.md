@@ -1337,7 +1337,7 @@ The container diagram visualizes the Next.js Frontend as a black box within its 
 - Frontend sends logs and metrics to Cloud Logging via gRPC
 - Frontend reports errors to Sentry via HTTPS
 
-[Container Diagram](../../docs/images/containers_c4.png)
+[Container Diagram](docs/images/containers_c4.png)
 
 ---
 
@@ -1387,7 +1387,7 @@ Features → Shared Components/Hooks → Infrastructure (Zustand, TanStack Query
 TanStack Query → ApiClient → Backend API / Auth0
 ```
 
-[Component Diagram](../../docs/images/component_c4.png)
+[Component Diagram](docs/images/component_c4.png)
 
 ---
 
