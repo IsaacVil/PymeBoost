@@ -1337,7 +1337,7 @@ The container diagram visualizes the Next.js Frontend as a black box within its 
 - Frontend sends logs and metrics to Cloud Logging via gRPC
 - Frontend reports errors to Sentry via HTTPS
 
-![Container Diagram](docs/images/component_c4.png)
+![Container Diagram](docs/images/containers_c4.png)
 
 ---
 
@@ -1387,7 +1387,7 @@ Features → Shared Components/Hooks → Infrastructure (Zustand, TanStack Query
 TanStack Query → ApiClient → Backend API / Auth0
 ```
 
-![Component Diagram](docs/images/containers_c4.png)
+![Component Diagram](docs/images/components_c4.png)
 
 ---
 
@@ -1419,9 +1419,9 @@ TanStack Query → ApiClient → Backend API / Auth0
 - Hosting: Google Cloud Run
 - Architecture: Monorepo with Domain-Driven Design (DDD) and Event Driven Design
 - Coding language: Python 3.12
-- Web framework: FastAPI 0.115
-- Unit testing framework: Pytest 8.3
-- Data validation framework: Pydantic 2.7
+- Web framework: FastAPI 0.115.4
+- Unit testing framework: Pytest 8.3.3
+- Data validation framework: Pydantic 2.10.2
 - Asynchronous operations & notifications: Google Cloud Pub/Sub and Google Cloud Tasks
 - Document & file storage: Google Cloud Storage
 - OCR processing: Google Cloud Document AI
@@ -1436,7 +1436,49 @@ TanStack Query → ApiClient → Backend API / Auth0
 - Database: Google Cloud SQL (PostgreSQL 16)
 - Encryption key management: Google Cloud KMS
 - Session cache: Google Cloud Memorystore (Redis)
-- Agent orchestration framework: LangGraph (LangChain) 0.2
+- Agent orchestration framework: LangGraph 0.2.41
+
+---
+
+## Environment Variables
+
+### Management
+- **Secrets:** All sensitive values (API keys, database passwords, encryption keys) stored in **Google Secret Manager**; never hardcoded or in `.env` files.
+- **Non-sensitive config:** Passed via environment variables at runtime through GitHub Environments (Development, Stage, Production), this are variables like API version, name of the bucket, etc.
+- **Validation:** Required variables validated on application startup using Pydantic `ConfigDict`; missing or invalid values prevent deployment.
+
+### Required Variables by Environment
+
+
+**All Environments:**
+
+**Setup:** Three GitHub Environments configured (Development, Staging, Production) with environment-specific variables.
+
+**Result:** Same Docker image deployed to all environments, but each behaves differently based on GitHub-injected variables.
+
+- `ENVIRONMENT` — Deployment stage: `development`, `staging`, `production`
+- `LOG_LEVEL` — Logging verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR`. Defines how many information needs to be log.
+- `API_VERSION` — OpenAPI version: `v1`
+- `AUTH0_DOMAIN` — Auth0 tenant domain for JWT validation, every environment uses a different url to get the JWKS public keys.
+- `JWKS_URL` — Auth0 JWKS endpoint for token key caching
+- `GCP_PROJECT_ID` — Google Cloud project identifier
+
+**Database:**
+- `DATABASE_URL` — Cloud SQL connection string (from Secret Manager)
+- `DATABASE_POOL_SIZE` — Connection pool size per environment
+
+**GCP Services:**
+- `GCS_BUCKET_NAME` — Google Cloud Storage bucket for documents/reports
+- `PUBSUB_TOPIC_CONTRACTS` — Pub/Sub topic for contract events
+- `REDIS_URL` — Cloud Memorystore Redis connection (from Secret Manager)
+- `KMS_KEY_NAME` — Cloud KMS key for AES-256 encryption
+
+**Third-party Integrations:**
+- `LANGRAPH_API_KEY` — LangGraph agent orchestration API key (from Secret Manager)
+
+### Loading Strategy
+- Variables loaded at startup with clear error messages for missing values.
+- Environment-specific overrides applied automatically from GitHub Environments.
 
 ---
 
@@ -1445,8 +1487,86 @@ TanStack Query → ApiClient → Backend API / Auth0
 ### Authentication & Authorization
 - Authentication delegated to Auth0 with Google OAuth 
 - JWT tokens validated on every request; expiration: 1 hour, automatic rotation with refresh token
-- Roles and permissions validated at the backend level: `Manager` and `Customs Agent` with the same permission codes defined in the frontend
-- Per-endpoint authorization enforced using permission claims from the JWT payload
+- Four roles with role-based access control: `pyme_owner`, `advisor`, `admin`, `system_agent`
+- Per-endpoint authorization enforced using role claims from JWT payload
+
+**Permission Matrix:**
+
+| Action | PYME Owner | Advisor | Admin | System Agent |
+|--------|-----------|---------|-------|--------------|
+| Browse Advisors | Yes | No | Yes | No |
+| Send/Receive Match | Yes | Yes | Yes | No |
+| Chat (Matched) | Yes* | Yes* | Yes | No |
+| Propose/Accept Contract | Yes* | Yes* | Yes | No |
+| View Own Contracts | Yes | Yes | Yes | No |
+| View All Contracts | No | No | Yes | No |
+| Submit Project Report | Yes* | Yes* | Yes | No |
+| Rate Advisor | Yes* | No | Yes | No |
+| Process OCR Documents | No | No | No | Yes |
+| Generate Recommendations | No | No | No | Yes |
+
+`* = Requires bilateral match or resource ownership`
+
+**Resource Ownership:**
+- Users can only access resources they own or participate in
+- Example: PYME A cannot view Contract created between PYME B and Advisor C
+- Validated at Service layer: user_id must match resource owner or participant
+- Ownership violation returns 403 Forbidden
+
+**Token Expiration & Refresh:**
+- JWT expiration: **1 hour** from Auth0
+- **Silent renewal:** Frontend automatically refreshes JWT **5 minutes before expiration** using Auth0 refresh token (transparent to user)
+- Refresh token validity: **30 days** from Auth0 (token can be renewed while still valid)
+- Backend validates token on every request against JWKS cache
+- If token expired AND refresh token also expired → 401 Unauthorized, user must re-authenticate
+- JWKS cache TTL: 50 hours (synchronized with session TTL + grace period); fallback to Auth0 if cache miss
+
+**Rate Limiting:**
+
+| Role | Limit | Window |
+|------|-------|--------|
+| pyme_owner | 100 requests | per minute |
+| advisor | 100 requests | per minute |
+| admin | 200 requests | per minute |
+| system_agent | 500 requests | per minute |
+
+- Rate limit exceeded → 429 Too Many Requests
+- Limits applied per user_id, not per IP
+- Blocking duration: 60 seconds
+
+### Error Handling
+
+**Exception Mapping to HTTP Status Codes:**
+
+| Exception Type | HTTP Code | Response | When |
+|----------------|-----------|----------|------|
+| ValidationException | 400 | Invalid input format | Pydantic validation fails |
+| DomainException | 400 | Business rule violated | Email exists, advisor unavailable |
+| AuthException | 401/403 | JWT invalid/expired or no permission | Auth failed or insufficient role |
+| NotFoundException | 404 | Resource not found | Contract ID doesn't exist |
+| ConflictException | 409 | Resource state conflict | Double-accept contract |
+| InternalServerError | 500 | Internal error (no details to user) | Unhandled exception |
+
+**Error Response Format:**
+```json
+{
+  "error_code": "RESOURCE_NOT_FOUND",
+  "message": "Contract ABC123 not found",
+  "timestamp": "2026-06-05T10:30:00Z",
+  "trace_id": "abc-123-def"
+}
+```
+
+**Retry Strategy:**
+- Transient errors (5xx, timeout): Exponential backoff (100ms → 200ms → 400ms → 2s → 5s)
+- Max retries: 5
+- Non-retryable errors (4xx, validation): No retry
+- Database connection failures: Retry with exponential backoff
+
+**Fallback & Degradation:**
+- Document AI down: Return partial validation, notify user
+- Redis down: Query database directly (slower but functional)
+- Pub/Sub unavailable: Dead Letter Policy for failed messages; exponential backoff retry (100ms → 200ms → 400ms); max 3 retries
 
 ### Transport
 - All communication between backend services and GCP managed services (Cloud SQL, Storage, Pub/Sub) is secured via HTTPS/TLS 1.3 using Google-managed certificates
@@ -1478,22 +1598,25 @@ TanStack Query → ApiClient → Backend API / Auth0
 * Format: Structured JSON with trace_id, request_id, user_id, user_role, timestamp, level, message, service, enviroment, version, endpoint, method, statuscode
 * Destination: Google Cloud Logging (same as frontend)
 * Correlation: X-Trace-ID header propagated across all requests (unified with frontend logs)
+* Retention: 1 year
 
 ### Metrics
 * What to measure: Latency (P95, P99), error rate, CPU utilization, memory usage, Pub/Sub queue depth
 * Destination: Google Cloud Monitoring
 * Tool: Google Cloud Monitoring dashboards
+* Retention: 1 year
  
 ### Distributed Traces
 * Instrumentation: OpenTelemetry SDK for Python (FastAPI)
 * Destination: Google Cloud Trace
 * Scope: Trace every HTTP request from entry to exit, including Cloud SQL queries and Pub/Sub messages
+* Retention: 1 year
  
 ### Application Patterns
  
 * Health Checks: /health/live (liveness), /health/ready (readiness) endpoints checked every 30 seconds by Cloud Run
 * Correlation IDs: X-Trace-ID injected into all logs, metrics, and spans; same ID across Frontend and Backend
-* Service Level Indcators: 
+* Service Level Indicators: 
   - Availability: 99.9% (max 43 min downtime/month)
   - Latency: 95% of requests < 500ms
   - Error rate: < 0.5%
@@ -1501,7 +1624,7 @@ TanStack Query → ApiClient → Backend API / Auth0
 ### Events to Register
  
 * User login (success/failure), JWT validation failures, unauthorized access attempts
-* DUA created/updated/validated, document uploaded, OCR processing (started/completed), DUA generation completed
+* Recommendations created, Documentos processed.
 * API requests (received/completed), database queries, Pub/Sub messages (enqueued/processed)
 * Exceptions/errors, health check results, performance degradation
  
@@ -1549,13 +1672,811 @@ TanStack Query → ApiClient → Backend API / Auth0
 | **Google Cloud API Gateway** | 99.95% | Premium tier; circuit breaker for backend failures |
 | **Google Cloud Pub/Sub** | 99.99% | Dead Letter Policy for failed messages; exponential backoff retry |
 | **Google Cloud Document AI** | 99.9% | Retry with exponential backoff; degraded mode returns partial data |
-| **Google Vertex AI (Gemini)** | 99.9% | Circuit breaker on 3 consecutive failures; fallback to manual review flag |
 | **Auth0** | 99.99% | Managed HA by Auth0; JWT cache allows short-term offline tolerance |
 | **Google Cloud Logging** | 99.95% | Best-effort; non-critical for availability |
 
+**Dead Letter Policy (Pub/Sub):**
+- When a message fails to process (after max retries), it's moved to a Dead Letter Queue (DLQ) instead of being discarded
+- Prevents message loss: failed messages stored for later inspection
+- Flow: Message → Process → Fails 3x → Dead Letter Queue → Alert
+- Team can fix issue or GC pub/sub may be up again so it can retry sending messages from DLQ
+- Example: Notification fails to send → DLQ → Alert → Fix/GC gets up again → Retry sending
+
 ### Single Point of Failure Analysis
+- **Auth0:**
+   1. Valid JWT token arrives at API
+   2. Validated against Auth0 JWKS (JSON Web Key Set) cached in Redis (50h TTL)
+   3. Session stored in Redis with extended TTL (base 48h + 2h grace during outage = 50h max)
+   4. If Auth0 goes down → Backend continues validating signatures against cached JWKS
+   5. **Guarantee:** JWKS always available for entire session lifetime (both expire at 50h)
+   6. **Result:** Every JWT signature validated cryptographically; no unverified claims extraction needed
+   7. If Redis also down → Fallback to database, no JWT validation (fails safely with 401)
+
+- Document AI: If unavailable, OCR fails; mitigated with retry and partial response fallback
+
+- Cloud SQL: Mitigated with Cloud SQL HA (Secondary Instance of the DB) and automatic failover
 
 ### Resilience Patterns (Production)
+Circuit Breaker: Prevents cascading failures by opening circuit after 5 consecutive failures; 30-second timeout before retry (Document AI)
+Retry with Backoff: Exponential backoff (100ms → 200ms → 400ms) for transient failures
+Bulkhead: OCR processing isolated to 20 max concurrent threads via Pub/Sub concurrency limits
+Degraded Mode: If OCR or AI unavailable, returns partial response with cached data and user notification
+Health Checks: /health/ready endpoint checked every 30 seconds by Cloud Run; auto-restart if unhealthy
+
+---
+
+## Backend Caching Strategy
+
+PymeBoost implements a robust caching strategy at the backend to guarantee availability, performance, and service continuity even when Auth0 is down. The strategy covers multiple layers: JWT tokens, refresh tokens, Redis sessions, and JWKS (JSON Web Key Set).
+
+### JWT (JSON Web Token) - Quick Access
+
+**Standard TTL (Normal):**
+- **1 hour**: JWT lifespan under normal conditions when Auth0 is available.
+- Purpose: Maintain secure and short-lived sessions to minimize risk of token compromise.
+
+**TTL with Grace Period (Auth0 Down):**
+- **3 hours total** (1 hour standard + 2 hours grace): Maximum time a JWT is valid even if Auth0 is down.
+- Purpose: Guarantee users can continue using the application for up to 2 additional hours without losing access if Auth0 fails.
+- Validation: During grace period, JWT is validated locally using cached JWKS instead of connecting to Auth0.
+
+### Refresh Token - Session Renewal (30 Days)
+
+**Refresh Token TTL:**
+- **30 days**: Maximum time a user can remain without re-authenticating.
+- Purpose: Allow users to renew JWT automatically without re-entering credentials.
+- Mechanism: When JWT expires, the client uses the Refresh Token to obtain a new JWT without UX interruptions.
+
+**User Behavior:**
+
+1. **User logs in** → JWT (1 hour) + Refresh Token (30 days) issued.
+
+2. **User closes app after 30 minutes** → Returns after 2 hours:
+   - JWT expired (1 hour lifespan passed).
+   - Refresh Token still valid (30 days).
+   - **Result**: Client automatically uses Refresh Token to get a new JWT. **No re-authentication needed**.
+
+3. **User closes app after 3 days** → Returns after 30 days:
+   - Refresh Token expired.
+   - **Result**: Must re-authenticate.
+
+4. **User stays in app for more than 1 hour (without closing):**
+   - JWT approaches expiration.
+   - Client automatically refreshes in background to obtain new JWT.
+   - **Result**: User never experiences session expiration while actively using the app.
+
+### Redis Session Store - Session Data Storage
+
+**Redis TTL:**
+- **3 hours** (equal to maximum JWT TTL with grace): Maximum duration session data is stored in Redis.
+- Purpose: Keep session data synchronized with maximum JWT validity, even if Auth0 is down.
+- Content stored: User ID, permissions, roles, session metadata.
+- Benefit: If Auth0 is down for 2 hours then recovers, Redis still has session data available for fast validation.
+
+**Automatic Cleanup:**
+- After 3 hours without activity, data is removed from Redis.
+- If user tries to use an expired JWT without valid Refresh Token, server rejects the request and requires re-authentication.
+
+### JWKS (JSON Web Key Set) - Cache Storage
+
+**JWKS Cache TTL:**
+- **3 hours** (equal to maximum JWT TTL): Duration Auth0 public certificates are stored locally on the server.
+- Purpose: Validate JWT signatures locally without depending on Auth0, enabling service continuity if Auth0 is down.
+
+**Mechanics:**
+
+1. Server periodically downloads Auth0 public certificates (JWKS).
+2. Stored in server memory/cache with 3-hour TTL.
+3. When JWT arrives, server validates signature using cached JWKS.
+4. If cached JWKS expires, server attempts to refresh from Auth0. If Auth0 doesn't respond, JWT is rejected after grace period.
+
+**Why 3 Hours (Justified by Auth0 SLA 99.99%):**
+
+Auth0 guarantees **99.99% uptime**, which translates to:
+- **Maximum downtime per year:** ~52.6 minutes (0.01% × 525,600 minutes/year)
+- **Average downtime per incident:** Typically 15-30 minutes
+
+PymeBoost uses **3 hours as a conservative grace buffer** because:
+1. **Covers rare extended outages:** Though 99.99% is the target, edge cases (regional issues, cascading failures) may exceed typical recovery time
+2. **Operational safety margin:** 180 minutes >> 52 minutes/year average, ensuring no user is suddenly locked out
+3. **User continuity:** Balances security with UX—worst-case outage still keeps most users operational
+4. **Technical requirement:** Server must validate JWTs locally (without Auth0) for the entire session window
+
+**Result:** During the 3-hour grace period, PymeBoost remains fully operational using cached JWKS for signature validation. After 3 hours, if Auth0 is still down (extremely rare), tokens are rejected to maintain security boundaries.
+
+### Error Handling & Recovery
+
+**If JWT expires and Auth0 is available:**
+- Client automatically uses Refresh Token to get new JWT.
+- Redis session renewed.
+- User continues without interruptions.
+
+**If JWT expires and Auth0 is down (within 2 hours):**
+- JWT remains valid by grace period (up to 3 hours total).
+- Redis session remains valid.
+- User can continue operating.
+
+**If JWT expires and Auth0 still down after 2 hours:**
+- JWT rejected (exceeded 3-hour grace).
+- Refresh Token cannot be used (requires Auth0).
+- User must re-authenticate.
+
+**If JWKS cache expires without Auth0 connection:**
+- Server cannot validate new JWTs.
+- Rejects requests to maintain security.
+- Once Auth0 recovers, JWKS updates and continues normally.
+
+### Caching Timeline Summary
+
+| Component | TTL | Purpose |
+|---|---|---|
+| JWT (normal) | 1 hour | Token validity with Auth0 available |
+| JWT (with grace) | 3 hours | Maximum tolerance if Auth0 is down |
+| Refresh Token | 30 days | Maximum time without re-authenticating |
+| Redis Session | 3 hours | Session data storage |
+| JWKS Cache | 3 hours | Local validation without depending on Auth0 |
+
+This strategy guarantees **PymeBoost maintains availability even during Auth0 interruptions, with a balance between security, UX, and service continuity**.
+
+---
+
+## Layered Design (Domain-Driven Design)
+
+PymeBoost backend follows a **vertical domain-driven layered architecture** where the application is organized by business domains rather than technical layers. Each domain is a self-contained module encapsulating its own logic, data, and API endpoints while maintaining clear boundaries through event-driven communication.
+
+The architecture enables:
+
+- **Domain ownership:** Each domain team owns their logic, database schema, and API contracts.
+- **Reduced coupling:** Domains communicate through well-defined events and service queries, never direct database access.
+- **Scalable growth:** New domains added without affecting existing ones; domain logic stays isolated.
+- **Clear responsibility boundaries:** Each domain knows its entities, use cases, and business rules.
+- **Event-driven resilience:** Asynchronous communication decouples domains and enables eventual consistency.
+
+The design has 4 main layers: Controllers (HTTP) → Services (logic) → Repositories (data) → Models (schema)
+
+### Core Domains
+
+PymeBoost is built around these core business domains:
+
+- **User:** Account creation, authentication, profile management (SME, Advisor).
+- **Advisor:** Reputation, specializations, base rates, availability.
+- **Pyme:** Business information, optimization needs, performance metrics, industry data.
+- **Matching:** Advisor discovery, recommendation engine, swipe decisions, match creation.
+- **Contract:** Negotiation, proposal submission, terms agreement, tracking.
+- **Communication:** Real-time chat, messaging between PYME and advisors.
+- **Project:** Project lifecycle, milestones, health monitoring, completion tracking.
+- **Review:** Ratings and feedback for advisors and PYMEs.
+- **Notification:** Event-driven alerts, email notifications, system-wide broadcasts.
+- **Event:** Event audit logging, event sourcing, domain event storage.
+
+### Complete Folder Structure
+
+Each domain is a vertical slice with its own layers:
+
+```txt
+src/backend/
+├── domains/
+│   ├── user/
+│   │   ├── controllers/
+│   │   │   ├── create_sme_account_controller.py
+│   │   │   ├── create_advisor_account_controller.py
+│   │   │   ├── login_controller.py
+│   │   │   ├── update_sme_profile_controller.py
+│   │   │   └── update_advisor_profile_controller.py
+│   │   ├── services/
+│   │   │   ├── user_service.py
+│   │   │   ├── session_cache_service.py
+│   │   │   └── auth_service.py
+│   │   ├── repositories/
+│   │   │   ├── user_repository.py
+│   │   │   └── session_repository.py
+│   │   ├── models/
+│   │   │   ├── user_model.py
+│   │   │   └── session_model.py
+│   │   ├── schemas/
+│   │   │   ├── create_sme_request.py
+│   │   │   ├── create_advisor_request.py
+│   │   │   ├── user_response.py
+│   │   │   └── session_response.py
+│   │   └── events/
+│   │       ├── sme_account_created_event.py
+│   │       └── advisor_account_created_event.py
+│   │
+│   ├── advisor/
+│   │   ├── controllers/
+│   │   │   ├── get_advisor_profile_controller.py
+│   │   │   ├── calculate_reputation_controller.py
+│   │   │   └── update_base_rate_controller.py
+│   │   ├── services/
+│   │   │   ├── advisor_service.py
+│   │   │   ├── reputation_service.py
+│   │   │   └── base_rate_service.py
+│   │   ├── repositories/
+│   │   │   ├── advisor_repository.py
+│   │   │   ├── reputation_repository.py
+│   │   │   └── specialization_repository.py
+│   │   ├── models/
+│   │   │   ├── advisor_model.py
+│   │   │   ├── specialization_model.py
+│   │   │   └── reputation_model.py
+│   │   ├── schemas/
+│   │   │   ├── advisor_profile_response.py
+│   │   │   ├── reputation_dto.py
+│   │   │   └── base_rate_dto.py
+│   │   └── events/
+│   │       ├── advisor_reputation_updated_event.py
+│   │       └── advisor_base_rate_updated_event.py
+│   │
+│   ├── pyme/
+│   │   ├── controllers/
+│   │   │   ├── get_pyme_profile_controller.py
+│   │   │   ├── get_advisor_recommendations_controller.py
+│   │   │   └── get_similar_projects_controller.py
+│   │   ├── services/
+│   │   │   ├── pyme_service.py
+│   │   │   ├── recommendation_service.py
+│   │   │   └── impact_prediction_service.py
+│   │   ├── repositories/
+│   │   │   ├── pyme_repository.py
+│   │   │   └── industry_repository.py
+│   │   ├── models/
+│   │   │   ├── pyme_model.py
+│   │   │   ├── industry_model.py
+│   │   │   └── optimization_area_model.py
+│   │   ├── schemas/
+│   │   │   ├── pyme_profile_response.py
+│   │   │   ├── recommendation_dto.py
+│   │   │   └── impact_prediction_dto.py
+│   │   └── events/
+│   │       ├── advisor_recommended_event.py
+│   │       └── recommendation_recalculated_event.py
+│   │
+│   ├── matching/
+│   │   ├── controllers/
+│   │   │   ├── get_advisor_matches_controller.py
+│   │   │   ├── create_swipe_decision_controller.py
+│   │   │   ├── create_match_controller.py
+│   │   │   ├── cancel_match_controller.py
+│   │   │   └── finalize_match_controller.py
+│   │   ├── services/
+│   │   │   ├── matching_service.py
+│   │   │   ├── match_expiration_service.py
+│   │   │   └── discovery_service.py
+│   │   ├── repositories/
+│   │   │   ├── match_repository.py
+│   │   │   ├── swipe_repository.py
+│   │   │   └── discovery_repository.py
+│   │   ├── models/
+│   │   │   ├── match_model.py
+│   │   │   └── swipe_model.py
+│   │   ├── schemas/
+│   │   │   ├── match_dto.py
+│   │   │   ├── swipe_request.py
+│   │   │   └── match_response.py
+│   │   └── events/
+│   │       ├── match_created_event.py
+│   │       ├── match_swiped_event.py
+│   │       └── match_expired_event.py
+│   │
+│   ├── contract/
+│   │   ├── controllers/
+│   │   │   ├── propose_contract_controller.py
+│   │   │   ├── counter_offer_controller.py
+│   │   │   ├── accept_contract_controller.py
+│   │   │   └── reject_contract_controller.py
+│   │   ├── services/
+│   │   │   ├── contract_service.py
+│   │   │   ├── negotiation_service.py
+│   │   │   └── contract_generator_service.py
+│   │   ├── repositories/
+│   │   │   ├── contract_repository.py
+│   │   │   └── negotiation_repository.py
+│   │   ├── models/
+│   │   │   ├── contract_model.py
+│   │   │   └── negotiation_model.py
+│   │   ├── schemas/
+│   │   │   ├── contract_proposal_request.py
+│   │   │   ├── contract_response.py
+│   │   │   └── counter_offer_dto.py
+│   │   └── events/
+│   │       ├── contract_proposed_event.py
+│   │       ├── contract_accepted_event.py
+│   │       └── contract_rejected_event.py
+│   │
+│   ├── communication/
+│   │   ├── controllers/
+│   │   │   ├── validate_chat_access_controller.py
+│   │   │   ├── send_message_controller.py
+│   │   │   └── get_messages_controller.py
+│   │   ├── services/
+│   │   │   ├── chat_service.py
+│   │   │   └── message_service.py
+│   │   ├── repositories/
+│   │   │   ├── message_repository.py
+│   │   │   └── chat_session_repository.py
+│   │   ├── models/
+│   │   │   ├── message_model.py
+│   │   │   └── chat_session_model.py
+│   │   ├── schemas/
+│   │   │   ├── message_request.py
+│   │   │   ├── message_response.py
+│   │   │   └── chat_session_dto.py
+│   │   └── events/
+│   │       └── message_sent_event.py
+│   │
+│   ├── project/
+│   │   ├── controllers/
+│   │   │   ├── create_project_controller.py
+│   │   │   ├── get_project_status_controller.py
+│   │   │   ├── generate_milestones_controller.py
+│   │   │   ├── validate_milestone_controller.py
+│   │   │   ├── monitor_health_controller.py
+│   │   │   └── close_project_controller.py
+│   │   ├── services/
+│   │   │   ├── project_service.py
+│   │   │   ├── milestone_service.py
+│   │   │   ├── health_monitoring_service.py
+│   │   │   └── project_completion_service.py
+│   │   ├── repositories/
+│   │   │   ├── project_repository.py
+│   │   │   └── milestone_repository.py
+│   │   ├── models/
+│   │   │   ├── project_model.py
+│   │   │   ├── milestone_model.py
+│   │   │   └── project_health_model.py
+│   │   ├── schemas/
+│   │   │   ├── create_project_request.py
+│   │   │   ├── project_response.py
+│   │   │   ├── milestone_dto.py
+│   │   │   └── health_status_dto.py
+│   │   └── events/
+│   │       ├── project_created_event.py
+│   │       ├── project_status_changed_event.py
+│   │       ├── milestone_completed_event.py
+│   │       └── project_completed_event.py
+│   │
+│   ├── review/
+│   │   ├── controllers/
+│   │   │   ├── leave_advisor_review_controller.py
+│   │   │   ├── leave_pyme_review_controller.py
+│   │   │   └── get_reviews_controller.py
+│   │   ├── services/
+│   │   │   └── review_service.py
+│   │   ├── repositories/
+│   │   │   └── review_repository.py
+│   │   ├── models/
+│   │   │   └── review_model.py
+│   │   ├── schemas/
+│   │   │   ├── review_request.py
+│   │   │   └── review_response.py
+│   │   └── events/
+│   │       └── review_submitted_event.py
+│   │
+│   ├── notification/
+│   │   ├── controllers/
+│   │   │   └── (notification delivery managed via Pub/Sub, not REST)
+│   │   ├── services/
+│   │   │   ├── notification_service.py
+│   │   │   ├── email_notification_service.py
+│   │   │   └── in_app_notification_service.py
+│   │   ├── repositories/
+│   │   │   └── notification_repository.py
+│   │   ├── models/
+│   │   │   ├── notification_model.py
+│   │   │   └── notification_preference_model.py
+│   │   ├── schemas/
+│   │   │   └── notification_dto.py
+│   │   └── handlers/
+│   │       ├── match_created_handler.py
+│   │       ├── contract_proposed_handler.py
+│   │       ├── project_status_handler.py
+│   │       └── advisor_selected_handler.py
+│   │
+│   └── event/
+│       ├── controllers/
+│       │   └── (Event publishing managed internally)
+│       ├── services/
+│       │   ├── event_service.py
+│       │   └── event_audit_service.py
+│       ├── repositories/
+│       │   └── event_repository.py
+│       ├── models/
+│       │   └── domain_event_model.py
+│       ├── schemas/
+│       │   └── domain_event_dto.py
+│       └── publishers/
+│           ├── event_publisher.py
+│           └── pubsub_publisher.py
+│
+├── shared/
+│   ├── database/
+│   │   ├── connection.py
+│   │   ├── session.py
+│   │   ├── migrations/
+│   │   └── seeders/
+│   ├── auth/
+│   │   ├── jwt_validator.py
+│   │   ├── permission_checker.py
+│   │   └── auth0_service.py
+│   ├── events/
+│   │   ├── event_bus.py
+│   │   ├── event_handler.py
+│   │   └── event_registry.py
+│   ├── exceptions/
+│   │   ├── domain_exception.py
+│   │   ├── validation_exception.py
+│   │   ├── auth_exception.py
+│   │   └── not_found_exception.py
+│   ├── logging/
+│   │   ├── logger.py
+│   │   └── structured_logging.py
+│   ├── messaging/
+│   │   ├── pubsub_client.py
+│   │   ├── message_publisher.py
+│   │   └── message_subscriber.py
+│   ├── validators/
+│   │   ├── email_validator.py
+│   │   ├── phone_validator.py
+│   │   └── business_validator.py
+│   └── utils/
+│       ├── uuid_generator.py
+│       ├── datetime_utils.py
+│       └── encryption_utils.py
+│
+├── api/
+│   └── routes.py
+│
+├── main.py
+└── config.py
+```
+
+### Folder Responsibilities
+
+| Folder | Responsibility |
+|--------|----------------|
+| `domains/[domain]/controllers/` | HTTP endpoint handlers. Parse requests, delegate to services, return responses. One controller per endpoint. |
+| `domains/[domain]/services/` | Business logic layer. Implements use cases, orchestrates repositories, publishes events, enforces domain rules. |
+| `domains/[domain]/repositories/` | Data access layer. Queries and mutations to database. Abstract database details from services. |
+| `domains/[domain]/models/` | SQLAlchemy ORM models. Database table definitions and relationships. |
+| `domains/[domain]/schemas/` | Pydantic request/response DTOs. Input validation and API contract definitions. |
+| `domains/[domain]/events/` | Domain events published by this domain. Event class definitions. |
+| `domains/[domain]/handlers/` | (Notification & Event domains) Event subscribers. Process async events from other domains. |
+| `shared/database/` | Database connection, session factory, migrations (Alembic). Shared by all domains. |
+| `shared/auth/` | Auth0 JWT validation, permission checking, session management. |
+| `shared/events/` | Event bus, event registry, event handler interfaces. Core event infrastructure. |
+| `shared/exceptions/` | Custom exception classes (DomainException, ValidationException, etc.). |
+| `shared/logging/` | Structured logging, correlation IDs, distributed tracing integration. |
+| `shared/messaging/` | Google Cloud Pub/Sub client, message publisher, subscriber utilities. |
+| `shared/validators/` | Reusable validation functions (email, phone, business rules). |
+| `shared/utils/` | Utility functions (UUID generation, datetime handling, encryption). |
+| `api/routes.py` | FastAPI router registration. Aggregates all domain endpoints. |
+| `main.py` | FastAPI application factory. Middleware setup, startup/shutdown hooks. |
+| `config.py` | Environment configuration, database settings, API keys. |
+
+### Dependency Flow (Within Each Domain)
+
+The dependency flow is **unidirectional and downward**:
+
+```
+Controller
+    ↓
+Service
+    ↓
+Repository
+    ↓
+Database (SQLAlchemy Models)
+```
+
+**Rules:**
+- Controllers never call repositories directly; always through services.
+- Controllers never access the database.
+- Services orchestrate repositories and publish events.
+- Repositories only query and mutate the database.
+- Models define schema; no business logic in models.
+- Events are published by services, not controllers.
+
+### Controllers — HTTP Handler Layer
+
+#### DO
+- Parse HTTP request into Pydantic DTO
+- Return appropriate HTTP status codes (200, 400, 401, 500)
+- Delegate all business logic to services
+- Catch service exceptions and convert to HTTP responses
+- Inject dependencies (service, repository) via constructor
+- Document endpoint behavior in docstrings
+
+#### DO NOT
+| Restriction | Why | Impact |
+|-------------|-----|--------|
+| Call repositories directly | Breaking layer abstraction | Hidden database coupling |
+| Implement business logic | Controllers handle HTTP only | Logic becomes untestable |
+| Access the database | Service's responsibility | Breaks dependency inversion |
+| Publish events directly | Services own state changes | Events fire at wrong time |
+| Call other domain's services | Hard dependencies between domains | Can't deploy independently |
+| Mutate request objects | DTOs should be immutable | Silent state corruption |
+| Catch and swallow exceptions | Errors need to propagate | Debugging becomes impossible |
+
+---
+
+### Services — Business Logic Layer
+
+#### DO
+- Orchestrate repositories to fetch/persist data
+- Validate business rules before state changes
+- Call other domain services via REST API (with timeout & retry)
+- Publish domain events after successful persistence
+- Return response DTOs (never raw models)
+- Log important business decisions
+- Raise domain-specific exceptions
+
+#### DO NOT
+| Restriction | Why | Impact |
+|-------------|-----|--------|
+| Query database directly | Use repositories for abstraction | Database changes break multiple services |
+| Import from other domains' folders | Breaks domain isolation | Can't test domains independently |
+| Return raw database models | DTOs are API contracts | Frontend couples to schema |
+| Perform HTTP calls directly | Use dependency injection | Untestable; hard-coded external deps |
+| Mutate input DTOs | Data transformations explicit | Silent bugs; hard to trace changes |
+| Publish events in request path | Event handlers may fail | Poor resilience; cascading failures |
+| Call database in event handlers | Should be isolated & async | Cascading failures between domains |
+
+---
+
+### Repositories — Data Access Layer
+
+#### DO
+- Query the database using SQLAlchemy ORM
+- Return complete entities (never partial/null projections)
+- Use parameterized queries (ORM prevents SQL injection)
+- Let database constraints enforce data integrity
+- Raise exceptions if queries fail
+- Keep methods focused on single query pattern
+
+#### DO NOT
+| Restriction | Why | Impact |
+|-------------|-----|--------|
+| Implement business logic | Only query/mutate data | Logic gets duplicated |
+| Call other repositories | Service's job | Breaks testability |
+| Return partial objects | Always return complete entities | Inconsistent data shapes |
+| Perform validation | Service's job | Validation gets duplicated |
+| Catch exceptions & return null | Let exceptions bubble | Errors silently disappear |
+| Execute raw SQL queries | Use ORM consistently | SQL injection risk |
+| Publish events | Services own state changes | Events fire at DB level |
+
+---
+
+### Models (SQLAlchemy) — Schema Definition
+
+#### DO
+- Define table structure with columns and types
+- Use relationships to model domain connections
+- Set database constraints (UNIQUE, NOT NULL, FK)
+- Keep models as passive data structures
+- Use computed properties for read-only derived data
+
+#### DO NOT
+| Restriction | Why | Impact |
+|-------------|-----|--------|
+| Implement business logic or validation | Models define schema only | Constraints become inconsistent with app logic |
+| Return models directly to API consumers | Use DTOs as API contracts | Clients couple to internal schema |
+| Perform database queries | Models are passive | Logic in wrong place |
+| Include state-mutating methods | Mutations go through services | Bypasses validation & events |
+
+---
+
+### Validation Layer Distribution
+
+Validation happens at **multiple layers**, each with specific responsibility:
+
+| Validation Type | Layer | Tool | When | Example |
+|-----------------|-------|------|------|---------|
+| **Input Format** | Controller | FastAPI + Pydantic | Request arrives | Email format, phone number format, UUID validity |
+| **Request DTO** | Controller | Pydantic Schemas | Parse incoming JSON | Required fields present, type correctness |
+| **Business Rules (Pre-Service)** | Service | Python + custom validators | Before state change | Email not already registered, advisor exists |
+| **Domain Rules** | Service | Domain-specific logic | During use case | Contract terms respect minimum hours, advisor reputation > threshold |
+| **Data Integrity** | Repository | Database constraints | Before persist | Unique constraints, foreign keys, NOT NULL |
+| **Immutability** | Repository | SQLAlchemy read-only props | After persist | Prevent accidental mutations of retrieved entities |
+| **Response Validation** | Service | Zod (frontend) / Pydantic (backend) | Before return | Response matches DTO schema; no null where forbidden |
+
+**Layer-by-Layer Breakdown:**
+
+**1. Controller (Request Entry Point)**
+- Parse HTTP body into Pydantic DTO
+- Validate required fields, types, formats (Pydantic enforces automatically)
+- Reject malformed requests with 400 Bad Request
+- Pass clean DTO to service
+- **Never:** Call business logic; skip validation
+
+**2. Service (Business Logic)**
+- Assume DTO is valid (controller guaranteed it)
+- Validate business rules: "Does this email already exist?", "Is advisor available?"
+- Enforce domain invariants: "Contract cannot be accepted if parties don't match"
+- Validate cross-domain constraints: "Is this advisor in valid specialization?"
+- Orchestrate repository calls; collect result
+- Publish events only after successful persistence
+- **Never:** Re-validate DTO format (controller did it); skip business validation
+
+**3. Repository (Data Access)**
+- Assume service passed valid data (service validated it)
+- Database constraints enforce final validation: unique indexes, foreign keys, NOT NULL
+- Raise exceptions if constraints violated
+- Return complete, consistent entities
+- **Never:** Validate business rules (service did it); return partial objects
+
+**4. Frontend (Zod Validation)**
+- Validate API response against schema
+- Reject invalid backend responses early
+- Provide type-safe data to components
+- Ensure runtime safety even if backend contract changed
+- **Never:** Trust unvalidated API data; assume backend never breaks
+
+---
+
+### Domain Isolation & Boundaries
+
+Each domain owns:
+
+- **Its database schema:** No cross-domain foreign keys. Domains reference each other by ID only.
+- **Its business logic:** Rules and validations specific to the domain live in its service layer.
+- **Its API contracts:** Schemas and DTOs are domain-specific.
+- **Its events:** Only this domain publishes these events.
+
+Domains **never**:
+- Import from other domains' folders (no `from domains.advisor.services import ...`).
+- Share database tables.
+- Call other domains' services directly.
+- Mutate other domains' data.
+
+**How domains reference each other:**
+
+If Matching domain needs advisor info, it queries the Advisor service via REST API (internal) or caches the data locally. It does **not** import `AdvisorRepository`.
+
+### Communication Strategy
+
+#### 1. Synchronous Communication (Queries)
+
+Used when a domain needs **immediate data** from another domain:
+
+```
+Matching Service → Query Advisor Service → Get advisor profile, base rate, reputation
+Pyme Service → Query Advisor Service → Get similar projects completed
+```
+
+**Rules:**
+- Always use service-level calls, not direct repository access.
+- Keep queries lightweight to avoid cascading latency.
+- Implement timeout and retry logic for resilience.
+
+#### 2. Asynchronous Communication (Events)
+
+Used for **state changes** that other domains need to react to:
+
+```
+Advisor Updates Industry
+        ↓
+AdvisorIndustryUpdated Event Published
+        ↓
+Event Bus
+        ↓
+├─ Pyme Domain (Recalculate Recommendations)
+├─ Matching Domain (Update Active Matches)
+└─ Notification Domain (Notify SMEs)
+```
+
+**Key Business Events:**
+
+| Event | Triggered By | Published By | Consumed By | Purpose |
+|-------|--------------|--------------|-------------|---------|
+| **AdvisorAccountCreated** | User creates advisor account | User Domain | Advisor Domain, Notification Domain | Initialize advisor profile, send welcome notification |
+| **SmeAccountCreated** | User creates SME account | User Domain | Pyme Domain, Notification Domain | Initialize PYME profile, send welcome notification |
+| **AdvisorIndustryUpdated** | Advisor updates specializations | Advisor Domain | Pyme Domain, Matching Domain | Recalculate recommendations, update active matches |
+| **AdvisorReputationUpdated** | Reputation score changes | Advisor Domain | Matching Domain, Notification Domain | Update advisor ranking, notify of reputation change |
+| **RecommendationUpdated** | New advisors match SME needs | Pyme Domain | Matching Domain, Notification Domain | Refresh recommendations, notify SME |
+| **MatchCreated** | PYME and Advisor matched | Matching Domain | Communication Domain, Notification Domain, Contract Domain | Enable chat, notify both parties, prepare contract |
+| **MatchSwiped** | Advisor swipes on PYME | Matching Domain | Notification Domain | Notify counterparty of interest |
+| **ContractProposed** | Contract sent for negotiation | Contract Domain | Communication Domain, Notification Domain | Enable discussion, notify parties |
+| **ContractAccepted** | Contract terms agreed | Contract Domain | Project Domain, Notification Domain | Create project, notify parties, start work |
+| **ProjectCreated** | Project starts | Project Domain | Notification Domain, Communication Domain | Initialize milestones, enable project chat |
+| **ProjectStatusChanged** | Project health or stage updates | Project Domain | Notification Domain | Notify stakeholders of progress |
+| **MilestoneCompleted** | PYME/Advisor completes milestone | Project Domain | Notification Domain, Review Domain | Notify parties, enable review collection |
+| **ProjectCompleted** | Project finalized | Project Domain | Review Domain, Notification Domain | Enable reviews, calculate final metrics |
+| **ReviewSubmitted** | Review left for advisor/PYME | Review Domain | Advisor Domain, Notification Domain, Pyme Domain | Update reputation, notify subject, archive review |
+
+### Shared Components
+
+Shared infrastructure lives in `src/backend/shared/` and is used by all domains:
+
+**shared/database/:**
+- `connection.py` — Database connection pool, session factory.
+- `session.py` — SQLAlchemy session management, transaction handling.
+- `migrations/` — Alembic migrations (versioned schema changes). (similar to flyway)
+- `seeders/` — Data fixtures for development and testing.
+
+**shared/auth/:**
+- `jwt_validator.py` — Validates JWT tokens from Auth0; caches JWKS locally.
+- `permission_checker.py` — Checks user permissions against endpoint requirements.
+- `auth0_service.py` — Creates/updates users in Auth0 (called by User domain).
+
+**shared/events/:**
+- `event_bus.py` — In-memory event broker for publishing/subscribing to domain events.
+- `event_handler.py` — Base class for event handlers. Each handler subscribes to specific events.
+- `event_registry.py` — Registry of all event handlers. Loaded at startup.
+
+**shared/exceptions/:**
+- `domain_exception.py` — Base exception for domain-specific errors.
+- `validation_exception.py` — Input validation failures.
+- `auth_exception.py` — Authentication/authorization failures.
+- `not_found_exception.py` — Resource not found.
+
+**shared/logging/:**
+- `logger.py` — Structured JSON logging with correlation IDs.
+- `structured_logging.py` — Middleware to inject trace_id, request_id, user_id into logs.
+
+**shared/messaging/:**
+- `pubsub_client.py` — Google Cloud Pub/Sub connection and utilities.
+- `message_publisher.py` — Publish messages to topics (for external integrations, email notifications).
+- `message_subscriber.py` — Subscribe to topics and process messages asynchronously.
+
+**shared/validators/:**
+- `email_validator.py` — Email format and uniqueness validation.
+- `phone_validator.py` — Phone number format validation.
+- `business_validator.py` — Business rule validations (e.g., valid industry codes).
+
+**shared/utils/:**
+- `uuid_generator.py` — Generate consistent UUIDs.
+- `datetime_utils.py` — Datetime parsing, formatting, timezone handling.
+- `encryption_utils.py` — Encrypt/decrypt sensitive fields.
+
+
+### Naming Conventions
+
+**Controllers:**
+- Verb-noun: `create_sme_account_controller.py`, `get_advisor_profile_controller.py`, `accept_contract_controller.py`
+- Class name: `CreateSmeAccountController`, `GetAdvisorProfileController`
+- Route: `/api/sme/accounts`, `/api/advisors/{id}`, `/api/contracts/{id}/accept`
+
+**Services:**
+- Noun-service: `user_service.py`, `advisor_service.py`, `matching_service.py`
+- Class name: `UserService`, `AdvisorService`, `MatchingService`
+- Methods: `create_sme_account()`, `get_advisor_profile()`, `calculate_match_score()`
+
+**Repositories:**
+- Noun-repository: `user_repository.py`, `advisor_repository.py`, `match_repository.py`
+- Class name: `UserRepository`, `AdvisorRepository`, `MatchRepository`
+- Methods: `save()`, `find_by_id()`, `find_all()`, `delete()`
+
+**Models:**
+- Noun + `Model`: `sme_model.py`, `advisor_model.py`, `match_model.py`
+- Class name: `SMEModel`, `AdvisorModel`, `MatchModel`
+- Table name: `smes`, `advisors`, `matches` (snake_case, plural)
+
+**Schemas (DTOs):**
+- Request: `create_sme_request.py`, `counter_offer_request.py`
+- Response: `sme_response.py`, `advisor_response.py`
+- DTO: `reputation_dto.py`, `match_dto.py`
+- Class name: `CreateSmeRequest`, `SmeResponse`, `ReputationDTO`
+
+**Events:**
+- Past tense: `sme_account_created_event.py`, `advisor_reputation_updated_event.py`, `match_created_event.py`
+- Class name: `SmeAccountCreatedEvent`, `AdvisorReputationUpdatedEvent`, `MatchCreatedEvent`
+
+**Handlers (Async Event Processing):**
+- Event + handler: `match_created_handler.py`, `project_status_handler.py`
+- Class name: `MatchCreatedHandler`, `ProjectStatusHandler`
+- Method: `handle(event: MatchCreatedEvent)`
+
+### Key Rules
+
+- **Domain isolation:** Domains never import from other domains; communicate via REST APIs and events only.
+- **No circular dependencies:** If A calls B, B must not call A (directly or indirectly).
+- **Single responsibility:** Each service has one reason to change; repositories only do data access.
+- **Immutable requests:** Request DTOs are read-only; responses are built from domain entities.
+- **Event-driven resilience:** State changes are published as events; subscribers handle them asynchronously.
+- **Repository contracts:** Repositories expose only query/mutation methods, not entities directly.
+- **Service orchestration:** Services call repositories and publish events; they own the use case logic.
+- **Explicit dependencies:** All dependencies injected via function parameters or constructor, never imported globals.
+- **No business logic in models:** Models define schema only; validation and rules live in services.
+- **One controller per endpoint:** Each controller handles a single HTTP operation; delegate all logic to services.
 
 ---
 
@@ -1658,7 +2579,7 @@ Implementation: [src/backend/domains/user/services/session_cache_service.py](src
    - A session object is created.
    - The session is stored in Redis.
 6. The session becomes available for future requests.
-7. The session TTL (Time To Live) is refreshed whenever user activity is detected.
+7. The session TTL (Time To Live) is refreshed whenever user activity is detected, standard time is 48 hours.
 
 ---
 
