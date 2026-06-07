@@ -2357,35 +2357,40 @@ If Matching domain needs advisor info, it queries the Advisor service via REST A
 
 ### Communication Strategy
 
-#### 1. Synchronous Communication (Queries)
+Domains communicate in two modes: **synchronous queries** when a domain needs data immediately, and **asynchronous events** when a domain reacts to another's state change. In both modes, a domain never consumes another domain's data in its raw, foreign shape. Every inbound payload — a query response or an event — first crosses an **Anticorruption Layer** before reaching the consuming domain's services and models.
 
-Used when a domain needs **immediate data** from another domain:
+#### Anticorruption Layer (ACL)
 
-```
-Matching Service → Query Advisor Service → Get advisor profile, base rate, reputation
-Pyme Service → Query Advisor Service → Get similar projects completed
-```
+The ACL is a thin, inbound-only translation boundary that each consuming domain owns. It maps another domain's representation (its response DTO or event payload) into the consumer's own model, keeping only the fields the consumer actually needs. This protects each domain's model from foreign concepts and stops an upstream schema change from rippling into downstream logic.
+
+**Why additive changes don't break consumers:** suppose domain B's translator extracts only fields `x`, `y`, `z` from domain A's response — those are the only ones B's model cares about. If A later evolves its response to also include a new field `l` (now `x`, `y`, `z`, `l`), B's translator simply continues extracting `x`, `y`, `z` and ignores `l`. B's service, model, and tests never see `l` and never change. The translator only needs to be touched if B later decides it actually wants `l`, or if A renames or removes one of the fields B already depends on — and even then, the fix is confined to that single translator.
+
+It lives inside the consuming domain — small translator/adapter components sitting at the boundary between its services and the external source — never in the source domain. These components translate in both directions of the call: inbound, they reshape the source's response or event payload into the consumer's own model (as above); outbound, they assemble the request the source's contract expects from data the consumer already has. Either way, the translation is confined to this boundary — a domain's services and business logic never assemble or parse another domain's contract directly, and a domain never reshapes its own model just to please a consumer.
+
+**Why a change in required input parameters doesn't ripple through B:** suppose domain A's query currently requires parameters `x`, `y`, `z`, and B's outbound translator builds exactly that request from data it already holds. If A later changes its contract to require `x`, `y`, `z`, `l`, only B's translator needs to learn how to produce `l` — by reading it from B's own model, deriving it, or applying a sensible default — and it does so in that single place. B's services, call sites, and business logic never construct A's request directly, so they stay untouched. Without this boundary, every spot in B that calls A would need to be found and patched each time A's required parameters change.
+
+**Communication flow:**
+
+- **Query:** the consuming service calls the source domain's public REST API, receives the source's response DTO, and passes it to its ACL translator. The translator returns the consumer's own model, and the service works only with that. If the source DTO changes, only the translator changes.
+- **Event:** the consuming domain's handler receives the event from the event bus, passes the payload through its ACL translator to obtain its own model, and the service reacts using that. If the event schema evolves, only the translator adapts; core logic stays untouched.
 
 **Rules:**
-- Always use service-level calls, not direct repository access.
+- Foreign DTOs and event payloads never reach services, repositories, or models — only translated models do.
+- One translator per consumed source; an upstream change touches exactly one place.
+- Translators map required fields only and carry no business logic.
+
+#### Synchronous Communication (Queries)
+
+Used when a domain needs immediate data from another — for example, Matching needs an advisor's profile, base rate, and reputation; Pyme needs an advisor's completed similar projects. The consuming service calls the source's public REST API, then translates the response through its ACL before use.
+
+**Rules:**
+- Always service-level REST calls; never direct repository access or cross-domain imports.
 - Keep queries lightweight to avoid cascading latency.
-- Implement timeout and retry logic for resilience.
+- Apply timeout and retry for resilience; degrade gracefully when the source is unavailable.
 
-#### 2. Asynchronous Communication (Events)
+#### Asynchronous Communication (Events)
 
-Used for **state changes** that other domains need to react to:
-
-```
-Advisor Updates Industry
-        ↓
-AdvisorIndustryUpdated Event Published
-        ↓
-Event Bus
-        ↓
-├─ Pyme Domain (Recalculate Recommendations)
-├─ Matching Domain (Update Active Matches)
-└─ Notification Domain (Notify SMEs)
-```
+Used for state changes that other domains react to. The source publishes a domain event to the event bus; each interested domain consumes it through its own handler and ACL translator, then acts on its own model. For example, when an advisor updates their industry, the Advisor domain publishes `AdvisorIndustryUpdated`: the Pyme domain recalculates recommendations, Matching updates active matches, and Notification alerts SMEs — each translating the payload at its own boundary.
 
 **Key Business Events:**
 
@@ -2492,6 +2497,7 @@ Shared infrastructure lives in `src/backend/shared/` and is used by all domains:
 ### Key Rules
 
 - **Domain isolation:** Domains never import from other domains; communicate via REST APIs and events only.
+- **Anticorruption Layer:** Every inbound query response or event payload is translated into the consuming domain's own model at its boundary; foreign DTOs never reach services, repositories, or models.
 - **No circular dependencies:** If A calls B, B must not call A (directly or indirectly).
 - **Single responsibility:** Each service has one reason to change; repositories only do data access.
 - **Immutable requests:** Request DTOs are read-only; responses are built from domain entities.
