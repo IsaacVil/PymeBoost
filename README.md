@@ -1834,6 +1834,20 @@ The architecture enables:
 
 The design has 4 main layers: Controllers (HTTP) → Services (logic) → Repositories (data) → Models (schema)
 
+### Code Organization
+
+The repository is structured to make navigation, maintenance, and scaling predictable. Each domain lives as a self-contained vertical slice under `src/backend/domains/<domain>/`. Within each slice, the four layers always appear in the same folder names (`controllers/`, `services/`, `repositories/`, `models/`, `schemas/`, `events/`), so any developer can find or add logic without reading other domains. Cross-domain utilities (auth, logging, exceptions, validators) live in `src/backend/shared/` and are imported by any domain that needs them. Tests live under `src/backend/tests/` organized by test type: `unit/` splits into `api/`, `contract/`, and `health/`; `integration/` holds full domain workflow tests. This layout means adding a new domain is additive: create a new folder, follow the same internal structure, and nothing existing is touched.
+
+Examples:
+
+- HTTP handler for creating an SME account: `src/backend/domains/user/controllers/create_sme_account_controller.py`
+- Business logic for calculating an advisor's reputation: `src/backend/domains/advisor/services/reputation_service.py`
+- Database queries for matching results: `src/backend/domains/matching/repositories/match_repository.py`
+- Event published when a contract is accepted: `src/backend/domains/contract/events/contract_accepted_event.py`
+- Shared JWT validation used by all domains: `src/backend/shared/auth/jwt_validator.py`
+- Unit test for API endpoints: `src/backend/tests/unit/api/`
+- Integration test suite: `src/backend/tests/integration/`
+
 ### Core Domains
 
 PymeBoost is built around these core business domains:
@@ -2512,251 +2526,65 @@ Shared infrastructure lives in `src/backend/shared/` and is used by all domains:
  ---
 ## Testing Strategies
 
+All backend tests run with Pytest 8.3.3 on Python 3.12 and execute automatically through GitHub Actions on every push and pull request. Each strategy has a runner script that executes its suite and produces a coverage report measuring how much of `src/backend` is exercised. The pipeline fails if total coverage drops below 80%.
+
 ### Unit Testing Strategy
 
-PymeBoost backend employs comprehensive unit testing with **Pytest 8.3.3**, covering API endpoints, contract validations, and health checks as integral parts of the testing suite. All unit tests validate business logic, domain rules, and service layer behavior in isolation.
+Runner script: `src/backend/tests/unit/run_unit_tests.sh`
 
-#### Coverage Requirements
+Unit tests validate isolated components (controllers, services, repositories, validators) with all external dependencies mocked (database, Auth0, Pub/Sub, Cloud Storage). API, contract, and health checks are treated as part of unit testing and run inside this same suite and coverage report.
 
-- **Target:** 80% code coverage across all services and repositories
-- **Execution:** `scripts/backend/run_unit_tests.sh` (runs via GitHub Actions)
-- **Tool:** Pytest with coverage plugin (`pytest-cov`)
-- **Report:** Coverage reports generated and stored in `coverage/backend/unit/` directory
+Coverage command: `pytest src/backend/tests/unit --cov=src/backend --cov-report=term-missing --cov-fail-under=80`
 
 #### API Unit Testing Strategy
 
-**Purpose:** Validate REST API endpoints, request/response validation, and HTTP status codes.
+Runner script: `src/backend/tests/unit/api/run_api_tests.sh`
 
-**Scope:**
-- Controllers parsing and mapping requests to DTOs
-- API contract validation (request/response formats)
-- HTTP status codes (200, 400, 401, 403, 404, 409, 500)
-- Error response format consistency
-- Authentication/authorization on protected endpoints
-
-**Test Location:** `src/backend/tests/unit/domains/[domain]/test_[domain]_controller.py`
-
-**Example Path:** `src/backend/tests/unit/domains/user/test_create_sme_account_controller.py`
-
-**Execution Command:**
-```bash
-pytest src/backend/tests/unit/domains/ -v --cov=src/backend/domains --cov-report=html:coverage/backend/unit/api
-```
-
-**Key Test Cases:**
-- Valid request → 200 OK with correct response DTO
-- Invalid request format → 400 Bad Request with validation error
-- Missing authentication → 401 Unauthorized
-- Insufficient permissions → 403 Forbidden
-- Non-existent resource → 404 Not Found
-- Business rule violation → 400 Bad Request with domain error code
-- Duplicate resource (conflict) → 409 Conflict
-
----
+Tests each controller and endpoint in isolation using FastAPI TestClient with mocked services. Validates status codes, request validation errors, and response shapes for every route.
 
 #### Contract Unit Testing Strategy
 
-**Purpose:** Validate domain business rules, contract negotiation logic, and constraint enforcement.
+Runner script: `src/backend/tests/unit/contract/run_contract_tests.sh`
 
-**Scope:**
-- Service layer business logic validation
-- Domain rule enforcement (e.g., contract terms constraints)
-- Business exception handling
-- Data transformation and mapping
-- Cross-domain business rule validation
-
-**Test Location:** `src/backend/tests/unit/domains/[domain]/test_[domain]_service.py`
-
-**Example Path:** `src/backend/tests/unit/domains/contract/test_contract_service.py`
-
-**Execution Command:**
-```bash
-pytest src/backend/tests/unit/domains/ -v -k "service" --cov=src/backend/domains --cov-report=html:coverage/backend/unit/contract
-```
-
-**Key Test Cases:**
-- Contract proposal with valid terms → Service accepts and returns DTO
-- Contract proposal with invalid budget → Service raises DomainException
-- Counter-offer respects minimum constraints → Validates business rules
-- Contract acceptance only from matched parties → Authorization enforcement
-- Negotiation state transitions → Prevents invalid state changes
-- Event publication after state change → Verifies event emitted correctly
-
----
+Validates that request and response Pydantic schemas match the published OpenAPI 3.1 contract, so DTOs never drift from the documented API.
 
 #### Health Checks Unit Testing Strategy
 
-**Purpose:** Validate liveness (/health/live) and readiness (/health/ready) endpoints.
+Runner script: `src/backend/tests/unit/health/run_health_tests.sh`
 
-**Scope:**
-- Liveness probe returns 200 OK when service is running
-- Readiness probe validates database connectivity
-- Readiness probe validates Redis connectivity
-- Readiness probe validates Auth0 JWKS cache availability
-- Graceful health status during degraded conditions
-
-**Test Location:** `src/backend/tests/unit/test_health_checks.py`
-
-**Execution Command:**
-```bash
-pytest src/backend/tests/unit/test_health_checks.py -v --cov=src/backend --cov-report=html:coverage/backend/unit/health
-```
-
-**Key Test Cases:**
-- GET /health/live → 200 OK (always succeeds)
-- GET /health/ready with database available → 200 OK
-- GET /health/ready with database unavailable → 503 Service Unavailable
-- GET /health/ready with Redis available → 200 OK
-- GET /health/ready with Redis unavailable → 503 Service Unavailable
-- GET /health/ready with degraded Redis (timeout) → 200 OK with degraded flag
-
----
+Tests the `/health/live` and `/health/ready` endpoints return the expected status and payload, keeping the Cloud Run liveness and readiness probes reliable.
 
 ### Integration Testing Strategy
 
-**Purpose:** Test domain workflows spanning multiple services, repositories, and external dependencies (database, Redis, Auth0).
+Runner script: `src/backend/tests/integration/run_integration_tests.sh`
 
-**Scope:**
-- Complete user workflows (signup → login → profile update)
-- Matching and contract negotiation workflows
-- Database transactions and consistency
-- Event publishing and handler execution
-- Cache behavior (Redis session storage)
-- Authorization and permission enforcement across endpoints
+Integration tests exercise full domain workflows against a real PostgreSQL test database and the in-memory event bus, with external providers stubbed. Coverage is reported the same way as unit tests.
 
-**Test Location:** `src/backend/tests/integration/domains/[domain]/test_[domain]_workflow.py`
+Coverage command: `pytest src/backend/tests/integration --cov=src/backend --cov-report=term-missing --cov-fail-under=80`
 
-**Example Path:** `src/backend/tests/integration/domains/user/test_user_signup_workflow.py`
+### CI/CD Pipeline
 
-**Execution Command:**
-```bash
-pytest src/backend/tests/integration/ -v --cov=src/backend/domains --cov-report=html:coverage/backend/integration
-```
+Workflow file: `.github/workflows/backend-tests.yml`
 
-**Test Setup:**
-- Uses fixtures that create test database (PostgreSQL with test schema)
-- Mocks Auth0 JWKS validation
-- Mocks Google Cloud Pub/Sub for event publishing
-- Pre-populates test data (industries, base rates, etc.)
+On every push to the working branch, GitHub Actions runs the jobs in order:
 
-**Key Test Cases:**
-- SME signup → Create account → Verify user in database → Check event published
-- Advisor login → JWT validation → Session cached in Redis → Future requests reuse cache
-- Match creation → Check both parties notified → Verify chat enabled
-- Contract negotiation → Propose → Counter offer → Accept → Verify project created
-- Project milestone completion → Update project health → Trigger notifications
-- Advisor reputation update → Recalculate recommendations → Update active matches
+1. `unit-tests` runs `run_unit_tests.sh` (includes API, contract, and health checks) with coverage.
+2. `integration-tests` runs `run_integration_tests.sh` with coverage.
+3. `coverage-gate` fails the pipeline if total coverage is below 80%.
+4. `promote-to-main` runs only if all previous jobs pass and promotes the current branch into `main`.
 
-**Coverage Target:** 75% for integration tests
+The `promote-to-main` job is the last step because the hosting service builds the production image from `main`. A branch only reaches `main`, and therefore production, after every test passes and the coverage gate is met.
 
----
+ ---
+## Environments Configs and Scripts
 
-### E2E Testing Strategy (Optional - Future Phase)
+### Environments 
 
-**Purpose:** Test critical user journeys from browser/API client perspective.
+### Development
 
-**Scope:**
-- Full PYME signup → onboarding → advisor discovery
-- Advisor matching → negotiation → project tracking
-- Real API calls (no mocks), against staging environment
+### Stage
 
-**Test Location:** `scripts/backend/run_e2e_tests.sh`
-
-**Execution:** Manual in staging environment; future automation via GitHub Actions
-
----
-
-### Test Execution in GitHub Actions
-
-**Pipeline:** `.github/workflows/backend-test.yml`
-
-**Triggers:**
-- On every push to `develop` branch
-- On every pull request to `main` branch
-
-**Workflow Steps:**
-
-1. **Setup Environment**
-   ```bash
-   - name: Setup Python
-     uses: actions/setup-python@v4
-     with:
-       python-version: '3.12'
-   ```
-
-2. **Install Dependencies**
-   ```bash
-   - name: Install Dependencies
-     run: pip install -r src/backend/requirements.txt pytest pytest-cov
-   ```
-
-3. **Run Unit Tests with Coverage**
-   ```bash
-   - name: Run Unit Tests
-     run: bash scripts/backend/run_unit_tests.sh
-   ```
-   Script location: `scripts/backend/run_unit_tests.sh`
-
-4. **Run Integration Tests**
-   ```bash
-   - name: Run Integration Tests
-     run: bash scripts/backend/run_integration_tests.sh
-   ```
-   Script location: `scripts/backend/run_integration_tests.sh`
-
-5. **Generate Coverage Report**
-   ```bash
-   - name: Upload Coverage to Codecov
-     uses: codecov/codecov-action@v3
-     with:
-       files: ./coverage/backend/coverage.xml
-       flags: backend
-       fail_ci_if_error: true
-   ```
-
-6. **Enforce Coverage Threshold**
-   ```bash
-   - name: Check Coverage Threshold
-     run: |
-       coverage report --fail-under=80 --skip-covered \
-       --omit=*/tests/*,*/migrations/*
-   ```
-   Fails if coverage drops below 80%
-
----
-
-### Test Scripts (Fictional Paths - Ready for Implementation)
-
-| Script | Location | Purpose | Command |
-|--------|----------|---------|---------|
-| **Unit Tests** | `scripts/backend/run_unit_tests.sh` | Run all unit tests with coverage | `pytest src/backend/tests/unit/ -v --cov=src/backend --cov-report=html:coverage/backend/unit` |
-| **API Tests** | `scripts/backend/run_api_tests.sh` | Run API endpoint tests only | `pytest src/backend/tests/unit/domains/ -v -k "controller" --cov=src/backend/domains` |
-| **Contract Tests** | `scripts/backend/run_contract_tests.sh` | Run contract/service tests | `pytest src/backend/tests/unit/domains/ -v -k "service" --cov=src/backend/domains` |
-| **Health Tests** | `scripts/backend/run_health_tests.sh` | Run health check tests | `pytest src/backend/tests/unit/test_health_checks.py -v --cov=src/backend` |
-| **Integration Tests** | `scripts/backend/run_integration_tests.sh` | Run integration workflows | `pytest src/backend/tests/integration/ -v --cov=src/backend/domains` |
-| **All Tests** | `scripts/backend/run_all_tests.sh` | Run unit + integration tests | `pytest src/backend/tests/ -v --cov=src/backend --cov-report=html:coverage/backend/all` |
-| **Coverage Report** | `scripts/backend/generate_coverage_report.sh` | Generate detailed coverage HTML | `coverage report && coverage html -d coverage/backend/report` |
-
----
-
-### Coverage Requirements & Targets
-
-| Category | Target | Acceptable Range | Notes |
-|----------|--------|------------------|-------|
-| **Unit Tests** | 80% | 78-100% | Services, repositories, validators |
-| **Integration Tests** | 75% | 70-100% | Domain workflows, end-to-end features |
-| **Overall Backend** | 80% | 78-100% | Combined unit + integration coverage |
-| **Critical Domains** | 85% | 83-100% | User, Contract, Project domains |
-| **Excluded** | N/A | N/A | Migrations, test fixtures, config files |
-
-**Coverage Enforcement:**
-- GitHub Actions fails PR if coverage < 78%
-- Coverage report generated on every test run
-- Trends tracked over time (target: never decrease)
-
----
-
-### Integration Testing Strategy
+### Production
 
 
 
@@ -2989,7 +2817,10 @@ Implementation: [src/backend/domains/user/controllers/update_advisor_industry_co
 ---
 
 ## Architecture Diagram in Layers
-
+### Component Diagram
+![component_diagram.png](docs/images/backend/component_c4bck.png)
+### Container Diagram
+![container_diagram.png](docs/images/backend/containers_c4bck.png)
 ---
 
 ## Design Considerations
