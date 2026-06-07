@@ -1834,6 +1834,20 @@ The architecture enables:
 
 The design has 4 main layers: Controllers (HTTP) → Services (logic) → Repositories (data) → Models (schema)
 
+### Code Organization
+
+The repository is structured to make navigation, maintenance, and scaling predictable. Each domain lives as a self-contained vertical slice under `src/backend/domains/<domain>/`. Within each slice, the four layers always appear in the same folder names (`controllers/`, `services/`, `repositories/`, `models/`, `schemas/`, `events/`), so any developer can find or add logic without reading other domains. Cross-domain utilities (auth, logging, exceptions, validators) live in `src/backend/shared/` and are imported by any domain that needs them. Tests live under `src/backend/tests/` organized by test type: `unit/` splits into `api/`, `contract/`, and `health/`; `integration/` holds full domain workflow tests. This layout means adding a new domain is additive: create a new folder, follow the same internal structure, and nothing existing is touched.
+
+Examples:
+
+- HTTP handler for creating an SME account: `src/backend/domains/user/controllers/create_sme_account_controller.py`
+- Business logic for calculating an advisor's reputation: `src/backend/domains/advisor/services/reputation_service.py`
+- Database queries for matching results: `src/backend/domains/matching/repositories/match_repository.py`
+- Event published when a contract is accepted: `src/backend/domains/contract/events/contract_accepted_event.py`
+- Shared JWT validation used by all domains: `src/backend/shared/auth/jwt_validator.py`
+- Unit test for API endpoints: `src/backend/tests/unit/api/`
+- Integration test suite: `src/backend/tests/integration/`
+
 ### Core Domains
 
 PymeBoost is built around these core business domains:
@@ -2264,6 +2278,16 @@ Database (SQLAlchemy Models)
 
 ---
 
+### Data Validation (Pydantic)
+
+Every request to the backend is validated against a Pydantic schema before entering services or repositories.
+
+Invalid data is rejected immediately. Services never receive unvalidated input.
+
+**Why mandatory:** Malformed requests (missing fields, wrong types, invalid formats) bypass domain rules silently. Pydantic catches them at the API boundary before business logic executes.
+
+---
+
 ### Validation Layer Distribution
 
 Validation happens at **multiple layers**, each with specific responsibility:
@@ -2498,7 +2522,73 @@ Shared infrastructure lives in `src/backend/shared/` and is used by all domains:
 * Pub/Sub queue depth > 100 messages → increase subscriber concurrency
 * Cloud SQL CPU > 80% → scale up (vertical); add read replica if reads spike
 * Max limit: 50 Cloud Run instances (cost control)
- 
+
+ ---
+## Testing Strategies
+
+All backend tests run with Pytest 8.3.3 on Python 3.12 and execute automatically through GitHub Actions on every push and pull request. Each strategy has a runner script that executes its suite and produces a coverage report measuring how much of `src/backend` is exercised. The pipeline fails if total coverage drops below 80%.
+
+### Unit Testing Strategy
+
+Runner script: `src/backend/tests/unit/run_unit_tests.sh`
+
+Unit tests validate isolated components (controllers, services, repositories, validators) with all external dependencies mocked (database, Auth0, Pub/Sub, Cloud Storage). API, contract, and health checks are treated as part of unit testing and run inside this same suite and coverage report.
+
+Coverage command: `pytest src/backend/tests/unit --cov=src/backend --cov-report=term-missing --cov-fail-under=80`
+
+#### API Unit Testing Strategy
+
+Runner script: `src/backend/tests/unit/api/run_api_tests.sh`
+
+Tests each controller and endpoint in isolation using FastAPI TestClient with mocked services. Validates status codes, request validation errors, and response shapes for every route.
+
+#### Contract Unit Testing Strategy
+
+Runner script: `src/backend/tests/unit/contract/run_contract_tests.sh`
+
+Validates that request and response Pydantic schemas match the published OpenAPI 3.1 contract, so DTOs never drift from the documented API.
+
+#### Health Checks Unit Testing Strategy
+
+Runner script: `src/backend/tests/unit/health/run_health_tests.sh`
+
+Tests the `/health/live` and `/health/ready` endpoints return the expected status and payload, keeping the Cloud Run liveness and readiness probes reliable.
+
+### Integration Testing Strategy
+
+Runner script: `src/backend/tests/integration/run_integration_tests.sh`
+
+Integration tests exercise full domain workflows against a real PostgreSQL test database and the in-memory event bus, with external providers stubbed. Coverage is reported the same way as unit tests.
+
+Coverage command: `pytest src/backend/tests/integration --cov=src/backend --cov-report=term-missing --cov-fail-under=80`
+
+### CI/CD Pipeline
+
+Workflow file: `.github/workflows/backend-tests.yml`
+
+On every push to the working branch, GitHub Actions runs the jobs in order:
+
+1. `unit-tests` runs `run_unit_tests.sh` (includes API, contract, and health checks) with coverage.
+2. `integration-tests` runs `run_integration_tests.sh` with coverage.
+3. `coverage-gate` fails the pipeline if total coverage is below 80%.
+4. `promote-to-main` runs only if all previous jobs pass and promotes the current branch into `main`.
+
+The `promote-to-main` job is the last step because the hosting service builds the production image from `main`. A branch only reaches `main`, and therefore production, after every test passes and the coverage gate is met.
+
+ ---
+## Environments Configs and Scripts
+
+### Environments 
+
+### Development
+
+### Stage
+
+### Production
+
+
+
+
  ---
 
 ## Backend Key Workflows
@@ -2727,7 +2817,10 @@ Implementation: [src/backend/domains/user/controllers/update_advisor_industry_co
 ---
 
 ## Architecture Diagram in Layers
-
+### Component Diagram
+![component_diagram.png](docs/images/backend/component_c4bck.png)
+### Container Diagram
+![container_diagram.png](docs/images/backend/containers_c4bck.png)
 ---
 
 ## Design Considerations
