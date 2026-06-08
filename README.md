@@ -20,7 +20,7 @@ PymeBoost emerges as a solution specifically designed for SMEs, creating an ecos
 
 # Prototypes & UX/UI
 
-Figma: 
+Vercel: https://pymeboost-v1.vercel.app/
 
 ---
 
@@ -242,33 +242,30 @@ src/
  
 | Folder | Responsibility |
 |--------|----------------|
-| `app/` | Next.js App Router pages and route structure. Contains layout.tsx for root layout and route-based pages. |
-| `features/matching/` | Advisor discovery and matching logic. Components for cards, grids, and filters. |
-| `features/contracts/` | Contract lifecycle management. Components for viewing, negotiating, and tracking contracts. |
-| `features/messaging/` | Real-time chat between PYME and advisors. Components for chat panel, message list, and input. |
-| `features/dashboard/` | Project overview and metrics. Components for stats, timelines, and performance tracking. |
-| `features/reports/` | Report generation and viewing. Components for report viewer and generator. |
-| `features/auth/` | User authentication and session management. Components for login and logout. |
-| `features/[feature]/components/` | UI components specific to that feature. Used only within that feature. |
-| `features/[feature]/hooks/` | Business logic hooks that implement workflows. Called by components. |
-| `features/[feature]/services/` | API communication functions. Called by hooks. One service per feature. |
-| `features/[feature]/types/` | TypeScript interfaces specific to the feature. |
-| `features/[feature]/validators/` | Zod validation schemas for feature data. |
-| `features/[feature]/page.tsx` | Route page component for that feature. |
-| `shared/components/` | Reusable UI components used across multiple features. |
-| `shared/components/ui/` | Basic UI primitives (Button, Input, Badge, Modal, Card, Dialog, etc.). |
-| `shared/components/layouts/` | Layout wrappers shared across features (DashboardLayout, AuthLayout). |
-| `shared/hooks/` | Common hooks reused across features (useNotifications, etc.). |
-| `shared/types/` | Global TypeScript types used across all features. |
-| `shared/utils/` | Utility functions and helpers. |
-| `store/` | Zustand global state stores. Not feature-specific. |
-| `store/authStore.ts` | User authentication, permissions, JWT token. |
-| `store/notificationStore.ts` | Toast messages, alerts, notifications. |
-| `store/uiStore.ts` | Modal states, sidebars, theme. |
-| `lib/` | Configurations and third-party integrations (queryClient for TanStack Query, axios for HTTP). |
-| `tests/` | Feature and component tests using Vitest (unit tests) and Playwright (E2E tests). Organized by feature. |
-| `styles/` | Global CSS and CSS variables. |
-| `public/` | Static assets (logos, icons, images). |
+| [frontend/src/app/layout.tsx](frontend/src/app/layout.tsx) | Next.js App Router pages and route structure. Contains layout.tsx for root layout and route-based pages. |
+| [frontend/src/features/matching/page.tsx](frontend/src/features/matching/page.tsx) | Advisor discovery and matching logic. Components for cards, grids, and filters. |
+| [frontend/src/features/contracts/page.tsx](frontend/src/features/contracts/page.tsx) | Contract lifecycle management. Components for viewing, negotiating, and tracking contracts. |
+| [frontend/src/features/messaging/page.tsx](frontend/src/features/messaging/page.tsx) | Real-time chat between PYME and advisors. Components for chat panel, message list, and input. |
+| [frontend/src/features/dashboard/page.tsx](frontend/src/features/dashboard/page.tsx) | Project overview and metrics. Components for stats, timelines, and performance tracking. |
+| [frontend/src/features/reports/page.tsx](frontend/src/features/reports/page.tsx) | Report generation and viewing. Components for report viewer and generator. |
+| [frontend/src/features/auth/page.tsx](frontend/src/features/auth/page.tsx) | User authentication and session management. Components for login and logout. |
+| [frontend/src/features/matching/hooks/useAdvisorMatching.ts](frontend/src/features/matching/hooks/useAdvisorMatching.ts) | Business logic hooks that implement workflows. Called by components. |
+| [frontend/src/features/matching/services/matchingService.ts](frontend/src/features/matching/services/matchingService.ts) | API communication functions. Called by hooks. One service per feature. |
+| [frontend/src/features/matching/types/matching.ts](frontend/src/features/matching/types/matching.ts) | TypeScript interfaces specific to the feature. |
+| [frontend/src/features/contracts/validators/contractValidator.ts](frontend/src/features/contracts/validators/contractValidator.ts) | Zod validation schemas for feature data. |
+| [frontend/src/shared/components/ui/Button.tsx](frontend/src/shared/components/ui/Button.tsx) | Basic UI primitives (Button, Input, Badge, Modal, Card, Dialog, etc.). |
+| [frontend/src/shared/components/layouts/DashboardLayout.tsx](frontend/src/shared/components/layouts/DashboardLayout.tsx) | Layout wrappers shared across features (DashboardLayout, AuthLayout). |
+| [frontend/src/shared/guards/AuthGuard.tsx](frontend/src/shared/guards/AuthGuard.tsx) | Route protection and session validation before rendering any private view. |
+| [frontend/src/shared/hooks/useNotifications.ts](frontend/src/shared/hooks/useNotifications.ts) | Common hooks reused across features. |
+| [frontend/src/shared/types/common.ts](frontend/src/shared/types/common.ts) | Global TypeScript types used across all features. |
+| [frontend/src/shared/utils/helpers.ts](frontend/src/shared/utils/helpers.ts) | Utility functions and helpers. |
+| [frontend/src/store/authStore.ts](frontend/src/store/authStore.ts) | User authentication, permissions, JWT token (Singleton pattern). |
+| [frontend/src/store/notificationStore.ts](frontend/src/store/notificationStore.ts) | Toast messages, alerts, notifications (Observer pattern). |
+| [frontend/src/store/uiStore.ts](frontend/src/store/uiStore.ts) | Modal states, sidebars, theme. |
+| [frontend/src/lib/queryClient.ts](frontend/src/lib/queryClient.ts) | TanStack Query configuration; cache, retry, staleTime (Factory pattern). |
+| [frontend/src/lib/apiClient.ts](frontend/src/lib/apiClient.ts) | Base HTTP client; JWT injection, error handling, retries (Template Method pattern). |
+| [frontend/src/tests/features/matching.spec.ts](frontend/src/tests/features/matching.spec.ts) | Feature and component tests using Vitest (unit tests) and Playwright (E2E tests). |
+| [frontend/src/app/globals.css](frontend/src/app/globals.css) | Global CSS and CSS variables. |
 
 ---
 
