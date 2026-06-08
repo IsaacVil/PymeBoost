@@ -1,0 +1,48 @@
+"use client";
+import { DashboardLayout } from "@/shared/components/layouts/DashboardLayout";
+import { Card, CardHeader, CardTitle, CardContent } from "@/shared/components/ui/Card";
+import { Badge } from "@/shared/components/ui/Badge";
+import { Button } from "@/shared/components/ui/Button";
+import { useAuthStore } from "@/store/authStore";
+
+// TODO: replace with useContracts() hook once connected to backend
+const mockContracts = [
+  { id: "c1", title: "Process Optimization Q3", type: "milestone-based", status: "active" as const, advisor: "Ana García" },
+  { id: "c2", title: "Digital Marketing Strategy", type: "fixed-price", status: "pending" as const, advisor: "Luis Torres" },
+];
+
+export default function ContractsPage() {
+  const { session } = useAuthStore();
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-100">Contracts</h1>
+            <p className="text-slate-400 mt-1">Track negotiations, milestones, and deliverables.</p>
+          </div>
+          <Button size="sm">New Contract</Button>
+        </div>
+
+        <div className="space-y-4">
+          {mockContracts.map((contract) => (
+            <Card key={contract.id}>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="font-semibold text-slate-100">{contract.title}</p>
+                  <p className="text-sm text-slate-400">Advisor: {contract.advisor}</p>
+                  <p className="text-xs text-slate-500 capitalize">{contract.type}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge status={contract.status} label={contract.status} />
+                  <Button variant="ghost" size="sm">View</Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+}

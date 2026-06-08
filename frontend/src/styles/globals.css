@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-background: #0F172A;
+    --color-surface: #1E293B;
+    --color-primary: #A855F7;
+    --color-accent: #FBBF24;
+    --color-text: #F1F5F9;
+    --color-text-muted: #94A3B8;
+    --color-border: #334155;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: "Inter", sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Poppins", sans-serif;
+  }
+
+  code, pre {
+    font-family: "JetBrains Mono", monospace;
+  }
+}

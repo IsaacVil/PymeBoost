@@ -1,0 +1,25 @@
+:root {
+  /* Colors */
+  --color-bg:           #0F172A; /* slate-950 */
+  --color-surface:      #1E293B; /* slate-800 */
+  --color-border:       #334155; /* slate-700 */
+  --color-primary:      #A855F7; /* purple-500 */
+  --color-accent:       #FBBF24; /* amber-400  */
+  --color-text:         #F1F5F9; /* slate-100  */
+  --color-text-muted:   #94A3B8; /* slate-400  */
+
+  /* Typography */
+  --font-sans:  "Inter", sans-serif;
+  --font-head:  "Poppins", sans-serif;
+  --font-mono:  "JetBrains Mono", monospace;
+
+  /* Spacing */
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+
+  /* Border radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
