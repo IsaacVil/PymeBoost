@@ -1047,15 +1047,31 @@ PymeBoost uses Auth0 for centralized authentication. Frontend delegates login/lo
 - Faster test execution
 - TypeScript out-of-the-box
 
-```
-frontend/src/features/matching/hooks/useAdvisorMatching.ts → frontend/src/tests/features/matching.spec.ts
-frontend/src/features/contracts/validators/contractValidator.ts → frontend/src/tests/features/contracts.spec.ts
-frontend/src/lib/helpers.ts → frontend/src/tests/shared/helpers.spec.ts
+- [useAdvisorMatching.ts](frontend/src/features/matching/hooks/useAdvisorMatching.ts) → [matching.spec.ts](frontend/src/tests/features/matching.spec.ts) — Tests swipe command execution and AI recommendation fetch logic.
+- [contractValidator.ts](frontend/src/features/contracts/validators/contractValidator.ts) → [contracts.spec.ts](frontend/src/tests/features/contracts.spec.ts) — Tests tier-specific commission rules: standard 3%, medium 5%, high 7%, and custom incremental formula.
+- [helpers.ts](frontend/src/shared/utils/helpers.ts) → [helpers.spec.ts](frontend/src/tests/shared/helpers.spec.ts) — Tests currency formatting, string truncation, unique ID generation, and relative time formatting.
+
+**Development (local):**
+
+| Command | When to use |
+|---------|-------------|
+| `npm run test` | During development — watch mode, re-runs on every file save |
+| `npm run test:run` | Before committing — runs once and exits with pass/fail |
+| `npm run test:coverage` | To check coverage — generates HTML report and fails if below 80% |
+
+**CI/CD (GitHub Actions — triggered on every push):**
+
+```bash
+# 1. Push to any branch
+git add .
+git commit -m "feat: your change"
+git push origin feature/your-branch
+
+# 2. GitHub Actions automatically runs frontend-ci.yml:
+#    lint → unit tests (npm run test:run) → coverage check → build → E2E
 ```
 
-**Run locally:** `npm run test` (watch mode)
-**Run once:** `npm run test:run`
-**Coverage report:** `npm run test:coverage`
+The pipeline runs `npm run test:run` headlessly and fails the entire workflow if any test fails or coverage drops below 80%. No manual intervention required — tests block the merge until green.
 
 ---
 
@@ -1087,7 +1103,9 @@ frontend/
 | `npx playwright test --ui` | Open interactive UI mode |
 | `npx playwright show-report` | Open last HTML report |
 
-**Implementation:** Each workflow lives in a `test.describe` block inside [`frontend/e2e/workflows.spec.ts`](frontend/e2e/workflows.spec.ts). Tag smoke tests with `@smoke` so CI can run them post-deploy independently.
+**Implementation:** 
+
+Each workflow lives in a `test.describe` block inside [`frontend/e2e/workflows.spec.ts`](frontend/e2e/workflows.spec.ts). Tag smoke tests with `@smoke` so CI can run them post-deploy independently.
 
 Use `data-testid` attributes on components as selectors — never rely on CSS classes or text content, as those change with styling. Add `data-testid` to a component when writing its test.
 
@@ -1103,7 +1121,6 @@ For tests that require an authenticated user, load session state via Playwright'
 |-----------|------|----------|-----------|
 | **Unit** | Vitest | `frontend/src/tests/features/`, `frontend/src/tests/shared/` | On save (watch mode) |
 | **E2E** | Playwright | `frontend/e2e/` | Before commit, on PR |
-| **Visual** | Optional (Percy, Chromatic) | CI/CD only | On PR |
 
 ---
 
@@ -1129,7 +1146,7 @@ For tests that require an authenticated user, load session state via Playwright'
 ```
 ApiClient catches error
 → Logs to Sentry + Cloud Logging
-→ Notifies user via toast
+→ Notifies user via toast (user notification, rest of the app still works)
 → Does NOT crash app
 ```
 
