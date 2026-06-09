@@ -4,15 +4,21 @@ import { Match } from "../types/matching";
 
 interface MatchingGridProps {
   matches: Match[];
-  onSelect: (advisorId: string, matchId: string) => void;
+  onApprove: (advisorId: string) => Promise<void>;
+  onReject: (advisorId: string) => Promise<void>;
 }
 
-export function MatchingGrid({ matches, onSelect }: MatchingGridProps) {
+export function MatchingGrid({ matches, onApprove, onReject }: MatchingGridProps) {
   // TODO: implement swipe animations with Framer Motion
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {matches.map((match) => (
-        <MatchingCard key={match.advisorId} match={match} onSelect={onSelect} />
+        <MatchingCard
+          key={match.advisorId}
+          match={match}
+          onApprove={onApprove}
+          onReject={onReject}
+        />
       ))}
     </div>
   );

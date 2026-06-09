@@ -1,93 +1,110 @@
-// Strategy Pattern: Different contract types have different validation rules
-// Why: Runtime validation ensures invalid data never reaches components or state
-//       New validation types can be added without modifying components
+// Strategy Pattern: each contract tier has different commission and duration rules
+// Tiers per project spec: standard (1mo/3%), medium (3mo/5%), high (6mo/7%), custom
+// Why: validation rules differ per tier — discriminatedUnion lets Zod pick the right strategy
 
 import { z } from "zod";
 
-export type ContractType = "fixed-price" | "hourly" | "milestone-based";
+// Shared action plan step — spec requires minimum 5 strategic steps, AI-generated
+const actionPlanStepSchema = z.object({
+  phase: z.number().int().min(1),
+  title: z.string().min(3),
+  description: z.string().min(10),
+});
 
-// Strategy 1: Fixed-price contracts
-export const fixedPriceContractSchema = z.object({
+// Base fields shared by all tiers
+const baseContractFields = {
   id: z.string(),
-  type: z.literal("fixed-price"),
   title: z.string().min(5),
-  totalPrice: z.number().positive("Price must be positive"),
-  currency: z.enum(["USD", "CRC"]),
+  advisorId: z.string(),
+  pymeId: z.string(),
+  implementationBudget: z.number().positive(),   // colones — spec: "Presupuesto de implementación"
+  monthlyRetainer: z.number().positive(),         // colones — spec: "Retainer mensual para el advisor"
+  advisorCommissionPercentage: z.number().min(0).max(100), // spec: "Ganancia Advisor"
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
-  deliverables: z.array(z.string()).min(1, "At least one deliverable required"),
+  objectives: z.array(z.string()).min(1, "At least one measurable objective required"),
+  actionPlan: z.array(actionPlanStepSchema).min(5, "Action plan requires at least 5 phases"),
+  status: z.enum(["pending", "active", "complete", "cancelled"]),
+};
+
+// Strategy 1: Standard — 1 month, 3% PymeBoost commission
+export const standardContractSchema = z.object({
+  ...baseContractFields,
+  tier: z.literal("standard"),
+  durationMonths: z.literal(1),
+  pymeBoostCommission: z.literal(3),
 });
 
-export type FixedPriceContract = z.infer<typeof fixedPriceContractSchema>;
-
-// Strategy 2: Hourly contracts
-export const hourlyContractSchema = z.object({
-  id: z.string(),
-  type: z.literal("hourly"),
-  title: z.string().min(5),
-  hourlyRate: z.number().positive("Rate must be positive"),
-  estimatedHours: z.number().positive().optional(),
-  currency: z.enum(["USD", "CRC"]),
-  startDate: z.coerce.date(),
+// Strategy 2: Medium — 3 months, 5% PymeBoost commission
+export const mediumContractSchema = z.object({
+  ...baseContractFields,
+  tier: z.literal("medium"),
+  durationMonths: z.literal(3),
+  pymeBoostCommission: z.literal(5),
 });
 
-export type HourlyContract = z.infer<typeof hourlyContractSchema>;
-
-// Strategy 3: Milestone-based contracts
-export const milestoneContractSchema = z.object({
-  id: z.string(),
-  type: z.literal("milestone-based"),
-  title: z.string().min(5),
-  milestones: z.array(
-    z.object({
-      title: z.string(),
-      dueDate: z.coerce.date(),
-      paymentPercentage: z.number().min(0).max(100),
-    })
-  ).min(2, "At least 2 milestones required"),
-  totalPrice: z.number().positive(),
-  currency: z.enum(["USD", "CRC"]),
+// Strategy 3: High — 6 months, 7% PymeBoost commission
+export const highContractSchema = z.object({
+  ...baseContractFields,
+  tier: z.literal("high"),
+  durationMonths: z.literal(6),
+  pymeBoostCommission: z.literal(7),
 });
 
-export type MilestoneContract = z.infer<typeof milestoneContractSchema>;
+// Strategy 4: Custom — flexible duration, commission starts at 3% + 1% per extra month
+export const customContractSchema = z.object({
+  ...baseContractFields,
+  tier: z.literal("custom"),
+  durationMonths: z.number().int().min(1),
+  pymeBoostCommission: z.number().min(3),
+}).refine(
+  (data) => data.pymeBoostCommission === 3 + (data.durationMonths - 1),
+  { message: "Custom commission must be 3% + 1% per additional month", path: ["pymeBoostCommission"] }
+);
 
-// Union type: any contract type
-export const contractSchema = z.union([
-  fixedPriceContractSchema,
-  hourlyContractSchema,
-  milestoneContractSchema,
+export type ContractTier = "standard" | "medium" | "high" | "custom";
+export type StandardContract = z.infer<typeof standardContractSchema>;
+export type MediumContract   = z.infer<typeof mediumContractSchema>;
+export type HighContract     = z.infer<typeof highContractSchema>;
+export type CustomContract   = z.infer<typeof customContractSchema>;
+
+// Union discriminated by tier — Zod picks the right strategy automatically
+export const contractSchema = z.discriminatedUnion("tier", [
+  standardContractSchema,
+  mediumContractSchema,
+  highContractSchema,
+  customContractSchema,
 ]);
 
 export type Contract = z.infer<typeof contractSchema>;
 
-// Validator class: applies the right strategy based on contract type
 export class ContractValidator {
   static validate(data: unknown): { valid: true; data: Contract } | { valid: false; error: string } {
     const result = contractSchema.safeParse(data);
-
-    if (result.success) {
-      return { valid: true, data: result.data };
-    }
-
+    if (result.success) return { valid: true, data: result.data };
     return {
       valid: false,
       error: result.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join("; "),
     };
   }
 
-  // Validate specific type
-  static validateFixedPrice(data: unknown): { valid: true; data: FixedPriceContract } | { valid: false; error: string } {
-    const result = fixedPriceContractSchema.safeParse(data);
+  static validateStandard(data: unknown): { valid: true; data: StandardContract } | { valid: false; error: string } {
+    const result = standardContractSchema.safeParse(data);
     return result.success ? { valid: true, data: result.data } : { valid: false, error: result.error.message };
   }
 
-  static validateHourly(data: unknown): { valid: true; data: HourlyContract } | { valid: false; error: string } {
-    const result = hourlyContractSchema.safeParse(data);
+  static validateMedium(data: unknown): { valid: true; data: MediumContract } | { valid: false; error: string } {
+    const result = mediumContractSchema.safeParse(data);
     return result.success ? { valid: true, data: result.data } : { valid: false, error: result.error.message };
   }
 
-  static validateMilestone(data: unknown): { valid: true; data: MilestoneContract } | { valid: false; error: string } {
-    const result = milestoneContractSchema.safeParse(data);
+  static validateHigh(data: unknown): { valid: true; data: HighContract } | { valid: false; error: string } {
+    const result = highContractSchema.safeParse(data);
+    return result.success ? { valid: true, data: result.data } : { valid: false, error: result.error.message };
+  }
+
+  static validateCustom(data: unknown): { valid: true; data: CustomContract } | { valid: false; error: string } {
+    const result = customContractSchema.safeParse(data);
     return result.success ? { valid: true, data: result.data } : { valid: false, error: result.error.message };
   }
 }

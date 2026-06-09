@@ -1,120 +1,67 @@
-// Factory Pattern: Encapsulates matching workflow complexity
-// Why: Setup requires TanStack Query, form state, validation, service calls
-//       Components get useAdvisorMatching() instead of assembling 20 pieces
+// Factory Pattern: assembles recommendation fetch + swipe commands + notifications
+// into a single hook the component consumes without knowing the internals
 
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { matchingService, MatchRequest, Match } from "../services/matchingService";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { matchingService } from "../services/matchingService";
 import { useNotificationStore } from "@/store/notificationStore";
+import { Match } from "../types/matching";
 
 interface UseAdvisorMatchingOptions {
   pymeId: string;
-  strategy?: "rule-based" | "ai" | "manual";
 }
 
 interface UseAdvisorMatchingReturn {
-  // Data
-  matches: Match[];
+  recommendations: Match[];
   isLoading: boolean;
   error: string | null;
-
-  // Form state
-  formData: MatchRequest;
-  updateFormData: (data: Partial<MatchRequest>) => void;
-
-  // Actions
-  performMatching: () => Promise<void>;
-  selectAdvisor: (advisorId: string, matchId: string) => Promise<void>;
-  retry: () => void;
+  swipeApproved: (advisorId: string) => Promise<void>;
+  swipeRejected: (advisorId: string) => Promise<void>;
 }
 
-export function useAdvisorMatching(options: UseAdvisorMatchingOptions): UseAdvisorMatchingReturn {
-  const { pymeId, strategy = "rule-based" } = options;
+export function useAdvisorMatching({ pymeId }: UseAdvisorMatchingOptions): UseAdvisorMatchingReturn {
   const { publish: notify } = useNotificationStore();
+  const queryClient = useQueryClient();
 
-  // Form state
-  const [formData, setFormData] = useState<MatchRequest>({
-    pymeId,
-    industry: "",
-    challenge: "",
-    budget: 0,
-    timeline: 0,
-  });
-
-  // TanStack Query: manages server state and caching
+  // Auto-fetch AI recommendations on mount — no search form needed
   const {
-    data: matches = [],
+    data: recommendations = [],
     isLoading,
     error,
-    refetch,
   } = useQuery({
-    queryKey: ["matches", pymeId, formData],
-    queryFn: async () => {
-      // This query is managed by QueryClientFactory config
-      try {
-        return await matchingService.getMatches(formData, strategy);
-      } catch (err) {
-        notify({
-          type: "error",
-          title: "Matching Error",
-          message: "Failed to find matching advisors",
-          duration: 5000,
-        });
-        throw err;
-      }
-    },
-    enabled: false, // Don't auto-fetch; user triggers via performMatching()
+    queryKey: ["recommendations", pymeId],
+    queryFn: () => matchingService.getRecommendations(pymeId),
+    enabled: !!pymeId,
   });
 
-  // Actions
-  const performMatching = async () => {
-    try {
-      refetch();
-      notify({
-        type: "success",
-        title: "Matching started",
-        message: `Finding advisors using ${strategy} strategy...`,
-        duration: 3000,
-      });
-    } catch (err) {
-      notify({
-        type: "error",
-        title: "Error",
-        message: "Failed to perform matching",
-        duration: 5000,
-      });
-    }
+  // Swipe mutations — Command pattern: matchingService creates the command, hook executes it
+  const swipeMutation = useMutation({
+    mutationFn: (command: ReturnType<typeof matchingService.swipeApproved>) =>
+      matchingService.executeSwipe(command),
+    onSuccess: () => {
+      // Remove swiped advisor from current list by refetching
+      queryClient.invalidateQueries({ queryKey: ["recommendations", pymeId] });
+    },
+    onError: () => {
+      notify({ type: "error", title: "Swipe failed", message: "Try again", duration: 4000 });
+    },
+  });
+
+  const swipeApproved = async (advisorId: string) => {
+    await swipeMutation.mutateAsync(matchingService.swipeApproved(advisorId));
+    notify({ type: "success", title: "Match approved!", message: "Chat is now available", duration: 3000 });
   };
 
-  const selectAdvisor = async (advisorId: string, matchId: string) => {
-    try {
-      // TODO: Create match in backend
-      notify({
-        type: "success",
-        title: "Match created",
-        message: "You can now chat with this advisor",
-        duration: 4000,
-      });
-    } catch (err) {
-      notify({
-        type: "error",
-        title: "Error",
-        message: "Failed to create match",
-        duration: 5000,
-      });
-    }
+  const swipeRejected = async (advisorId: string) => {
+    await swipeMutation.mutateAsync(matchingService.swipeRejected(advisorId));
   };
 
   return {
-    matches: matches as Match[],
+    recommendations: recommendations as Match[],
     isLoading,
     error: error instanceof Error ? error.message : null,
-    formData,
-    updateFormData: (data) => setFormData((prev) => ({ ...prev, ...data })),
-    performMatching,
-    selectAdvisor,
-    retry: () => refetch(),
+    swipeApproved,
+    swipeRejected,
   };
 }

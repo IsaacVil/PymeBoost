@@ -535,9 +535,9 @@ PymeBoost employs strategic, essential OOP design patterns to maintain a modular
 | authStore | [frontend/src/store/authStore.ts](frontend/src/store/authStore.ts) | Manages global auth state (user, token, permissions) | Singleton | **One authoritative source.** Auth state must be consistent across all features (contracts, messaging, dashboards). Multiple instances = token mismatches = silent feature breakage. Zustand enforces one instance automatically. |
 | notificationStore | [frontend/src/store/notificationStore.ts](frontend/src/store/notificationStore.ts) | Publishes system-wide toasts, alerts, notifications | Observer (Pub-Sub) | **Decouples event producers from consumers.** When contracts are accepted or milestones update, 5+ features must react without knowing each other. Without Observer, features need direct imports or prop drilling through 5+ levels = fragile code. |
 | ApiClient | [frontend/src/lib/apiClient.ts](frontend/src/lib/apiClient.ts) | Base HTTP client with reusable request/response logic | Template Method | **Eliminates duplicate error handling.** Every API call needs JWT injection, error handling, rate limiting, retries. Template Method defines the flow once, reused by all services. Without it, duplicate logic across 10+ services means bugs fixed in one place don't propagate. |
-| MatchingService | [frontend/src/features/matching/services/matchingService.ts](frontend/src/features/matching/services/matchingService.ts) | Determines advisor recommendation strategy based on context | Strategy | **Swappable algorithms without code changes.** Matching can be rule-based, AI-powered, or manual. Strategy allows new algorithms without modifying components. Without it, adding a matching type requires touching component and service layers. |
-| useAdvisorMatching | [frontend/src/features/matching/hooks/useAdvisorMatching.ts](frontend/src/features/matching/hooks/useAdvisorMatching.ts) | Creates and manages matching workflow logic | Factory | **Encapsulates workflow complexity.** Setup requires: TanStack Query config, form state, Zod validation, service calls. Factory gives components `useAdvisorMatching()` instead of assembling 20 pieces—reduces bugs and cognitive load. |
-| ContractValidator | [frontend/src/features/contracts/validators/contractValidator.ts](frontend/src/features/contracts/validators/contractValidator.ts) | Validates contract terms, negotiation constraints | Strategy | **Runtime validation of critical business rules.** Fixed-price, hourly, and milestone contracts have different constraints. Strategy centralizes validation logic; invalid data never reaches components or state. |
+| MatchingService | [frontend/src/features/matching/services/matchingService.ts](frontend/src/features/matching/services/matchingService.ts) | Executes Swipe Approved / Swipe Rejected actions as discrete commands; fetches AI-generated recommendations | Command | **Swipe actions are the core interaction unit.** Each swipe (approved/rejected) is encapsulated as a Command object with `execute()`. This decouples the action from the trigger, enables logging, queuing, and future undo — without Command, swipe logic would be scattered across components. |
+| useAdvisorMatching | [frontend/src/features/matching/hooks/useAdvisorMatching.ts](frontend/src/features/matching/hooks/useAdvisorMatching.ts) | Assembles AI recommendation fetch + swipe commands + notifications into a single hook | Factory | **Encapsulates workflow complexity.** Setup requires: TanStack Query config, swipe command creation, cache invalidation, notification publishing. Factory gives components `useAdvisorMatching()` instead of assembling these pieces manually — reduces bugs and cognitive load. |
+| ContractValidator | [frontend/src/features/contracts/validators/contractValidator.ts](frontend/src/features/contracts/validators/contractValidator.ts) | Validates contract terms per tier: standard (1mo/3%), medium (3mo/5%), high (6mo/7%), custom (incremental commission) | Strategy | **Each tier has different commission and duration rules.** Standard locks commission at 3%, custom enforces 3% + 1% per extra month via `.refine()`. Without Strategy, a single schema can't enforce tier-specific rules — invalid commissions would silently reach the backend. |
 | QueryClientFactory | [frontend/src/lib/queryClient.ts](frontend/src/lib/queryClient.ts) | Initializes and configures TanStack Query | Factory | **Consistent caching across all features.** Factory centralizes cache settings, retry logic, staleTime. Without it, some features cache aggressively while others refetch constantly = data inconsistency and poor UX. |
 
 ---
@@ -568,28 +568,29 @@ PymeBoost employs strategic, essential OOP design patterns to maintain a modular
 ### State Distribution: Patterns in Practice
 
 **Global State (Zustand) — Singleton Pattern:**
-- `authStore`: Single instance manages user, token, permissions globally.
+- [`authStore`](frontend/src/store/authStore.ts): Single instance manages user, token, permissions globally.
   - **Why Singleton:** Any feature reading auth must see the same state. Multiple instances = data inconsistency.
-- `notificationStore`: Single instance publishes toasts, alerts system-wide.
-  - **Why Singleton + Observer:** Matches created, contracts accepted, milestones met → all features receive notifications from one source.
-- `uiStore`: Single instance manages modal states, sidebar visibility, theme.
+- [`notificationStore`](frontend/src/store/notificationStore.ts): Single instance publishes toasts, alerts system-wide.
+  - **Why Singleton + Observer:** Swipe approved, contracts accepted, milestones met → all features receive notifications from one source.
+- [`uiStore`](frontend/src/store/uiStore.ts): Single instance manages modal states, sidebar visibility, theme.
 
 **Server State (TanStack Query) — Factory + Cache Strategy:**
-- All API data (advisors, contracts, messages) cached and managed via **QueryClientFactory**.
+- All API data (advisors, contracts, messages) cached and managed via [`QueryClientFactory`](frontend/src/lib/queryClient.ts).
 - **Why Factory:** Ensures consistent cache settings, retry behavior, staleTime across all queries.
 - Automatic refetch, deduplication, background updates reduce stale data bugs.
 
 **Local State (React `useState`):**
-- Form inputs, UI toggles, loading states—never persisted beyond component.
-- Keeps global state clean and predictable.
+- [`MessageInput`](frontend/src/features/messaging/components/MessageInput.tsx) — message text before sending.
+- [`MatchingFilters`](frontend/src/features/matching/components/MatchingFilters.tsx) — industry filter input.
+- Never persisted beyond the component. Keeps global state clean and predictable.
 
 ---
 
 ### Composition Over Inheritance
 
 Components are built from primitives, not extended:
-- `ContractSection` = `ContractViewer` + `ContractTerms` + `ActionButtons` (composition, not inheritance).
-- `Button` component accepts `variant` prop instead of creating `PrimaryButton`, `SecondaryButton` subclasses.
+- [`ContractNegotiation`](frontend/src/features/contracts/components/ContractNegotiation.tsx) = [`ContractViewer`](frontend/src/features/contracts/components/ContractViewer.tsx) + [`ContractTerms`](frontend/src/features/contracts/components/ContractTerms.tsx) + `ActionButtons` (composition, not inheritance).
+- [`Button`](frontend/src/shared/components/ui/Button.tsx) accepts `variant` prop instead of creating `PrimaryButton`, `SecondaryButton` subclasses.
 - **Why:** Composition is flexible; inheritance creates rigid hierarchies prone to fragility.
 
 ---

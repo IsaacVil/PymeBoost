@@ -3,17 +3,21 @@ import { DashboardLayout } from "@/shared/components/layouts/DashboardLayout";
 import { Card } from "@/shared/components/ui/Card";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
-import { useAuthStore } from "@/store/authStore";
+
+const tierLabels = {
+  standard: "Standard · 1 mo",
+  medium:   "Medium · 3 mo",
+  high:     "High · 6 mo",
+  custom:   "Custom",
+} as const;
 
 // TODO: replace with useContracts() hook once connected to backend
 const mockContracts = [
-  { id: "c1", title: "Process Optimization Q3", type: "milestone-based", status: "active" as const, advisor: "Ana García" },
-  { id: "c2", title: "Digital Marketing Strategy", type: "fixed-price", status: "pending" as const, advisor: "Luis Torres" },
+  { id: "c1", title: "Process Optimization Q3", tier: "high"     as const, status: "active"  as const, advisor: "Ana García" },
+  { id: "c2", title: "Digital Marketing Strategy", tier: "standard" as const, status: "pending" as const, advisor: "Luis Torres" },
 ];
 
 export default function ContractsPage() {
-  const { session } = useAuthStore();
-
   return (
     <DashboardLayout>
       <div className="space-y-8">
@@ -32,7 +36,7 @@ export default function ContractsPage() {
                 <div className="space-y-1">
                   <p className="font-semibold text-zinc-900">{contract.title}</p>
                   <p className="text-sm text-zinc-500">Advisor: {contract.advisor}</p>
-                  <p className="text-xs text-zinc-400 capitalize">{contract.type}</p>
+                  <p className="text-xs text-zinc-400">{tierLabels[contract.tier]}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <Badge status={contract.status} label={contract.status} />
