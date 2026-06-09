@@ -358,7 +358,7 @@ If used by 1 feature → `frontend/src/features/[feature]/components/`.
  
 ### Component Layers
  
-**Layer 1**: Primitives (Feature-specific, presentational)
+**Layer 1**: Primitives (Feature-specific, presentational, not logic-aware)
 - Single-responsibility components that accept data via props.
 - Examples: `MatchingCard`, `ContractViewer`, `ChatBubble`, `MetricsChart`.
 **Layer 2: Compound Components** (Assembled, reusable within feature)
@@ -377,17 +377,19 @@ If used by 1 feature → `frontend/src/features/[feature]/components/`.
 ### Feature Component Structure
  
 **Matching Example:**
-- `MatchingCard` (Primitive): Single advisor card.
-- `MatchingGrid` (Compound): Grid of advisor cards.
-- `MatchingPage` (Container): Manages data fetching and state.
+- [`MatchingCard`](frontend/src/features/matching/components/MatchingCard.tsx) (Primitive): Single advisor card.
+- [`MatchingGrid`](frontend/src/features/matching/components/MatchingGrid.tsx) (Compound): Grid of advisor cards.
+- [`MatchingPage`](frontend/src/features/matching/page.tsx) (Container): Manages data fetching and state.
+
 **Contracts Example:**
-- `ContractViewer` (Primitive): Contract display.
-- `ContractSection` (Compound): Groups related contract elements.
-- `ContractPage` (Container): Manages negotiation state.
+- [`ContractViewer`](frontend/src/features/contracts/components/ContractViewer.tsx) (Primitive): Contract display.
+- [`ContractNegotiation`](frontend/src/features/contracts/components/ContractNegotiation.tsx) (Compound): Groups ContractViewer + ContractTerms + actions.
+- [`ContractsPage`](frontend/src/features/contracts/page.tsx) (Container): Manages negotiation state.
+
 **Messaging Example:**
-- `MessageBubble` (Primitive): Single message.
-- `ChatPanel` (Compound): MessageList + MessageInput combined.
-- `ChatPage` (Container): Manages real-time updates.
+- [`MessageBubble`](frontend/src/features/messaging/components/MessageBubble.tsx) (Primitive): Single message bubble.
+- [`ChatPanel`](frontend/src/features/messaging/components/ChatPanel.tsx) (Compound): MessageList + MessageInput combined.
+- [`MessagingPage`](frontend/src/features/messaging/page.tsx) (Container): Manages real-time updates.
 
 ---
  
