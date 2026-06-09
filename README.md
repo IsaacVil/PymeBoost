@@ -1180,7 +1180,9 @@ ApiClient catches error
 
 ### GitHub Actions Workflows
 
-Workflow files: [`frontend-ci.yml`](.github/workflows/frontend-ci.yml) · [`deploy-frontend.yml`](.github/workflows/deploy-frontend.yml)
+Workflow files: 
+- [`frontend-ci.yml`](.github/workflows/frontend-ci.yml) 
+- [`deploy-frontend.yml`](.github/workflows/deploy-frontend.yml)
 
 **On every push to main:**
 
@@ -1248,6 +1250,7 @@ Vercel does automatically: serverless functions, CDN edge network, SSL, domains 
 | **Staging** | `staging.pymeboost.com` | `develop` | automatic |
 | **Production** | `pymeboost.com` | `main` | manual approval required |
 
+### Deployment Strategy
 
 The frontend does not require Terraform or manual cloud resources — Vercel manages all infrastructure (compute, network, SSL, domains). Declarative config lives in [`frontend/vercel.json`](frontend/vercel.json):
 
