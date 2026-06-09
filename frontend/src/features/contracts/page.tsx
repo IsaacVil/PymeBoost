@@ -1,6 +1,6 @@
 "use client";
 import { DashboardLayout } from "@/shared/components/layouts/DashboardLayout";
-import { Card, CardHeader, CardTitle, CardContent } from "@/shared/components/ui/Card";
+import { Card } from "@/shared/components/ui/Card";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
 import { useAuthStore } from "@/store/authStore";
@@ -19,8 +19,8 @@ export default function ContractsPage() {
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-100">Contracts</h1>
-            <p className="text-slate-400 mt-1">Track negotiations, milestones, and deliverables.</p>
+            <h1 className="text-3xl font-bold text-zinc-900">Contracts</h1>
+            <p className="text-zinc-500 mt-1">Track negotiations, milestones, and deliverables.</p>
           </div>
           <Button size="sm">New Contract</Button>
         </div>
@@ -30,9 +30,9 @@ export default function ContractsPage() {
             <Card key={contract.id}>
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="font-semibold text-slate-100">{contract.title}</p>
-                  <p className="text-sm text-slate-400">Advisor: {contract.advisor}</p>
-                  <p className="text-xs text-slate-500 capitalize">{contract.type}</p>
+                  <p className="font-semibold text-zinc-900">{contract.title}</p>
+                  <p className="text-sm text-zinc-500">Advisor: {contract.advisor}</p>
+                  <p className="text-xs text-zinc-400 capitalize">{contract.type}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <Badge status={contract.status} label={contract.status} />

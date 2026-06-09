@@ -11,7 +11,7 @@ export function ContractTerms({ contract }: ContractTermsProps) {
   // hourly: hourlyRate + estimatedHours
   // milestone-based: milestones list + paymentPercentage per milestone
   return (
-    <div className="space-y-2 text-sm text-slate-300">
+    <div className="space-y-2 text-sm text-zinc-600">
       <p>Currency: {contract.currency}</p>
     </div>
   );

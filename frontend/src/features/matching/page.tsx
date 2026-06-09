@@ -18,11 +18,10 @@ export default function MatchingPage() {
     <DashboardLayout>
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-100">Find Advisors</h1>
-          <p className="text-slate-400 mt-1">Describe your challenge and we'll match the right specialist.</p>
+          <h1 className="text-3xl font-bold text-zinc-900">Find Advisors</h1>
+          <p className="text-zinc-500 mt-1">Describe your challenge and we'll match the right specialist.</p>
         </div>
 
-        {/* Matching form */}
         <Card>
           <div className="space-y-4">
             <Input
@@ -57,17 +56,16 @@ export default function MatchingPage() {
           </div>
         </Card>
 
-        {/* Results */}
         {matches.length > 0 && (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-slate-100">Best Matches</h2>
+            <h2 className="text-xl font-semibold text-zinc-900">Best Matches</h2>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {matches.map((match) => (
                 <Card key={match.advisorId}>
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-medium text-slate-100">Advisor #{match.advisorId}</p>
-                      <p className="text-sm text-slate-400 mt-1">{match.reason}</p>
+                      <p className="font-medium text-zinc-900">Advisor #{match.advisorId}</p>
+                      <p className="text-sm text-zinc-500 mt-1">{match.reason}</p>
                     </div>
                     <Badge status="active" label={`${match.matchScore}%`} />
                   </div>

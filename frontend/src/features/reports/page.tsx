@@ -15,8 +15,8 @@ export default function ReportsPage() {
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-100">Reports</h1>
-            <p className="text-slate-400 mt-1">Track advisor deliverables and project performance.</p>
+            <h1 className="text-3xl font-bold text-zinc-900">Reports</h1>
+            <p className="text-zinc-500 mt-1">Track advisor deliverables and project performance.</p>
           </div>
           <Button size="sm">Generate Report</Button>
         </div>
@@ -26,8 +26,8 @@ export default function ReportsPage() {
             <Card key={report.id}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-slate-100">{report.title}</p>
-                  <p className="text-sm text-slate-400">{report.date}</p>
+                  <p className="font-medium text-zinc-900">{report.title}</p>
+                  <p className="text-sm text-zinc-500">{report.date}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <Badge status={report.status} label={report.status} />

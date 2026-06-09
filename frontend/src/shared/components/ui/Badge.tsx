@@ -6,11 +6,11 @@ interface BadgeProps {
 }
 
 const statusClasses: Record<BadgeStatus, string> = {
-  active:    "bg-green-500/20 text-green-400 border-green-500/30",
-  pending:   "bg-amber-500/20 text-amber-400 border-amber-500/30",
-  complete:  "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  cancelled: "bg-red-500/20 text-red-400 border-red-500/30",
-  neutral:   "bg-slate-700 text-slate-400 border-slate-600",
+  active:    "bg-green-100 text-green-700 border-green-600",
+  pending:   "bg-amber-100 text-amber-700 border-amber-500",
+  complete:  "bg-teal-100 text-teal-700 border-teal-500",
+  cancelled: "bg-red-100 text-red-700 border-red-600",
+  neutral:   "bg-zinc-100 text-zinc-500 border-zinc-400",
 };
 
 export function Badge({ status = "neutral", label }: BadgeProps) {

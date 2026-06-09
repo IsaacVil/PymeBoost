@@ -18,7 +18,7 @@ interface UIStore {
   closeModal: () => void;
 
   // Theme
-  theme: "dark";
+  theme: "light" | "dark";
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -29,5 +29,5 @@ export const useUIStore = create<UIStore>((set) => ({
   openModal: (modal) => set({ activeModal: modal }),
   closeModal: () => set({ activeModal: null }),
 
-  theme: "dark",
+  theme: "light",
 }));

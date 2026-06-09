@@ -14,10 +14,10 @@ export function ChatPanel({ matchId, advisorName, currentUserId }: ChatPanelProp
 
   // TODO: implement connection status indicator
   return (
-    <div className="flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-lg">
-      <div className="p-4 border-b border-slate-800">
-        <p className="font-semibold text-slate-100">{advisorName}</p>
-        <p className="text-xs text-slate-400">{isConnected ? "Connected" : "Connecting…"}</p>
+    <div className="flex-1 flex flex-col bg-zinc-50 border-2 border-zinc-800 rounded-lg">
+      <div className="p-4 border-b-2 border-zinc-800">
+        <p className="font-semibold text-zinc-900">{advisorName}</p>
+        <p className="text-xs text-zinc-500">{isConnected ? "Connected" : "Connecting…"}</p>
       </div>
       <MessageList messages={messages as any} currentUserId={currentUserId} />
       <MessageInput onSend={send} disabled={!isConnected} />

@@ -12,7 +12,7 @@ export function MessageBubble({ message, isOwn }: MessageBubbleProps) {
   return (
     <div className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-xs px-4 py-2 rounded-lg text-sm ${
-        isOwn ? "bg-purple-500 text-white" : "bg-slate-700 text-slate-100"
+        isOwn ? "bg-teal-500 text-white" : "bg-zinc-100 text-zinc-900"
       }`}>
         <p>{message.content}</p>
         <p className="text-xs opacity-60 mt-1">{formatRelativeTime(message.timestamp)}</p>

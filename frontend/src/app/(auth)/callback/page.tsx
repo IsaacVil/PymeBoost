@@ -15,8 +15,8 @@ export default function CallbackPage() {
   }, [router, setSession]);
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-      <p className="text-slate-400 animate-pulse">Authenticating…</p>
+    <div className="min-h-screen bg-stone-100 flex items-center justify-center">
+      <p className="text-zinc-500 animate-pulse">Authenticating…</p>
     </div>
   );
 }

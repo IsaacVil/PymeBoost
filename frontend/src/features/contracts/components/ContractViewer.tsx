@@ -11,10 +11,10 @@ export function ContractViewer({ contract }: ContractViewerProps) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="font-semibold text-slate-100">{contract.title}</p>
+        <p className="font-semibold text-zinc-900">{contract.title}</p>
         <Badge status="pending" label={contract.type} />
       </div>
-      <p className="text-sm text-slate-400 capitalize">{contract.type}</p>
+      <p className="text-sm text-zinc-500 capitalize">{contract.type}</p>
     </div>
   );
 }

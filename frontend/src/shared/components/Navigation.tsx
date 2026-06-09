@@ -25,8 +25,8 @@ export function Navigation() {
               href={href}
               className={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 pathname.startsWith(href)
-                  ? "bg-purple-500/20 text-purple-400"
-                  : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                  ? "bg-teal-500/10 text-teal-600"
+                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
               }`}
             >
               {label}
@@ -36,7 +36,7 @@ export function Navigation() {
       </ul>
       <button
         onClick={logout}
-        className="w-full text-left px-4 py-2 text-sm text-slate-400 hover:text-slate-100 rounded-md hover:bg-slate-800 transition-colors"
+        className="w-full text-left px-4 py-2 text-sm text-zinc-500 hover:text-zinc-900 rounded-md hover:bg-zinc-100 transition-colors"
       >
         Sign out
       </button>

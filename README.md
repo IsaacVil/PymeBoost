@@ -425,9 +425,9 @@ Components are designed for desktop experience first; gracefully adapt to smalle
  
 - All components use **TailwindCSS utilities only**; no external stylesheets or CSS-in-JS.
 - Shared primitives establish baseline styles; feature components extend them.
-- Form inputs: `px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500`.
-- Buttons: `primary` (blue-600), `secondary` (slate-200), `ghost` (transparent).
-- Cards: `p-6 shadow-sm border border-slate-200 rounded-lg`.
+- Form inputs: `bg-white border-2 border-zinc-800 px-3 py-2 rounded-md focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500`.
+- Buttons: `primary` (teal-500), `secondary` (zinc-50 + border-zinc-800), `ghost` (transparent).
+- Cards: `bg-zinc-50 border-2 border-zinc-800 rounded-lg p-6 shadow-sm`.
 - Modals: `bg-black/50` overlay, flexbox centered.
  
 ---
@@ -458,24 +458,29 @@ Components are designed for desktop experience first; gracefully adapt to smalle
 
 | Color | Hex | Tailwind | Usage |
 |-------|-----|----------|-------|
-| Primary Purple | #A855F7 | `purple-500` | CTAs, highlights, active states |
-| Dark Background | #0F172A | `slate-950` | Main background |
-| Dark Surface | #1E293B | `slate-800` | Cards, panels |
-| Accent Gold | #FBBF24 | `amber-400` | Ratings, warnings |
-| Text Light | #F1F5F9 | `slate-100` | Primary text |
-| Text Muted | #94A3B8 | `slate-400` | Secondary text |
-| Border | #334155 | `slate-700` | Borders, dividers |
+| Primary Teal | #17B6B0 | `teal-500` | CTAs, highlights, active states |
+| Primary Teal Dark | #12918C | `teal-600` | Hover states |
+| Background Cream | #F5F1E8 | `stone-100` | Main background |
+| Surface White | #FCFCFA | `zinc-50` | Cards, panels |
+| Soft Cyan Surface | #DFF4F3 | `cyan-100` | Highlight sections |
+| Dark Text | #161616 | `zinc-900` | Primary text |
+| Muted Text | #6B6B6B | `zinc-500` | Secondary text |
+| Border Dark | #262626 | `zinc-800` | Borders, dividers |
+| Success Green | #20B15A | `green-600` | Success states |
+| Warning Orange | #F59E0B | `amber-500` | Pending states |
+| Danger Red | #DC2626 | `red-600` | Error/cancelled states |
+| Gold Accent | #D97706 | `amber-600` | Ratings, premium indicators |
 
 ### Typography
 
 | Element | Font | Size | Weight |
 |---------|------|------|--------|
-| H1 | Poppins | 40px | 700 |
-| H2 | Poppins | 28px | 700 |
-| H3 | Poppins | 20px | 600 |
-| Body | Inter | 16px | 400 |
-| Small | Inter | 14px | 400 |
-| Mono | JetBrains Mono | 14px | 400 |
+| H1 | Righteous | 48px | 700 |
+| H2 | Righteous | 32px | 700 |
+| H3 | Righteous | 24px | 600 |
+| Body | Sans Serif | 16px | 400 |
+| Small | Sans Serif | 14px | 400 |
+| Mono | JetBrains Mono | 12px | 500 |
 
 ### Spacing
 
@@ -486,17 +491,17 @@ Components are designed for desktop experience first; gracefully adapt to smalle
 ### Components
 
 **Buttons:**
-- Primary: `bg-purple-500 text-white hover:bg-purple-600 rounded-md px-4 py-2`
-- Secondary: `bg-slate-800 text-slate-100 border border-slate-700 rounded-md px-4 py-2`
+- Primary: `bg-teal-500 text-white hover:bg-teal-600 rounded-md px-4 py-2`
+- Secondary: `bg-zinc-50 text-zinc-900 border-2 border-zinc-800 rounded-md px-4 py-2`
 
 **Cards:**
-- `bg-slate-800 border border-slate-700 rounded-lg p-6 shadow-lg`
+- `bg-zinc-50 border-2 border-zinc-800 rounded-lg p-6 shadow-sm`
 
 **Inputs:**
-- `bg-slate-900 border border-slate-700 text-slate-100 px-3 py-2 rounded-md focus:ring-2 focus:ring-purple-500/20`
+- `bg-white border-2 border-zinc-800 text-zinc-900 px-3 py-2 rounded-md focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500`
 
 **Modals:**
-- `bg-slate-800 rounded-lg p-8 border border-slate-700 with bg-black/60 overlay`
+- `bg-zinc-50 rounded-lg p-8 border-2 border-zinc-800 with bg-black/50 overlay`
 
 ### Icons & Images
 
@@ -505,12 +510,16 @@ Components are designed for desktop experience first; gracefully adapt to smalle
 
 ### Standards
 
-- Purple primary only; gold accent for highlights/ratings
-- Dark backgrounds, light text
+- Teal primary color for actions and active states
+- Cream/light backgrounds with dark outlined cards
+- Thick visible borders (`border-2 border-zinc-800`)
+- Rounded industrial-style components
 - WCAG AA contrast (4.5:1 minimum)
-- Focus states: `focus:ring-2 focus:ring-purple-500`
+- Focus states: `focus:ring-2 focus:ring-teal-500`
 - Semantic HTML and full keyboard navigation
 - No hardcoded colors; use Tailwind only
+- Monospace labels for metadata, tags, and section headers
+- Subtle retro-dashboard aesthetic with spacious layouts
 
 ---
 

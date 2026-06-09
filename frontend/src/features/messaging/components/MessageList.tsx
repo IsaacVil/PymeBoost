@@ -12,7 +12,7 @@ export function MessageList({ messages, currentUserId }: MessageListProps) {
   return (
     <div className="flex-1 p-4 overflow-y-auto space-y-3">
       {messages.length === 0 && (
-        <p className="text-slate-500 text-sm text-center">Start of conversation</p>
+        <p className="text-zinc-400 text-sm text-center">Start of conversation</p>
       )}
       {messages.map((msg) => (
         <MessageBubble key={msg.id} message={msg} isOwn={msg.senderId === currentUserId} />

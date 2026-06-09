@@ -1,12 +1,16 @@
 :root {
   /* Colors */
-  --color-bg:           #0F172A; /* slate-950 */
-  --color-surface:      #1E293B; /* slate-800 */
-  --color-border:       #334155; /* slate-700 */
-  --color-primary:      #A855F7; /* purple-500 */
-  --color-accent:       #FBBF24; /* amber-400  */
-  --color-text:         #F1F5F9; /* slate-100  */
-  --color-text-muted:   #94A3B8; /* slate-400  */
+  --color-bg:           #F5F1E8; /* stone-100  */
+  --color-surface:      #FCFCFA; /* zinc-50    */
+  --color-border:       #262626; /* zinc-800   */
+  --color-primary:      #17B6B0; /* teal-500   */
+  --color-primary-dark: #12918C; /* teal-600   */
+  --color-accent:       #D97706; /* amber-600  */
+  --color-text:         #161616; /* zinc-900   */
+  --color-text-muted:   #6B6B6B; /* zinc-500   */
+  --color-success:      #20B15A; /* green-600  */
+  --color-warning:      #F59E0B; /* amber-500  */
+  --color-danger:       #DC2626; /* red-600    */
 
   /* Typography */
   --font-sans:  "Inter", sans-serif;

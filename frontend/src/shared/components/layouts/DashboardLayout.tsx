@@ -9,10 +9,10 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-slate-950 flex">
-        <aside className="w-64 bg-slate-900 border-r border-slate-800 flex-shrink-0">
-          <div className="p-6 border-b border-slate-800">
-            <span className="text-xl font-bold text-purple-400">PymeBoost</span>
+      <div className="min-h-screen bg-stone-100 flex">
+        <aside className="w-64 bg-zinc-50 border-r-2 border-zinc-800 flex-shrink-0">
+          <div className="p-6 border-b-2 border-zinc-800">
+            <span className="text-xl font-bold text-teal-500">PymeBoost</span>
           </div>
           <Navigation />
         </aside>

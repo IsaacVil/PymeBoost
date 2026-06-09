@@ -15,8 +15,8 @@ export function MatchingCard({ match, onSelect }: MatchingCardProps) {
     <Card>
       <div className="flex items-start justify-between">
         <div>
-          <p className="font-medium text-slate-100">Advisor #{match.advisorId}</p>
-          <p className="text-sm text-slate-400 mt-1">{match.reason}</p>
+          <p className="font-medium text-zinc-900">Advisor #{match.advisorId}</p>
+          <p className="text-sm text-zinc-500 mt-1">{match.reason}</p>
         </div>
         <Badge status="active" label={`${match.matchScore}%`} />
       </div>

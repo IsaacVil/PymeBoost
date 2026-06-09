@@ -7,7 +7,7 @@ interface CardProps {
 
 export function Card({ children, className = "" }: CardProps) {
   return (
-    <div className={`bg-slate-800 border border-slate-700 rounded-lg p-6 shadow-lg ${className}`}>
+    <div className={`bg-zinc-50 border-2 border-zinc-800 rounded-lg p-6 shadow-sm ${className}`}>
       {children}
     </div>
   );
@@ -18,9 +18,9 @@ export function CardHeader({ children, className = "" }: CardProps) {
 }
 
 export function CardTitle({ children }: { children: ReactNode }) {
-  return <h3 className="text-lg font-semibold text-slate-100">{children}</h3>;
+  return <h3 className="text-lg font-semibold text-zinc-900">{children}</h3>;
 }
 
 export function CardContent({ children, className = "" }: CardProps) {
-  return <div className={`text-slate-300 ${className}`}>{children}</div>;
+  return <div className={`text-zinc-600 ${className}`}>{children}</div>;
 }
