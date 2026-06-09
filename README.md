@@ -1065,13 +1065,35 @@ frontend/src/lib/helpers.ts → frontend/src/tests/shared/helpers.spec.ts
 
 **Critical flows:**
 - PYME signup → onboarding → browse advisors
-- Advisor matching → chat → contract negotiation
-- Contract tracking → phase reporting → completion
+- Advisor matching → swipe approved/rejected → list refresh
+- Contract detail → tier validation → terms display
+- Messaging → open conversation → send message
 - Error handling (network failures, validation errors)
 
-**Run locally:** `npm run test:e2e`
+**File structure:**
 
-**Run in CI:** GitHub Actions runs on every PR
+```
+frontend/
+└── e2e/
+    └── workflows.spec.ts   ← critical workflow tests (auth, matching, contracts, messaging)
+```
+
+**Commands:**
+
+| Command | Description |
+|---------|-------------|
+| `npx playwright test` | Run all E2E tests |
+| `npx playwright test --grep @smoke` | Run only smoke tests (used in CI post-deploy) |
+| `npx playwright test --ui` | Open interactive UI mode |
+| `npx playwright show-report` | Open last HTML report |
+
+**Implementation:** Each workflow lives in a `test.describe` block inside [`frontend/e2e/workflows.spec.ts`](frontend/e2e/workflows.spec.ts). Tag smoke tests with `@smoke` so CI can run them post-deploy independently.
+
+Use `data-testid` attributes on components as selectors — never rely on CSS classes or text content, as those change with styling. Add `data-testid` to a component when writing its test.
+
+For tests that require an authenticated user, load session state via Playwright's `storageState` instead of logging in on every test (see [Playwright docs on authentication](https://playwright.dev/docs/auth)).
+
+**Base test file:** [`frontend/e2e/workflows.spec.ts`](frontend/e2e/workflows.spec.ts) — contains the skeleton for all critical workflows with `TODO` comments marking what each test needs to assert.
 
 ---
 
@@ -1080,7 +1102,7 @@ frontend/src/lib/helpers.ts → frontend/src/tests/shared/helpers.spec.ts
 | Test Type | Tool | Location | Frequency |
 |-----------|------|----------|-----------|
 | **Unit** | Vitest | `frontend/src/tests/features/`, `frontend/src/tests/shared/` | On save (watch mode) |
-| **Integration** | Playwright | `frontend/tests/e2e/` | Before commit, on PR |
+| **E2E** | Playwright | `frontend/e2e/` | Before commit, on PR |
 | **Visual** | Optional (Percy, Chromatic) | CI/CD only | On PR |
 
 ---
@@ -1121,11 +1143,27 @@ ApiClient catches error
 
 **Tools:** Google Cloud Monitoring, Sentry
 
+### Monitoring Alerts
+
+**Critical alerts (page team immediately):**
+- Unhandled errors spike (>10 in 5 min)
+- API error rate >5%
+- Page load time >3s
+- Failed deployments
+
+**Warning alerts (check next morning):**
+- Sentry error threshold crossed
+- Code coverage dropped below 80%
+- Bundle size increased >10%
+
+
 ---
 
 ### CI/CD Pipeline
 
 ### GitHub Actions Workflows
+
+Workflow files: [`frontend-ci.yml`](.github/workflows/frontend-ci.yml) · [`deploy-frontend.yml`](.github/workflows/deploy-frontend.yml)
 
 **On every push to main:**
 
@@ -1147,35 +1185,68 @@ ApiClient catches error
    - Check for TypeScript errors
    - Verify build succeeds
 
-5. **Deploy to Staging** (Google App Engine)
+5. **Deploy to Staging** (Vercel)
    - Deploy to staging environment
    - Run smoke tests
    - Notify team if failed
 
 **On PR merge to main:**
 
-6. **Deploy to Production** (Google App Engine)
+6. **Deploy to Production** (Vercel)
+   - Requires manual approval via GitHub Environments
    - Deploy to production
-   - Monitor Sentry + Cloud Logging for 10 min
+   - Monitor for 10 min post-deploy
    - Rollback if critical errors detected
 
 ---
 
-### Deployment Environments
+### Deployment Architecture
 
-| Environment | Purpose | Auto-Deploy | Branch |
-|-------------|---------|------------|--------|
-| **Development** | Local testing | No | Feature branches |
-| **Staging** | Final testing before production | Yes (on push to develop) | `develop` |
-| **Production** | Live users | Manual approval | `main` |
+The frontend is deployed to **Vercel**. The code goes from github to production:
+
+```
+Developer push
+      │
+      ▼
+GitHub repository
+      │
+      ├─── push to any branch ──► GitHub Actions: frontend-ci.yml
+      │                               lint → unit tests → e2e → build
+      │
+      ├─── push to develop ────► GitHub Actions: deploy-frontend.yml
+      │                               build → vercel CLI → Vercel (staging)
+      │                               → smoke tests (@smoke tag)
+      │
+      └─── push to main ───────► GitHub Actions: deploy-frontend.yml
+                                      manual approval (GitHub Environments)
+                                      → build → vercel --prod → Vercel (production)
+                                      → 10 min post-deploy monitor
+```
+
+Vercel does automatically: serverless functions, CDN edge network, SSL, domains and rollback from the dashboard.
+
+| Environment | URL | Branch | Deploy |
+|-------------|-----|--------|--------|
+| **Development** | `localhost:3000` | feature branches | manual (`npm run dev`) |
+| **Staging** | `staging.pymeboost.com` | `develop` | automatic |
+| **Production** | `pymeboost.com` | `main` | manual approval required |
+
+
+The frontend does not require Terraform or manual cloud resources — Vercel manages all infrastructure (compute, network, SSL, domains). Declarative config lives in [`frontend/vercel.json`](frontend/vercel.json):
+
+- **`framework`** — tells Vercel this is Next.js (enables automatic build optimizations)
+- **`regions`** — `iad1` (us-east-1, Virginia) for lower latency with the backend
+- **`headers`** — security headers on all routes: `X-Frame-Options`, `CSP`, `X-Content-Type-Options`
+- **`redirects`** — declarative permanent redirects
+- **`env`** — references to Vercel Environment Variables (with `@` prefix) instead of hardcoded values
+
+Environment variables (`@next_public_api_url`, etc.) are configured once in the Vercel dashboard and injected automatically on every deploy.
 
 ---
 
 ### Deployment Strategy
 
-**Rolling deployment:** New code gradually replaces old code (no downtime)
-
-**Rollback:** If critical errors detected post-deploy, one-click rollback to previous version
+**Rollback:** Si se detectan errores post-deploy, rollback instantáneo a la versión anterior desde el dashboard de Vercel (sin re-deploy).
 
 ---
 
@@ -1191,21 +1262,6 @@ Code must pass these checks before merging to main:
 | **E2E** | Playwright | All critical workflows pass |
 | **Security** | Snyk | No critical vulnerabilities |
 | **Performance** | Lighthouse | Core Web Vitals meet targets |
-
----
-
-### Monitoring Alerts
-
-**Critical alerts (page team immediately):**
-- Unhandled errors spike (>10 in 5 min)
-- API error rate >5%
-- Page load time >3s
-- Failed deployments
-
-**Warning alerts (check next morning):**
-- Sentry error threshold crossed
-- Code coverage dropped below 80%
-- Bundle size increased >10%
 
 ---
 
