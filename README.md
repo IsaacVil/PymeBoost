@@ -1252,6 +1252,8 @@ Vercel does automatically: serverless functions, CDN edge network, SSL, domains 
 
 ### Deployment Strategy
 
+**Rollback:** If there are errors post-deploy, we apply a rollback from Vercel's dashboard.
+
 The frontend does not require Terraform or manual cloud resources — Vercel manages all infrastructure (compute, network, SSL, domains). Declarative config lives in [`frontend/vercel.json`](frontend/vercel.json):
 
 - **`framework`** — tells Vercel this is Next.js (enables automatic build optimizations)
@@ -1261,13 +1263,6 @@ The frontend does not require Terraform or manual cloud resources — Vercel man
 - **`env`** — references to Vercel Environment Variables (with `@` prefix) instead of hardcoded values
 
 Environment variables (`@next_public_api_url`, etc.) are configured once in the Vercel dashboard and injected automatically on every deploy.
-
----
-
-### Deployment Strategy
-
-**Rollback:** Si se detectan errores post-deploy, rollback instantáneo a la versión anterior desde el dashboard de Vercel (sin re-deploy).
-
 ---
 
 ### Quality Gates
@@ -1299,28 +1294,70 @@ Code must pass these checks before merging to main:
 
 ### Core Performance Targets
 
-| Metric | Target | Tool |
-|--------|--------|------|
-| **First Contentful Paint (FCP)** | <1.8s | Lighthouse |
-| **Largest Contentful Paint (LCP)** | <2.5s | Lighthouse |
-| **Cumulative Layout Shift (CLS)** | <0.1 | Lighthouse |
-| **JavaScript Bundle** | <150KB (gzipped) | Webpack Bundle Analyzer |
-| **API Response Time** | <500ms | Cloud Monitoring |
+Targets are defined per page because each route has different rendering complexity. `/login` is a static form; `/matching` fetches advisor cards with images from the API; `/dashboard` renders charts and live metrics; `/messages` must feel instant to be usable as a chat.
+
+| Page | FCP Target | LCP Target | Justification |
+|------|-----------|-----------|---------------|
+| `/login` | <0.8s | <1.0s | Static form, no API calls on load — slowness here has no excuse |
+| `/matching` | <1.8s | <2.0s | Fetches advisor cards with images and AI scores from API |
+| `/dashboard` | <2.0s | <2.5s | Renders charts, KPIs, and timeline — most JS-heavy page |
+| `/messages` | <1.5s | <1.8s | Chat must feel instantaneous; slow load breaks the real-time illusion |
+| `/contracts` | <1.8s | <2.0s | Contract list + detail viewer with structured data |
+
+**CLS target (all pages):** <0.1 — advisor cards, contract items, and chat bubbles must not shift position as images or data loads in. Enforced by reserving explicit dimensions on `<Image>` components and skeleton loaders before data arrives.
+
+**JavaScript Bundle targets (per route, gzipped):**
+
+| Bundle | Size limit | Notes |
+|--------|-----------|-------|
+| Initial (app shell + auth) | <50KB | Loads on every route — kept minimal by design |
+| `/matching` chunk | <40KB | MatchingCard, MatchingGrid, swipe animations (Framer Motion) |
+| `/contracts` chunk | <35KB | ContractViewer, ContractNegotiation, tier validation logic |
+| `/dashboard` chunk | <30KB | Charts and metrics components loaded on demand |
+| Total per route | <150KB | No single page should force the user to download more than this |
+
+Next.js code-splits automatically by route. The 150KB ceiling applies per route, not to the entire app — a user visiting only `/login` downloads ~50KB, never the full bundle.
+
+**API Response Time targets (per endpoint type):**
+
+| Endpoint type | Target | Justification |
+|---------------|--------|---------------|
+| Static data (user profile, contract list) | <200ms | Simple DB query with indexed fields — no excuse for slowness |
+| Matching recommendations (AI) | <1.5s | LangGraph agent processes SME context to rank advisors — inherently slower |
+| Message history | <300ms | Paginated query (50 messages max), Redis-cached session |
+| Contract submission | <400ms | Writes to DB + publishes Pub/Sub event for notifications |
+| Document upload (OCR) | <8s | Cloud Document AI processing — shown to user as async with progress indicator |
+
+The 500ms global target applies to standard CRUD endpoints. AI-driven endpoints (matching recommendations) have a separate 1.5s ceiling, reflected in the TanStack Query `staleTime` and loading state shown to the user during the wait.
 
 ---
 
 ### Code Splitting
 
-Next.js automatically code-splits by route. Each feature loads only when accessed:
+Next.js splits the bundle automatically by route. The split works well only because the feature-based architecture enforces strict boundaries — features never import from each other (see [1.2 Key Rules](frontend/src/features/)), so no feature's code leaks into another route's chunk.
 
-```
-Initial bundle: app shell + authentication (50KB)
-/matching: +40KB (loaded on demand)
-/contracts: +35KB (loaded on demand)
-/dashboard: +30KB (loaded on demand)
+| Route | Chunk size | What drives the weight |
+|-------|-----------|------------------------|
+| Initial (app shell + auth) | ~50KB | Auth0 SDK, Zustand, TanStack Query client |
+| `/matching` | +40KB | Framer Motion (swipe animations), advisor card components |
+| `/contracts` | +35KB | ContractViewer, tier validation logic, Zod schemas |
+| `/dashboard` | +30KB | Chart components, metrics rendering |
+| `/messages` | +25KB | WebSocket client, ChatPanel, MessageList |
+| `/reports` | +20KB | ReportViewer, PDF rendering utilities |
+
+Framer Motion is scoped only to [MatchingCard.tsx](frontend/src/features/matching/components/MatchingCard.tsx) and never imported in shared components — if it were in `shared/`, it would inflate every route's chunk.
+
+For heavy components that are not visible on initial render (modals, negotiation forms), `next/dynamic` defers loading until the user triggers them:
+
+```typescript
+// ContractNegotiation only loads when the user opens the negotiation modal
+const ContractNegotiation = dynamic(
+  () => import("@/features/contracts/components/ContractNegotiation"),
+  { loading: () => <Skeleton /> }
+);
 ```
 
-**Result:** Users loading the app don't download matching/contracts code until needed.
+Used in [ContractsPage](frontend/src/features/contracts/page.tsx) and [MessagingPage](frontend/src/features/messaging/page.tsx) for modal-only components that would otherwise inflate the initial chunk unnecessarily.
 
 ---
 
