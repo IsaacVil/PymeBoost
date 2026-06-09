@@ -361,13 +361,16 @@ If used by 1 feature → `frontend/src/features/[feature]/components/`.
 **Layer 1**: Primitives (Feature-specific, presentational, not logic-aware)
 - Single-responsibility components that accept data via props.
 - Examples: `MatchingCard`, `ContractViewer`, `ChatBubble`, `MetricsChart`.
+
 **Layer 2: Compound Components** (Assembled, reusable within feature)
 - Combine primitives into larger, reusable units within the same feature.
 - Examples: `MatchingGrid`, `ChatPanel`, `ContractSection`.
+
 **Layer 3: Containers/Pages** (Logic-aware, orchestrators)
 - Connect to hooks, API calls, and global state.
 - Pass processed data to primitives and compounds.
 - Examples: `MatchingPage`, `ContractPage`, `DashboardPage`.
+
 **Shared Primitives** (`shared/components/ui/`)
 - Foundational elements used across features: Button, Input, Badge, Modal, Card, Dialog, Select, Checkbox, Avatar, Textarea, Toast, Tooltip.
 - Use Radix UI for behavior and TailwindCSS for styling.
