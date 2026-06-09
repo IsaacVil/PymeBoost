@@ -655,7 +655,7 @@ All data from the backend (advisors, contracts, messages, dashboards) is cached 
 - **Mutations:** Create/update/delete via useMutation
 - **Refetch:** After mutations, queries are invalidated to refetch fresh data
 
-TanStack Query basically handles caching, deduplication, background updates, and stale data automatically. Components never manage backend data manually.
+TanStack Query basically handles caching, deduplication, background updates, and stale data automatically. Components never manage backend data manually. [`QueryClientFactory`](frontend/src/lib/queryClient.ts).
 
 ---
  
@@ -669,6 +669,24 @@ Single centralized `ApiClient` handles all HTTP communication:
 All services call through `apiClient`. No direct fetch() calls.
  
 **Why centralized:** JWT injection, error handling, retries, and logging happen once, not duplicated across 10+ service files.
+
+#### HTTP Response Codes
+
+| Code | Name | When PymeBoost receives it | How ApiClient handles it |
+|------|------|---------------------------|--------------------------|
+| `200` | OK | Successful GET — advisors list, contracts, messages fetched | Returns `{ success: true, data }` |
+| `201` | Created | Successful POST — contract proposed, swipe registered, match created | Returns `{ success: true, data }` |
+| `204` | No Content | Successful DELETE or action with no body — swipe rejected, notification dismissed | Returns `{ success: true, data: null }` |
+| `400` | Bad Request | Request body invalid — contract fields missing or malformed | Returns `{ success: false, error }`, Zod catches this before it reaches components |
+| `401` | Unauthorized | JWT expired or missing | Triggers logout via `authStore`, redirects to `/auth/login` |
+| `403` | Forbidden | Valid JWT but insufficient role or permission — SME accessing advisor-only route | AuthGuard blocks render; `apiClient` returns `{ success: false, error }` |
+| `404` | Not Found | Resource doesn't exist — advisor deleted, contract not found | Returns `{ success: false, error }`, feature shows empty state |
+| `409` | Conflict | Duplicate action — PYME already has an active contract, swipe already registered | Returns `{ success: false, error }`, notificationStore publishes warning |
+| `422` | Unprocessable Entity | Data structurally valid but business rules fail — commission percentage out of range | ContractValidator catches this before the request; backend returns details |
+| `429` | Too Many Requests | Rate limit exceeded — too many matching requests in a short window | `retryDelay` backoff applies; notificationStore publishes warning to user |
+| `500` | Internal Server Error | Unexpected backend failure | `executeWithRetry` retries up to 3 times with exponential backoff |
+| `502` | Bad Gateway | Cloud Run instance not reachable — deploy in progress | Same retry logic as 500; Sentry logs the incident |
+| `503` | Service Unavailable | Backend temporarily down — maintenance window | Retries exhausted → `{ success: false, error }`, user sees error state |
 
 ---
  
@@ -832,18 +850,18 @@ Sign Up → Profile Setup → Wait for Matches → Accept Chat → Negotiate Ter
 
 ---
 
-## Interaction Patterns
+### Interaction Patterns
 
-| Pattern | Where | Purpose |
-|---------|-------|---------|
-| **Modal Forms** | Contract negotiation, phase reports | Focused input without page navigation |
-| **Toast Notifications** | Every feature | Status updates (contract accepted, phase done, error) |
-| **Loading States** | Data fetching | Spinner or skeleton while data loads |
-| **Empty States** | No data yet | Friendly message + CTA (e.g., "No contracts yet. Browse advisors") |
-| **Inline Validation** | Forms | Real-time feedback (red border + error text) |
-| **Swipe Animations** | Matching | Smooth card transitions (right = approve, left = reject) |
-| **Real-time Updates** | Dashboard, chat | WebSocket for live metric/message updates |
-| **Confirmation Dialogs** | Critical actions | "Are you sure?" before deleting or canceling |
+| Pattern | Where | Purpose | Implementation |
+|---------|-------|---------|----------------|
+| **Modal Forms** | Contract negotiation, phase reports | Focused input without page navigation | [`Modal.tsx`](frontend/src/shared/components/ui/Modal.tsx) — `<Modal open={isOpen} onClose={() => setOpen(false)} title="New Contract">` |
+| **Toast Notifications** | Every feature | Status updates (contract accepted, phase done, error) | [`notificationStore`](frontend/src/store/notificationStore.ts) — `publish({ type: "success", title: "Contract accepted", duration: 4000 })` |
+| **Loading States** | Data fetching | Spinner or skeleton while data loads | [`MatchingPage`](frontend/src/features/matching/page.tsx) — `if (isLoading) return <p className="animate-pulse">Finding matches…</p>` |
+| **Empty States** | No data yet | Friendly message + CTA (e.g., "No contracts yet. Browse advisors") | [`MatchingPage`](frontend/src/features/matching/page.tsx) — `if (!recommendations.length) return <EmptyState cta="Complete your profile" />` |
+| **Inline Validation** | Forms | Real-time feedback (red border + error text) | [`Input.tsx`](frontend/src/shared/components/ui/Input.tsx) — `<Input label="Budget" error={errors.budget?.message} />` |
+| **Swipe Animations** | Matching | Smooth card transitions (right = approve, left = reject) | [`MatchingCard`](frontend/src/features/matching/components/MatchingCard.tsx) — `<motion.div drag="x" onDragEnd={(_, info) => info.offset.x > 100 ? onApprove(id) : onReject(id)}>` |
+| **Real-time Updates** | Dashboard, chat | WebSocket for live metric/message updates | [`useMessaging`](frontend/src/features/messaging/hooks/useMessaging.ts) — `useEffect(() => { ws.current = new WebSocket(url); ws.current.onmessage = (e) => setMessages(prev => [...prev, JSON.parse(e.data)]) }, [url])` |
+| **Confirmation Dialogs** | Critical actions | "Are you sure?" before deleting or canceling | [`Modal.tsx`](frontend/src/shared/components/ui/Modal.tsx) — `<Modal title="Cancel contract?"><Button variant="danger" onClick={onConfirm}>Yes, cancel</Button></Modal>` |
 
 ### Key Rules
 
