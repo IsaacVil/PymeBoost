@@ -1618,6 +1618,8 @@ TanStack Query → ApiClient → Backend API / Auth0
 - Session cache: Google Cloud Memorystore (Redis)
 - Agent orchestration framework: LangGraph 0.2.41
 - Container registry: Google Artifact Registry
+- Vector store: pgvector (PostgreSQL extension on Cloud SQL) — stores and queries vector embeddings directly within the existing PostgreSQL instance. Used for advisor use case similarity search, recommendation scoring, and similar project retrieval. Eliminates the need for a separate vector database service.
+- LinkedIn profile extraction: ProxyCurl API (Nubela) 
 
 ---
 
@@ -1663,6 +1665,7 @@ PymeBoost is built around these core business domains:
 - **Review:** Ratings and feedback for advisors and PYMEs.
 - **Notification:** Event-driven alerts, email notifications, system-wide broadcasts.
 - **Event:** Event audit logging, event sourcing, domain event storage.
+- **AI:** PDF ingestion, OCR processing, block extraction, thematic classification, embedding generation, vector storage, and all AI-driven computations for the platform.
 
 ### Complete Folder Structure
 
@@ -1678,11 +1681,14 @@ backend/
 │   │   │   ├── login_controller.py
 │   │   │   ├── update_sme_profile_controller.py
 │   │   │   ├── update_advisor_profile_controller.py
-│   │   │   └── update_advisor_industry_controller.py
+│   │   │   ├── update_advisor_industry_controller.py
+│   │   │   └── upload_use_cases_controller.py
 │   │   ├── services/
 │   │   │   ├── user_service.py
 │   │   │   ├── session_cache_service.py
-│   │   │   └── auth_service.py
+│   │   │   ├── auth_service.py
+│   │   │   ├── cedula_juridica_verification_service.py
+│   │   │   └── linkedin_profile_extraction_service.py
 │   │   ├── repositories/
 │   │   │   ├── user_repository.py
 │   │   │   └── session_repository.py
@@ -1696,7 +1702,8 @@ backend/
 │   │   │   └── session_response.py
 │   │   └── events/
 │   │       ├── sme_account_created_event.py
-│   │       └── advisor_account_created_event.py
+│   │       ├── advisor_account_created_event.py
+│   │       └── use_case_uploaded_event.py
 │   │
 │   ├── advisor/
 │   │   ├── controllers/
@@ -1727,25 +1734,34 @@ backend/
 │   │   ├── controllers/
 │   │   │   ├── get_pyme_profile_controller.py
 │   │   │   ├── get_advisor_recommendations_controller.py
-│   │   │   └── get_similar_projects_controller.py
+│   │   │   ├── get_similar_projects_controller.py
+│   │   │   ├── get_needs_assessment_questions_controller.py
+│   │   │   └── submit_needs_assessment_controller.py
 │   │   ├── services/
 │   │   │   ├── pyme_service.py
-│   │   │   ├── recommendation_service.py
-│   │   │   └── impact_prediction_service.py
+│   │   │   ├── impact_prediction_service.py
+│   │   │   └── needs_assessment_service.py
 │   │   ├── repositories/
 │   │   │   ├── pyme_repository.py
-│   │   │   └── industry_repository.py
+│   │   │   ├── industry_repository.py
+│   │   │   ├── question_catalog_repository.py
+│   │   │   └── needs_vector_repository.py
 │   │   ├── models/
 │   │   │   ├── pyme_model.py
 │   │   │   ├── industry_model.py
-│   │   │   └── optimization_area_model.py
+│   │   │   ├── optimization_area_model.py
+│   │   │   ├── question_catalog_model.py
+│   │   │   └── needs_vector_model.py
 │   │   ├── schemas/
 │   │   │   ├── pyme_profile_response.py
 │   │   │   ├── recommendation_dto.py
-│   │   │   └── impact_prediction_dto.py
+│   │   │   ├── impact_prediction_dto.py
+│   │   │   ├── needs_assessment_request.py
+│   │   │   └── needs_assessment_response.py
 │   │   └── events/
 │   │       ├── advisor_recommended_event.py
-│   │       └── recommendation_recalculated_event.py
+│   │       ├── recommendation_recalculated_event.py
+│   │       └── sme_needs_assessment_updated_event.py
 │   │
 │   ├── matching/
 │   │   ├── controllers/
@@ -1886,23 +1902,54 @@ backend/
 │   │       ├── match_created_handler.py
 │   │       ├── contract_proposed_handler.py
 │   │       ├── project_status_handler.py
-│   │       └── advisor_selected_handler.py
+│   │       ├── advisor_selected_handler.py
+│   │       └── advisor_use_case_processed_handler.py
 │   │
-│   └── event/
+│   ├── event/
+│   │   ├── controllers/
+│   │   │   └── (Event publishing managed internally)
+│   │   ├── services/
+│   │   │   ├── event_service.py
+│   │   │   └── event_audit_service.py
+│   │   ├── repositories/
+│   │   │   └── event_repository.py
+│   │   ├── models/
+│   │   │   └── domain_event_model.py
+│   │   ├── schemas/
+│   │   │   └── domain_event_dto.py
+│   │   └── publishers/
+│   │       ├── event_publisher.py
+│   │       └── pubsub_publisher.py
+│   │
+│   └── ai/
 │       ├── controllers/
-│       │   └── (Event publishing managed internally)
+│       │   └── (all processing managed via Pub/Sub, not REST)
 │       ├── services/
-│       │   ├── event_service.py
-│       │   └── event_audit_service.py
+│       │   ├── use_case_pdf_processing_service.py
+│       │   ├── ocr_service.py
+│       │   ├── embedding_service.py
+│       │   ├── thematic_classification_service.py
+│       │   ├── recommendation_service.py
+│       │   ├── recommendation_batch_service.py
+│       │   └── recommendation_on_demand_service.py
 │       ├── repositories/
-│       │   └── event_repository.py
+│       │   ├── use_case_repository.py
+│       │   ├── document_block_repository.py
+│       │   └── recommendation_result_repository.py
 │       ├── models/
-│       │   └── domain_event_model.py
+│       │   ├── use_case_model.py
+│       │   ├── document_block_model.py
+│       │   └── recommendation_result_model.py
 │       ├── schemas/
-│       │   └── domain_event_dto.py
-│       └── publishers/
-│           ├── event_publisher.py
-│           └── pubsub_publisher.py
+│       │   ├── use_case_dto.py
+│       │   ├── document_block_dto.py
+│       │   └── recommendation_result_dto.py
+│       ├── events/
+│       │   ├── advisor_use_case_processed_event.py
+│       │   └── recommendation_ready_event.py
+│       └── handlers/
+│           ├── use_case_uploaded_handler.py
+│           └── recommendation_requested_handler.py
 │
 ├── shared/
 │   ├── database/
@@ -2225,6 +2272,9 @@ Used for state changes that other domains react to. The source publishes a domai
 | **MilestoneCompleted** | PYME/Advisor completes milestone | Project Domain | Notification Domain, Review Domain | Notify parties, enable review collection |
 | **ProjectCompleted** | Project finalized | Project Domain | Review Domain, Notification Domain | Enable reviews, calculate final metrics |
 | **ReviewSubmitted** | Review left for advisor/PYME | Review Domain | Advisor Domain, Notification Domain, Pyme Domain | Update reputation, notify subject, archive review |
+| **UseCaseUploaded** | Advisor uploads use case PDFs | User Domain | AI Domain | Trigger PDF processing pipeline |
+| **AdvisorUseCaseProcessed** | Use case PDF processing completes | AI Domain | Notification Domain | Notify advisor of processing result (success or failure) |
+| **SmeNeedsAssessmentUpdated** | SME submits or retakes needs assessment | Pyme Domain | Pyme Domain | Invalidate recommendation cache, trigger recommendation recalculation |
 
 ### Shared Components
 
@@ -3071,21 +3121,28 @@ Cloud Run scales to a maximum of 50 instances. Each FastAPI instance maintains a
 
 Implementation: [backend/domains/user/controllers/create_sme_account_controller.py](backend/domains/user/controllers/create_sme_account_controller.py)
 
-1. The user completes the registration form on the frontend.
+1. The user completes the registration form on the frontend, providing:
+   - Name of the owner.
+   - Business email address.
+   - Phone number.
+   - Cédula jurídica (Legal Entity ID).
+   - Company size (categorical: `Small` | `Medium` | `Large`).
 2. The frontend sends the information to Google Cloud API Gateway through a POST request.
 3. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
 4. Google Cloud API Gateway routes the request to Cloud Run.
 5. FastAPI validates the format of the received data.
 6. Business validations are executed:
+   - Cedula Juridica is not already registered.
    - Email is not already registered.
    - Phone number is not already registered.
-   - Valid company name.
-   - Required fields are completed (Legal Entity ID, associated bank account).
-7. The request data is mapped into the corresponding Domain-Driven Design DTO.
-8. The user is created in Auth0 and the JWT access token is retrieved.
-9. The SME profile is created in the database.
-10. A `SmeAccountCreated` event is generated.
-11. The system returns a successful account creation confirmation.
+7. The `Cédula Jurídica Verification` workflow is executed 
+   - If verification fails, the registration is rejected.
+8. The user is prompted to pay the $25 SME subscription fee. For now, this payment is assumed to have been completed in person — no automated payment process is implemented at this stage.
+9. The request data is mapped into the corresponding Domain-Driven Design DTO.
+10. The user is created in Auth0 and the JWT access token is retrieved.
+11. The SME profile is created in the database.
+12. A `SmeAccountCreated` event is generated.
+13. The system returns a successful account creation confirmation.
 
 ---
 
@@ -3093,20 +3150,26 @@ Implementation: [backend/domains/user/controllers/create_sme_account_controller.
 
 Implementation: [backend/domains/user/controllers/create_advisor_account_controller.py](backend/domains/user/controllers/create_advisor_account_controller.py)
 
-1. The advisor completes the registration form.
-2. The frontend sends the information through a POST request to Google Cloud API Gateway.
-3. Google Cloud API Gateway validates the endpoint and applies rate limiting.
-4. The request is routed to Cloud Run.
-5. FastAPI validates the structure of the received data.
+1. The advisor completes the registration form, providing:
+   - Personal email address.
+   - Phone number.
+   - LinkedIn profile URL.
+2. The frontend sends the information to Google Cloud API Gateway through a POST request.
+3. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
+4. Google Cloud API Gateway routes the request to Cloud Run.
+5. FastAPI validates the format of the received data.
 6. Business validations are executed:
-   - Unique email address.
-   - Valid specialization.
-   - Required profile information is provided.
-7. The request data is mapped into the corresponding Domain-Driven Design DTO.
-8. The user is created in Auth0 and the JWT access token is retrieved.
-9. The Advisor profile is created in the database.
-10. An `AdvisorAccountCreated` event is generated.
-11. The system returns a successful registration confirmation.
+   - Email is not already registered.
+   - Phone number is not already registered.
+7. The `LinkedIn Profile Extraction` workflow is executed.
+   - If extraction fails, the registration is rejected.
+8. The request data is mapped into the corresponding Domain-Driven Design DTO.
+9. The user is created in Auth0 and the JWT access token is retrieved.
+10. The Advisor profile is created in the database with the extracted LinkedIn data and submitted use cases.
+11. An `AdvisorAccountCreated` event is generated.
+12. The system returns a successful account creation confirmation.
+
+
 
 ---
 
@@ -3139,7 +3202,7 @@ Implementation: [backend/domains/user/services/session_cache_service.py](backend
    - A session object is created.
    - The session is stored in Redis.
 6. The session becomes available for future requests.
-7. The session TTL (Time To Live) is refreshed whenever user activity is detected, standard time is 48 hours.
+7. The session TTL (Time To Live) is refreshed whenever user activity is detected. Redis session TTL is always set to 3 hours — matching the maximum JWT validity (1 hour standard + 2 hour grace period) — so session data remains available even if Auth0 goes down within the standard window.
 
 ---
 
@@ -3149,16 +3212,15 @@ Implementation: [backend/domains/user/controllers/update_sme_profile_controller.
 
 1. The SME requests an update to its business information.
 2. The frontend sends an authenticated PUT request.
-3. Google Cloud API Gateway validates the endpoint and JWT.
-4. Cloud Run receives the request.
-5. FastAPI validates the user's identity.
+3. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+4. Google Cloud API Gateway routes the request to Cloud Run.
+5. FastAPI validates the JWT using Auth0 JWKS.
 6. The system verifies that the user owns the SME profile.
 7. The SME entity is retrieved from the database.
 8. Allowed fields are updated:
-   - Profile picture.
-   - Business name.
    - Description.
    - Contact information.
+   - Company size (categorical: `Small` | `Medium` | `Large`).
 9. Changes are persisted.
 10. A `SmeInformationUpdated` event is generated.
 11. The updated information is returned.
@@ -3171,16 +3233,16 @@ Implementation: [backend/domains/user/controllers/update_advisor_profile_control
 
 1. The advisor requests an update to their professional information.
 2. The frontend sends an authenticated PUT request.
-3. Google Cloud API Gateway validates the endpoint and JWT.
-4. Cloud Run receives the request.
-5. FastAPI validates the JWT.
+3. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+4. Google Cloud API Gateway routes the request to Cloud Run.
+5. FastAPI validates the JWT using Auth0 JWKS.
 6. The system verifies profile ownership.
 7. The Advisor entity is retrieved.
 8. Allowed fields are updated:
-   - Profile picture.
    - Display name.
    - Description.
    - Contact information.
+   - If the advisor needs to change the industry it needs to use the `Change Industry for an Advisor` workflow 
 9. Changes are persisted.
 10. An `AdvisorInformationUpdated` event is generated.
 11. The updated profile is returned.
@@ -3193,15 +3255,196 @@ Implementation: [backend/domains/user/controllers/update_advisor_industry_contro
 
 1. The advisor selects new specialization industries.
 2. The frontend sends an authenticated PUT request.
-3. Google Cloud API Gateway validates the endpoint and JWT.
-4. The request is routed to Cloud Run.
-5. FastAPI validates the user's identity through Auth0.
+3. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+4. Google Cloud API Gateway routes the request to Cloud Run.
+5. FastAPI validates the JWT using Auth0 JWKS.
 6. The Advisor profile is retrieved.
 7. The selected industries are validated against the system catalog.
 8. The advisor's associated industries are updated.
 9. An `AdvisorIndustryUpdated` event is generated.
 10. The system returns a successful update confirmation.
 
+---
+
+#### Cédula Jurídica Verification
+
+Implementation: [backend/domains/user/services/cedula_juridica_verification_service.py](backend/domains/user/services/cedula_juridica_verification_service.py)
+
+1. The system receives a cédula jurídica submitted during SME registration.
+2. The system sends an HTTP GET request to the Hacienda API:
+   `GET https://api.hacienda.go.cr/fe/ae?identificacion={cedula_juridica}`
+   No authentication is required.
+3. The following information is extracted from the response and stored:
+   - Company name (`nombre`).
+4. If the cédula is not found, verification fails and the registration is rejected.
+5. If verification succeeds, the retrieved company data is returned to the registration flow.
+
+---
+
+#### LinkedIn Profile Extraction
+
+Implementation: [backend/domains/user/services/linkedin_profile_extraction_service.py](backend/domains/user/services/linkedin_profile_extraction_service.py)
+
+ProxyCurl is a third-party REST API (by Nubela) that receives a LinkedIn profile URL and returns structured JSON data extracted from the public profile. It handles the scraping and parsing of LinkedIn on PymeBoost's behalf, operating on a credit-based model (one credit consumed per profile request). No browser automation or direct LinkedIn scraping is performed by PymeBoost.
+
+1. The system receives a LinkedIn profile URL submitted during Advisor registration.
+2. The system sends an HTTP GET request to the ProxyCurl API:
+   `GET https://nubela.co/proxycurl/api/v2/linkedin?url={linkedin_profile_url}`
+   Authentication via `Authorization: Bearer {PROXYCURL_API_KEY}` header (key stored in Google Secret Manager).
+3. The following information is extracted from the response and stored:
+   - Full name (`full_name`).
+   - Work experience (`experiences`) — roles, companies, durations.
+   - Industries derived from experience and profile (`industry`).
+   - Certifications (`certifications`).
+4. If the LinkedIn URL is invalid, the profile is private, or ProxyCurl returns an error, extraction fails and the registration is rejected.
+5. If extraction succeeds, the retrieved profile data is returned to the registration flow.
+
+---
+
+#### Advisor Uploads Use Cases
+
+Implementation: [backend/domains/user/controllers/upload_use_cases_controller.py](backend/domains/user/controllers/upload_use_cases_controller.py)
+
+An advisor uploads one or more PDF use case files. No additional form fields are required — all information is extracted from the PDF content. Each PDF must follow the defined structure below. The system stores the files, extracts and classifies the content via OCR and embeddings, and associates the processed use cases with the advisor's profile.
+
+**Expected PDF Structure:**
+
+Each uploaded PDF must contain the following information:
+
+| Section | Description |
+|---|---|
+| 1. Company Information | Name, industry (categorical — from predefined catalog), company size (categorical: `Small` | `Medium` | `Large`) |
+| 2. Company Context | Business model, market position, main challenges at the time |
+| 3. Initial Situation | Specific problem or opportunity that triggered the engagement |
+| 4. Actions Performed | Steps, methodologies, and interventions executed by the advisor |
+| 5. Metrics Before | Quantitative baseline — revenue, costs, conversion rates, or other KPIs |
+| 6. Metrics After | Quantitative results after the engagement — same KPIs as Metrics Before |
+
+**Workflow:**
+
+1. The advisor uploads one or more PDF files through the frontend.
+2. The frontend sends an authenticated POST request (multipart/form-data) to Google Cloud API Gateway.
+3. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+4. Google Cloud API Gateway routes the request to Cloud Run.
+5. FastAPI validates the JWT using Auth0 JWKS and verifies the file type (PDF only) and file size limit.
+6. Each PDF is stored in Google Cloud Storage under the advisor's namespace. The file reference is recorded in the database with status `PENDING`.
+7. A `UseCaseUploaded` event is published to Google Cloud Pub/Sub for each uploaded file.
+8. The system returns an immediate confirmation that the files were received. Processing continues asynchronously.
+9. For each file, the `Use Case PDF Processing` workflow is triggered by the Pub/Sub subscriber.
+
+---
+
+### AI Domain Workflows
+
+#### Use Case PDF Processing
+
+Implementation: [backend/domains/ai/services/use_case_pdf_processing_service.py](backend/domains/ai/services/use_case_pdf_processing_service.py)
+
+Triggered by the `UseCaseUploaded` Pub/Sub event.
+
+1. The service retrieves the PDF from Google Cloud Storage.
+2. The PDF is sent to **Google Cloud Document AI** (OCR processor):
+   - Extracts raw text, layout structure, and section boundaries.
+   - Returns a structured JSON with text blocks and their positions.
+3. The extracted text is divided into blocks based on the detected section boundaries from the layout structure.
+4. For each block, a content hash is computed and compared against already-processed blocks for this advisor. If the hash already exists, the stored embedding is reused and the block is not reprocessed.
+5. For new blocks, embeddings are generated and sent to the **thematic classification** step.
+6. Each block is classified into one of the following thematic categories:
+   - `company_information`
+   - `company_context`
+   - `initial_situation`
+   - `actions_performed`
+   - `metrics_before`
+   - `metrics_after`
+7. Each classified block is stored with: thematic category, embedding, content hash, and source use case reference.
+8. The blocks are indexed in **pgvector** (Cloud SQL PostgreSQL extension) grouped by thematic category and advisor industry, creating an inverted index used by Advisor Recommendation and Advisor Similar Project Retrieval workflows.
+9. If any required thematic category has no blocks assigned after classification, the use case is marked as `FAILED` and an `AdvisorUseCaseProcessed` event is published to Pub/Sub with `status: FAILED`.
+10. The use case status is updated to `PROCESSED` and an `AdvisorUseCaseProcessed` event is published to Pub/Sub with `status: PROCESSED`.
+
+---
+
+#### Advisor Recommendation Algorithm
+
+Implementation: [backend/domains/ai/services/recommendation_service.py](backend/domains/ai/services/recommendation_service.py)
+
+Describes how recommendations are computed for a single SME. Called by both the Batch Job and the On-Demand workflow — the logic is the same regardless of what triggered it.
+
+1. The SME's profile is loaded: industry (categorical), company size (categorical), and needs vector (from the Business Needs Assessment).
+2. Industry and company size are used as categorical pre-filters on the pgvector search, narrowing the candidate advisor use case blocks before semantic scoring.
+3. A similarity search is executed in **pgvector** against the `document_block` table, filtering by thematic categories `initial_situation` and `company_information`.
+4. The returned blocks are grouped by `advisor_id`. For each advisor, an average semantic similarity score is computed from their matched blocks.
+5. The needs vector is used as a secondary signal: advisors whose use cases cover the business areas where the PYME rated themselves lowest are boosted.
+6. Each advisor is ranked using a composite score:
+   - Semantic similarity score (pgvector search).
+   - Needs vector alignment.
+   - Reputation score (retrieved from Advisor Domain via synchronous query).
+7. The top N advisors are selected with their full profiles: name, industries, certifications, base rate, and reputation score.
+8. The ranked list is persisted in the database associated with the PYME's profile.
+9. The Redis cache entry for this PYME is updated with the new results and a TTL of 24 hours.
+
+---
+
+#### Advisor Recommendation Batch Job
+
+Implementation: [backend/domains/ai/services/recommendation_batch_service.py](backend/domains/ai/services/recommendation_batch_service.py)
+
+Runs on a schedule for **all active SMEs**. Its only responsibility is to iterate over SMEs and trigger the `Advisor Recommendation Algorithm` for each one.
+
+1. Google Cloud Scheduler fires the job on a defined interval every 24 hours.
+2. The batch job retrieves all active SME IDs from the database.
+3. For each SME, it executes the `Advisor Recommendation Algorithm`.
+
+---
+
+#### Advisor Recommendation On-Demand
+
+Implementation: [backend/domains/ai/services/recommendation_on_demand_service.py](backend/domains/ai/services/recommendation_on_demand_service.py)
+
+Triggered by the `RecommendationRequested`, `AdvisorIndustryUpdated` or `SmeNeedsAssessmentUpdated` Pub/Sub event. Handles individual SMEs that need immediate computation (new registration, cache miss with no DB results).
+
+1. The Pub/Sub event payload is received containing the `pyme_id` of the SME that needs recommendations.
+2. The SME's full profile is retrieved from the database using the `pyme_id`: industry (categorical), company size (categorical), and needs vector.
+3. The following data is passed to the `Advisor Recommendation Algorithm`:
+   - `pyme_id` — to associate the results with the correct SME.
+   - `industry` — categorical value used as a pre-filter.
+   - `company_size` — categorical value used as a pre-filter.
+   - `needs_vector` — normalized ratings vector from the Business Needs Assessment. If the SME has not yet completed the assessment, an empty vector is passed and the needs vector alignment signal is skipped in the scoring step.
+4. The Algorithm computes and persists the results. The On-Demand workflow has no further responsibility after handing off.
+
+---
+
+#### Advisor Similar Project Retrieval
+
+Implementation: [backend/domains/ai/services/similar_project_retrieval_service.py](backend/domains/ai/services/similar_project_retrieval_service.py)
+
+Triggered synchronously via HTTP when an SME browses an advisor's profile or after a match is created. Returns the advisor's past projects that are most similar to the SME's context, ordered by relevance. Used to show the SME concrete evidence of the advisor's experience in situations like theirs.
+
+1. The SME sends a GET request providing the `advisor_id` to retrieve similar projects for.
+2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `pyme_id`.
+5. The SME's profile is retrieved: industry (categorical), company size (categorical), and improvement category distribution from the Business Needs Assessment. If the SME has not yet completed the assessment, the search falls back to industry and company size filters only.
+6. A pgvector similarity search is executed against the advisor's indexed use case blocks, filtering by thematic categories `company_information` and `initial_situation`. The query vector is derived from the SME's top improvement categories.
+7. Results are grouped by `use_case_id`. For each use case, an aggregate similarity score is computed as a **weighted average of the cosine similarity scores** of its matched blocks. `initial_situation` blocks carry higher weight than `company_information` blocks because the initial situation reflects the actual business problem.
+8. The use cases are ranked by score. and for the best use case similarity, the full block set is assembled: `company_context`, `initial_situation`, `actions_performed`, `metrics_before`, and `metrics_after`.
+9. The summarie is returned, containing: use case title, company context, initial situation description, key actions taken, and the before/after outcome metrics.
+
+---
+
+#### Promise Industry Classification
+
+Implementation: [backend/domains/ai/services/promise_classification_service.py](backend/domains/ai/services/promise_classification_service.py)
+
+Triggered by the `PromiseTextUpdated` Pub/Sub event, published whenever an advisor adds or edits a promise. Classifies the free-form promise text against the predefined industry catalog using embeddings and cosine similarity — the same approach used for thematic classification of PDF blocks. Stores the resulting industry tags on the promise record for use at display time.
+
+1. The AI Domain receives the `PromiseTextUpdated` event containing the `promise_id` and `promise_text`.
+2. An embedding is generated for the `promise_text`.
+3. The industry catalog is retrieved from the database. Each industry entry has a pre-computed representative embedding stored alongside it.
+4. The cosine similarity between the promise embedding and each industry embedding is computed.
+5. All similarity scores are stored on the promise record as a map of `industry_code → score`. The full distribution is preserved for potential future use.
+6. The `industry_tags` field on the promise record is updated with the 1 to 2 industry codes with the highest scores, used for display-time ordering.
+
+---
 
 ### Notifications Domain Workflows
 
@@ -3209,64 +3452,399 @@ Implementation: [backend/domains/user/controllers/update_advisor_industry_contro
 #### Messages Notifications
 #### Advisor Selection Notifications
 
+#### Use Case Processing Notification
+
+Triggered by the `AdvisorUseCaseProcessed` Pub/Sub event.
+
+1. The Notification Domain receives the event containing the use case ID, advisor ID, and processing status (`PROCESSED` or `FAILED`).
+2. An in-app notification is sent to the advisor indicating whether each file was processed successfully or failed.
+
+#### Recommendations Ready Notification
+
+Triggered by the `RecommendationReady` Pub/Sub event, published by the `Advisor Recommendation On-Demand` workflow upon completion.
+
+1. The Notification Domain receives the event containing the `pyme_id`.
+2. An in-app notification is sent to the SME indicating that their advisor recommendations are ready to view.
+
 
 ### Pyme Domain Workflows
 
-#### Advisor Recommendation
-#### Advisor Recommendation Recalculation (Triggered by AdvisorIndustryUpdated Event)
-#### Advisor Similar Project Retrieval
-#### Advisor Impact Prediction
+#### SME Business Needs Assessment
 
+Implementation: [backend/domains/pyme/controllers/submit_needs_assessment_controller.py](backend/domains/pyme/controllers/submit_needs_assessment_controller.py)
+
+The SME can retake the assessment at any time; the previous distribution is overwritten.
+
+**Fetch Questions:**
+
+1. The frontend sends a GET request to retrieve the active question catalog.
+2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS.
+5. The system retrieves all active questions from the `question_catalog` table (ID, text, improvement category).
+6. The question list is returned to the frontend.
+
+**Submit Answers:**
+
+1. The SME rates each question from 1 to 5 and submits the form.
+2. The frontend sends a POST request with the answers (`question_id`: `rating` pairs).
+3. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+4. Google Cloud API Gateway routes the request to Cloud Run.
+5. FastAPI validates the JWT using Auth0 JWKS and extracts the PYME ID.
+6. The system validates that all active questions are answered and all ratings are within 1–5.
+7. Answers are grouped by their question's `improvement_category`. The average rating is computed per category.
+8. Each category average is normalized to produce a percentage distribution: `category_score / sum_of_all_category_scores`. The result is a fixed-dimension vector where all values sum to 1.0, with each dimension representing one improvement category.
+9. If the SME already has a needs distribution, it is overwritten with the new one, preserving the previous version for audit.
+10. The distribution vector is stored in pgvector associated with the PYME profile.
+11. The Advisor Recommendation cache for this SME is invalidated in Redis, forcing recalculation on the next request or when the event triggers it, whichever happens first.
+12. A `SmeNeedsAssessmentUpdated` event is published to Pub/Sub.
+
+---
+
+#### Advisor Recommendation
+
+Implementation: [backend/domains/pyme/controllers/get_advisor_recommendations_controller.py](backend/domains/pyme/controllers/get_advisor_recommendations_controller.py)
+
+Serves pre-computed recommendations at request time. No computation happens here — all scoring and ranking is handled by the AI Domain.
+
+1. The PYME sends a GET request to the recommendations endpoint.
+2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the PYME's ID from the token claims.
+5. The service checks Redis for a cached recommendation list for this PYME.
+6. If the cache exists: the cached list is returned directly.
+7. If the cache does not exist:
+   - The pre-computed recommendation list is retrieved from the database.
+   - If the database also has no results: an empty list is returned with a `pending` status flag. A `RecommendationRequested` event is published to Pub/Sub triggering the `Advisor Recommendation On-Demand` workflow in the AI Domain. The SME is notified via in-app notification once the On-Demand workflow completes (see Notifications Domain › Recommendations Ready Notification).
+   - If the database has results: they are written to Redis with a TTL of 24 hours and returned to the frontend.
+
+---
 
 ### Advisor Domain Workflows
 
+#### Advisor Success Metric Promises (Add a promise)
+
+Implementation: [backend/domains/advisor/controllers/success_metric_promises_controller.py](backend/domains/advisor/controllers/success_metric_promises_controller.py)
+
+1. The advisor sends a POST request with the promise text.
+2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `advisor_id`.
+5. The system checks that the advisor does not already have 3 active promises. If they do, the request is rejected.
+6. The promise text is stored as a new record associated with the `advisor_id`, with a generated `promise_id`. The `industry_tags` field is left empty until classification completes.
+7. A `PromiseTextUpdated` event is published to Pub/Sub with the `promise_id` and `promise_text`, triggering the `Promise Industry Classification` workflow in the AI Domain.
+
+**Display on profile card:**
+
+When an SME views an advisor's profile, the active promises are retrieved from the database. Promises whose `industry_tags` include the SME's industry are shown first; the rest follow in creation order. No computation is required at read time — the ordering is a sort on the stored tags.
+
+#### Advisor Success Metric Promises (Edit a promise)
+
+Implementation: [backend/domains/advisor/controllers/success_metric_promises_controller.py](backend/domains/advisor/controllers/success_metric_promises_controller.py)
+
+1. The advisor sends a PATCH request with the `promise_id` and the updated text.
+2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT and confirms the `promise_id` belongs to the requesting advisor.
+5. Only the text of that specific promise is updated. All other promises remain unchanged.
+6. The `industry_tags` for this promise are cleared and a `PromiseTextUpdated` event is published to Pub/Sub, triggering reclassification in the AI Domain.
+
+#### Advisor Success Metric Promises (Delete a promise)
+
+Implementation: [backend/domains/advisor/controllers/success_metric_promises_controller.py](backend/domains/advisor/controllers/success_metric_promises_controller.py)
+
+
+1. The advisor sends a DELETE request with the `promise_id`.
+2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT and confirms ownership.
+5. The promise is removed. The advisor's remaining promises are unaffected.
+
+
 #### Advisor Reputation Calculation
-#### Advisor Base Rate Calculation (el porcentaje que saldra como "cobro base" puede ser negociado en chat luego)
+
+Implementation: [backend/domains/advisor/services/reputation_service.py](backend/domains/advisor/services/reputation_service.py)
+
+Triggered by the `ReviewSubmitted` Pub/Sub event published by the Review Domain each time an SME leaves a review for an advisor. Recomputes the advisor's reputation score as a plain average of all their star ratings and updates the stored value on their profile.
+
+The advisor profile stores two fields to make this O(1): `reputation_score` (the running average, never rounded) and `rating_count` (total number of ratings received so far).
+
+1. The Advisor Domain receives the `ReviewSubmitted` event containing the `advisor_id` and the `new_rating` value.
+2. The current `reputation_score` and `rating_count` are retrieved from the advisor's profile record.
+3. The new reputation score is computed incrementally — no query against the reviews table: `(reputation_score * rating_count + new_rating) / (rating_count + 1)`.
+4. `rating_count` is incremented by 1.
+5. Both the updated `reputation_score` (stored unrounded) and `rating_count` are written back to the advisor's profile record.
+6. If the advisor's profile is cached in Redis, the cache entry is invalidated so the next read reflects the updated score.
 
 ### Matching Domain Workflows
 
 #### Advisor Swipe Decision
-#### Create Match
-#### Match Expiration
-#### Cancel Match
-#### Finalize Advisor Selection (Marry the prospect)
 
+Implementation: [backend/domains/matching/controllers/create_swipe_decision_controller.py](backend/domains/matching/controllers/create_swipe_decision_controller.py)
+
+1. The PYME sends a POST request to `/api/matching/swipe` with: `pyme_id`, `advisor_id`, and `approved` (`true` for right swipe, `false` for left swipe).
+2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `pyme_id` from the token claims.
+5. The system retrieves the PYME's current recommendation list from the database, excluding advisors who were previously rejected (existing swipe with match status `Negative`) or whose match with this PYME was cancelled (match status `CANCELLED`).
+6. The system verifies that the advisor being swiped appears in that filtered list. If not, the request is rejected.
+7. The system checks that no swipe decision already exists for this PYME–advisor pair. If one exists, the request is rejected with `409 Conflict`.
+7. A swipe record is persisted with `pyme_id`, `advisor_id`, and the `approved` flag.
+8. If `approved` is `false` (left swipe): the swipe is recorded as match status `Negative` and no further action is taken. The recommendation slot is consumed and the next advisor will be served on the following request.
+9. If `approved` is `true` (right swipe): a `MatchSwiped` event is published to the event bus with `pyme_id` and `advisor_id`, which triggers the `Create Match` workflow automatically.
+
+---
+
+#### Create Match
+
+Implementation: [backend/domains/matching/controllers/create_match_controller.py](backend/domains/matching/controllers/create_match_controller.py)
+
+
+1. The system receives the match creation request with `pyme_id` and `advisor_id`.
+2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS.
+5. The system verifies that no active match already exists between this PYME–advisor pair. If one does, the request is rejected with `409 Conflict`.
+6. The system verifies that both the PYME and the advisor exist and are in active status.
+7. A match record is created with status `ACTIVE` and the associated `pyme_id` and `advisor_id`.
+8. A `MatchCreated` event is published to the event bus with `match_id`, `pyme_id`, and `advisor_id`.
+9. The Communication Domain receives the `MatchCreated` event and opens a shared chat session between the PYME and the advisor.
+10. The Notification Domain receives the `MatchCreated` event and notifies both parties that a new match was established.
+
+---
+
+#### Cancel Match
+
+Implementation: [backend/domains/matching/controllers/cancel_match_controller.py](backend/domains/matching/controllers/cancel_match_controller.py)
+
+
+1. The PYME or advisor sends a DELETE request to `/api/matching/matches/{match_id}`.
+2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `user_id`.
+5. The match record is retrieved from the database. If not found, a `NotFoundException` is raised.
+6. The system verifies that the requesting user is a participant in the match (either the `pyme_id` or the `advisor_id`). If not, `403 Forbidden` is returned.
+7. The system verifies that the match status is `ACTIVE` and that no finalized contract exists for this match. A match linked to a finalized contract cannot be cancelled.
+8. The match status is updated to `CANCELLED`.
+9. A `MatchCancelled` event is published to the event bus.
+10. The Notification Domain notifies the other party that the match was cancelled.
+11. A confirmation response is returned to the requesting user.
 
 ### Communication Domain Workflows
 
 #### Chat Access Validation
+
+Implementation: [backend/domains/communication/controllers/validate_chat_access_controller.py](backend/domains/communication/controllers/validate_chat_access_controller.py)
+
+Validates that a requesting user is allowed to access the chat session for a given match, and creates the session if it does not yet exist.
+
+1. The user sends a GET request to `/api/chat/{match_id}/access`.
+2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `user_id` from the token claims.
+5. The match record is retrieved using the `match_id`. If not found, a `NotFoundException` is raised.
+6. The system verifies that the requesting user is either the `pyme_id` or the `advisor_id` of that match. If not, `403 Forbidden` is returned.
+7. The system verifies that the match status is `ACTIVE` or `FINALIZED`. Cancelled matches cannot be accessed.
+8. The chat session for this match is retrieved from the database. If no session exists yet, one is created and persisted with the `match_id`.
+9. The chat session details (`session_id`, `match_id`) are returned to the frontend, along with the requesting user's role (`pyme` or `advisor`) and the current match status so the frontend can determine which UI actions to surface.
+
+---
+
 #### Chat Between Advisor and Pyme
 
+Implementation: [backend/domains/communication/controllers/send_message_controller.py](backend/domains/communication/controllers/send_message_controller.py)
 
+The primary collaboration space between the PYME and the advisor after a match is established. Beyond messaging, the chat UI surfaces the action that initiates contract negotiation.
+
+1. The user sends a POST request to `/api/chat/{match_id}/messages` with: `sender_id` and `content`.
+2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `user_id`.
+5. The system validates chat access — verifies that the user is a participant of the match and that the match status permits messaging (`ACTIVE` or `FINALIZED`).
+6. The chat session for the match is retrieved.
+7. The `Blocked Content Validation` workflow is executed against the message content. If blocked content is detected, the request is rejected.
+8. The message record is persisted with `session_id`, `sender_id`, `content`, and `sent_at`.
+9. A `MessageSent` event is published to the event bus with `message_id`, `session_id`, and `sender_id`.
+10. The Notification Domain receives the `MessageSent` event and notifies the other participant of the incoming message.
+
+---
+
+#### Blocked Content Validation
+
+Implementation: [backend/domains/communication/services/blocked_content_service.py](backend/domains/communication/services/blocked_content_service.py)
+
+Called internally by the `Chat Between Advisor and Pyme` workflow before any message is persisted. Its sole responsibility is to detect contact information embedded in message text that would allow either party to move the relationship off-platform.
+
+1. The service receives the raw message `content` string.
+2. The content is scanned for email address patterns using a regex that matches the standard `local@domain.tld` format.
+3. The content is scanned for phone number patterns, including local Costa Rican formats (8-digit numbers starting with 2, 6, 7, or 8) and international formats with country code prefix (`+`, `00`).
+4. The content is scanned for social media profile links and handles: domains or path patterns belonging to Instagram, LinkedIn, WhatsApp, Telegram, Facebook, X (Twitter), and TikTok.
+5. If any pattern matches, the service returns a rejection result with the category of blocked content found (`email`, `phone`, or `social_media`).
+6. If no pattern matches, the service returns a pass result and the calling workflow proceeds to persist the message.
 
 
 ### Contract Domain Workflows
 
 #### Propose Contract
-#### Counter Offer (Se puede definir en el chat una vez hay match para bajar la tarifa del advisor)
-#### Accepted Contract 
+
+Implementation: [backend/domains/contract/controllers/propose_contract_controller.py](backend/domains/contract/controllers/propose_contract_controller.py)
+
+The PYME initiates contract negotiation from the chat interface by clicking "Propose Contract". The proposal contains all the terms of the engagement.
+
+**Contract fields:**
+
+| Field | Description |
+|---|---|
+| `implementation_budget` | One-time implementation cost (float) |
+| `monthly_retainer` | Fixed monthly advisor fee (float) |
+| `duration_tier` | `standard` (1 mo, 3%), `medium` (3 mo, 5%), `high` (6 mo, 7%), `annual` (12 mo, 10%), `custom` (1–12 mo, commission auto-calculated) |
+| `duration_months` | Required only for `custom` tier; must be an integer between 1 and 12 |
+| `main_objective` | Free-text description of the engagement's primary goal |
+| `advisor_result_profit` | Advisor's bonus tied to results (float or percentage) |
+| `expected_metrics` | List of N metrics; each has a `name` (e.g., `"Conversión de Campañas"`), a `value_type` (`number` or `percentage`), and a `target` (e.g., `+25`) |
+| `roadmap` | Ordered list of project phases; each has a `name`, `description`, and `goal` referencing one of the expected metrics (e.g., `"Conversión de Campañas \| +5%"`) |
+
+**Workflow:**
+
+1. The PYME sends a POST request to `/api/contracts` with the full proposal payload including all fields above.
+2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `pyme_id`.
+5. The match record is retrieved using the `match_id` in the payload. The system verifies the requesting user is the PYME of that match and that the match status is `ACTIVE`.
+6. The system verifies that no contract in `PENDING_PROPOSAL` status already exists for this match. Only one active negotiation is allowed at a time.
+7. The `duration_tier` is validated:
+   - `standard`, `medium`, `high`, or `annual`: commission is set automatically from the tier.
+   - `custom`: `duration_months` must be between 1 and 12. The commission is computed automatically using linear interpolation: `commission = 3 + (duration_months - 1) × (7 / 11)`, which yields exactly 3% at 1 month and exactly 10% at 12 months. The result is rounded to two decimal places and stored on the contract record — it is never supplied by the client.
+8. `expected_metrics` must contain at least one entry. Each metric must have a non-empty `name`, a valid `value_type`, and a numeric `target`.
+9. `roadmap` must contain at least one phase. Each phase's `goal` must reference the `name` of one of the declared `expected_metrics`.
+10. A contract record is created with status `PENDING_PROPOSAL`, linked to the `match_id`.
+11. All `expected_metrics` are stored as child records linked to the contract.
+12. All `roadmap` phases are stored in order, each linked to the contract and to their referenced metric.
+13. A `ContractProposed` event is published to the event bus with `contract_id` and `match_id`.
+14. The Communication Domain receives the event and delivers a system message in the match's chat indicating that a new proposal is awaiting review.
+15. The Notification Domain notifies the advisor that a contract proposal has been sent.
+16. The contract details are returned to the PYME.
+
+---
+
+#### Counter Offer
+
+Implementation: [backend/domains/contract/controllers/counter_offer_controller.py](backend/domains/contract/controllers/counter_offer_controller.py)
+
+1. The non-proposing party sends a POST request to `/api/contracts/{contract_id}/counter-offer` with the **complete** new contract payload.
+2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `user_id`.
+5. The existing contract is retrieved using `contract_id`. If not found, a `NotFoundException` is raised.
+6. The system verifies the requesting user is a participant in the match linked to this contract. If not, `403 Forbidden` is returned.
+7. The system verifies the contract status is `PENDING_PROPOSAL`. Accepted contracts cannot be countered.
+8. The system verifies the requesting user is **not** the party who last proposed this contract (`proposed_by` field in the negotiation record). A party cannot counter their own proposal.
+9. The previous contract status is updated to `REJECTED`.
+10. A new contract record is created from the submitted payload with status `PENDING_PROPOSAL`, linked to the same `match_id`. The same validation rules from `Propose Contract` apply: tier validation, commission calculation, metric completeness, and roadmap phase references.
+11. All `expected_metrics` and `roadmap` phases from the new payload are stored linked to the new contract.
+12. A `ContractProposed` event is published with the new `contract_id` and `match_id`.
+13. The Communication Domain delivers a system message in the match's chat indicating a counter-offer has been submitted.
+14. The Notification Domain notifies the other party of the counter-offer.
+15. The new contract details are returned.
+
+---
+
+#### Accept Contract (Marry the prospect)
+
+Implementation: [backend/domains/contract/controllers/accept_contract_controller.py](backend/domains/contract/controllers/accept_contract_controller.py)
+
+The non-proposing party formally accepts the current proposal. This is the "Marry the prospect" action — it seals the engagement, finalizes the match, and triggers project creation.
+
+1. The non-proposing party sends a POST request to `/api/contracts/{contract_id}/accept`.
+2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `user_id`.
+5. The contract is retrieved using `contract_id`. If not found, a `NotFoundException` is raised.
+6. The system verifies the requesting user is a participant in the match linked to this contract. If not, `403 Forbidden` is returned.
+7. **The system verifies that a contract in `PENDING_PROPOSAL` status exists for this match.** If the contract is in any other status, the request is rejected.
+8. The system verifies the requesting user is **not** the party who last proposed this contract. A party cannot accept their own proposal.
+9. The contract status is updated to `ACCEPTED`.
+10. The match status is updated to `FINALIZED`.
+11. A `ContractAccepted` event is published to the event bus with `contract_id` and `match_id`.
+12. The Project Domain receives the `ContractAccepted` event and creates a project with milestones derived from the contract's roadmap phases and expected metrics.
+13. The Notification Domain notifies both parties that the contract was accepted and the project has been created.
+14. The accepted contract details are returned; the frontend redirects both parties to the project dashboard.
+
+---
+
 #### Reject Contract
+
+Implementation: [backend/domains/contract/controllers/reject_contract_controller.py](backend/domains/contract/controllers/reject_contract_controller.py)
+
+A simple rejection of the current proposal. The match remains active and the proposing party may send a new proposal at any time.
+
+1. The non-proposing party sends a POST request to `/api/contracts/{contract_id}/reject`.
+2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `user_id`.
+5. The contract is retrieved using `contract_id`. If not found, a `NotFoundException` is raised.
+6. The system verifies the requesting user is a participant in the match linked to this contract. If not, `403 Forbidden` is returned.
+7. The system verifies the contract status is `PENDING_PROPOSAL`. Only pending contracts can be rejected.
+8. The system verifies the requesting user is **not** the party who last proposed this contract.
+9. The contract status is updated to `REJECTED`.
+10. A `ContractRejected` event is published to the event bus with `contract_id` and `match_id`.
+11. The match status remains `ACTIVE` — the proposing party may submit a new proposal via the `Propose Contract` workflow.
+12. The Notification Domain notifies the proposing party that their proposal was rejected.
+13. A confirmation response is returned.
 
 
 ### Project Domain Workflows
 
-#### Create Project 
-#### Close Project 
-#### Project Milestone Generation
 #### Project Milestone Validation	
 #### Project Health Monitoring	
 #### Project Completion Validation	
 #### Project Status Management
 
 
-
-
 ### Review Domain Workflows
 
-#### Leave a Review for a Advisor (that you have already hired in the past)
-#### Leave a Review for a Pime (that you have been hired by in the past)
+#### Leave a Review for an Advisor (that you have already hired in the past)
 
+Implementation: [backend/domains/review/controllers/leave_advisor_review_controller.py](backend/domains/review/controllers/leave_advisor_review_controller.py)
 
+A PYME may leave a review for an advisor only after the shared project has been completed. One review is allowed per project.
+
+1. The PYME sends a POST request to `/api/reviews/advisor` with: `project_id`, `subject_id` (advisor's ID), `rating` (1–5), and an optional `comment`.
+2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `pyme_id` from the token claims.
+5. The project record is retrieved using the `project_id`. If not found, a `NotFoundException` is raised.
+6. The system verifies that the requesting user is the PYME participant of that project. If not, `403 Forbidden` is returned.
+7. The system verifies that the project status is `COMPLETED`. Reviews cannot be submitted for active or cancelled projects.
+8. The system verifies that no review from this PYME for this project already exists. If one does, the request is rejected with `409 Conflict`.
+9. The rating is validated to be within the 1–5 range.
+10. A review record is created with `reviewer_id` (the PYME's ID), `subject_id` (the advisor's ID), `rating`, `comment`, and `created_at`.
+11. A `ReviewSubmitted` event is published to the event bus with `review_id`, `subject_id`, and `rating`.
+12. The review confirmation is returned to the PYME.
+
+The Notification Domain receives the `ReviewSubmitted` event and notifies the advisor that a review was submitted.
+---
+
+#### Leave a Review for a Pyme (that you have been hired by in the past)
+
+Implementation: [backend/domains/review/controllers/leave_pyme_review_controller.py](backend/domains/review/controllers/leave_pyme_review_controller.py)
+
+An advisor may leave a review for a PYME only after the shared project has been completed. One review is allowed per project.
+
+1. The advisor sends a POST request to `/api/reviews/pyme` with: `project_id`, `subject_id` (PYME's ID), `rating` (1–5), and an optional `comment`.
+2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `advisor_id` from the token claims.
+5. The project record is retrieved using the `project_id`. If not found, a `NotFoundException` is raised.
+6. The system verifies that the requesting user is the advisor participant of that project. If not, `403 Forbidden` is returned.
+7. The system verifies that the project status is `COMPLETED`. Reviews cannot be submitted for active or cancelled projects.
+8. The system verifies that no review from this advisor for this project already exists. If one does, the request is rejected with `409 Conflict`.
+9. The rating is validated to be within the 1–5 range.
+10. A review record is created with `reviewer_id` (the advisor's ID), `subject_id` (the PYME's ID), `rating`, `comment`, and `created_at`.
+11. A `ReviewSubmitted` event is published to the event bus with `review_id`, `subject_id`, and `rating`.
+12. The review confirmation is returned to the advisor.
+
+ The Notification Domain receives the `ReviewSubmitted` event and notifies the PYME that a review was submitted.
 
 ### Event Domain Workflows
 
@@ -3276,11 +3854,6 @@ Implementation: [backend/domains/user/controllers/update_advisor_industry_contro
 #### ProjectStatusChanged Event
 #### RecommendationUpdated Event
 #### ProjectAssigned Event
-
-
-
-
-#### [QUITAR LUEGO DE REALIZARLO] Reflection Pattern puede aprovechar con el recommendations verificar si tiene projectos similares con Advisor Similar Project Retrieval
 
 
 
@@ -3298,6 +3871,7 @@ Implementation: [backend/domains/user/controllers/update_advisor_industry_contro
 ## 2.12 Design Considerations
 ### Algorithm Selection & Parameters
 
+#### [QUITAR LUEGO DE REALIZARLO] Reflection Pattern puede aprovechar con el recommendations verificar si tiene projectos similares con Advisor Similar Project Retrieval
 
 ---
 
