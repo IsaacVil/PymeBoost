@@ -3287,10 +3287,12 @@ Implementation: [backend/domains/user/controllers/update_advisor_industry_contro
 ---
 
 ## 2.11 C4 Architecture Diagrams
-### Component Diagram
-![component_diagram.png](docs/images/backend/component_c4bck.png)
+### Context Diagram
+![context_diagram.png](docs/images/backend/context_c4bck.png)
 ### Container Diagram
 ![container_diagram.png](docs/images/backend/containers_c4bck.png)
+### Component Diagram
+![component_diagram.png](docs/images/backend/component_c4bck.png)
 ---
 
 ## 2.12 Design Considerations

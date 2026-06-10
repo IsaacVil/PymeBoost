@@ -1,0 +1,66 @@
+@startuml context_c4bck
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+title PymeBoost Backend — C4 Context Diagram
+
+Person(pyme, "PYME", "Small or medium enterprise owner seeking advisory services.")
+Person(advisor, "Advisor", "Business specialist offering consulting services.")
+
+System_Boundary(backend_boundary, "PymeBoost Backend") {
+    System(backend, "PymeBoost Backend API", "FastAPI 0.115.4 / Python 3.12\nDomain-Driven Design + Event-Driven Architecture\nHosted on Google Cloud Run")
+}
+
+System_Ext(frontend, "PymeBoost Frontend", "Next.js 15 / React 19\nHosted on Vercel")
+System_Ext(auth0, "Auth0", "OAuth 2.0 / JWT token issuance and validation")
+System_Ext(cloud_sql, "Google Cloud SQL", "PostgreSQL 16\nPrimary relational database")
+System_Ext(redis, "Google Cloud Memorystore", "Redis\nSession cache and fast key-value store")
+System_Ext(pubsub, "Google Cloud Pub/Sub", "Asynchronous domain event messaging and notifications")
+System_Ext(cloud_tasks, "Google Cloud Tasks", "Asynchronous task scheduling and deferred operations")
+System_Ext(cloud_storage, "Google Cloud Storage", "Document and file storage (PDF, images, reports)")
+System_Ext(document_ai, "Google Cloud Document AI", "OCR processing for legal documents (cédula jurídica)")
+System_Ext(secret_manager, "Google Secret Manager", "Secure storage for API keys and credentials")
+System_Ext(kms, "Google Cloud KMS", "Encryption key management for sensitive data")
+System_Ext(operations, "Google Cloud Operations Suite", "Cloud Logging + Cloud Monitoring for observability")
+System_Ext(api_gateway, "Google Cloud API Gateway", "API routing, rate limiting, and request management")
+System_Ext(langgraph, "LangGraph", "v0.2.41\nAI agent orchestration for matching recommendations")
+System_Ext(artifact_registry, "Google Artifact Registry", "Container image registry for Cloud Run deployments")
+
+' User interactions
+Rel(pyme, frontend, "Uses", "HTTPS")
+Rel(advisor, frontend, "Uses", "HTTPS")
+
+' Frontend to backend
+Rel(frontend, api_gateway, "Sends REST and WebSocket requests", "HTTPS + JWT / WSS")
+Rel(api_gateway, backend, "Routes requests", "HTTPS / WSS")
+
+' Authentication
+Rel(backend, auth0, "Validates JWT tokens", "HTTPS")
+
+' Data stores
+Rel(backend, cloud_sql, "Reads and writes domain data", "SQLAlchemy / TCP")
+Rel(backend, redis, "Stores and retrieves session cache", "Redis protocol")
+
+' Async messaging
+Rel(backend, pubsub, "Publishes and subscribes to domain events", "gRPC")
+Rel(backend, cloud_tasks, "Schedules async tasks", "HTTPS")
+
+' Storage and AI
+Rel(backend, cloud_storage, "Stores and retrieves files and documents", "HTTPS")
+Rel(backend, document_ai, "Sends documents for OCR processing", "HTTPS")
+
+' Security and secrets
+Rel(backend, secret_manager, "Fetches secrets and API keys at runtime", "HTTPS")
+Rel(backend, kms, "Encrypts and decrypts sensitive fields", "HTTPS")
+
+' Observability
+Rel(backend, operations, "Sends structured logs and metrics", "gRPC")
+
+' AI orchestration
+Rel(backend, langgraph, "Orchestrates AI agents for advisor recommendations", "HTTPS")
+
+' Deployment
+Rel(artifact_registry, backend, "Provides container images", "Docker pull")
+
+@enduml
