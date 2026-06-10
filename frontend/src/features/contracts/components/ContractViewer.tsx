@@ -1,4 +1,5 @@
 "use client";
+import { memo } from "react";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Contract } from "../validators/contractValidator";
 
@@ -20,7 +21,7 @@ interface ContractViewerProps {
   contract: Contract;
 }
 
-export function ContractViewer({ contract }: ContractViewerProps) {
+function ContractViewerBase({ contract }: ContractViewerProps) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -43,3 +44,5 @@ export function ContractViewer({ contract }: ContractViewerProps) {
     </div>
   );
 }
+
+export const ContractViewer = memo(ContractViewerBase);

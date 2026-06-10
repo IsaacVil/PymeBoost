@@ -3,6 +3,7 @@
 
 "use client";
 
+import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { matchingService } from "../services/matchingService";
 import { useNotificationStore } from "@/store/notificationStore";
@@ -48,14 +49,16 @@ export function useAdvisorMatching({ pymeId }: UseAdvisorMatchingOptions): UseAd
     },
   });
 
-  const swipeApproved = async (advisorId: string) => {
+  // useCallback prevents new function references on every render —
+  // MatchingCard is memoized so stable callbacks avoid unnecessary re-renders
+  const swipeApproved = useCallback(async (advisorId: string) => {
     await swipeMutation.mutateAsync(matchingService.swipeApproved(advisorId));
     notify({ type: "success", title: "Match approved!", message: "Chat is now available", duration: 3000 });
-  };
+  }, [swipeMutation, notify]);
 
-  const swipeRejected = async (advisorId: string) => {
+  const swipeRejected = useCallback(async (advisorId: string) => {
     await swipeMutation.mutateAsync(matchingService.swipeRejected(advisorId));
-  };
+  }, [swipeMutation]);
 
   return {
     recommendations: recommendations as Match[],

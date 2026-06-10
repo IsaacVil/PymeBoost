@@ -1,5 +1,12 @@
 // Types aligned with project spec: AI-generated Tinder-style matching
 
+export interface MatchRequest {
+  industry?: string;
+  budgetMin?: number;
+  budgetMax?: number;
+  timelineMonths?: number;
+}
+
 export interface AdvisorProfile {
   id: string;
   name: string;

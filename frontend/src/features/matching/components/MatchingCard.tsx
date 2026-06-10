@@ -1,4 +1,5 @@
 "use client";
+import { memo } from "react";
 import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
 import { Card, CardTitle, CardContent } from "@/shared/components/ui/Card";
@@ -10,7 +11,7 @@ interface MatchingCardProps {
   onReject: (advisorId: string) => Promise<void>;
 }
 
-export function MatchingCard({ match, onApprove, onReject }: MatchingCardProps) {
+function MatchingCardBase({ match, onApprove, onReject }: MatchingCardProps) {
   return (
     <Card>
       {/* Header */}
@@ -74,3 +75,5 @@ export function MatchingCard({ match, onApprove, onReject }: MatchingCardProps) 
     </Card>
   );
 }
+
+export const MatchingCard = memo(MatchingCardBase);

@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 import { Input } from "@/shared/components/ui/Input";
 import { MatchRequest } from "../types/matching";
 
@@ -8,14 +9,24 @@ interface MatchingFiltersProps {
 }
 
 export function MatchingFilters({ filters, onChange }: MatchingFiltersProps) {
-  // TODO: implement filter controls (industry, budget range, timeline)
+  const [industry, setIndustry] = useState(filters.industry ?? "");
+
+  // Debounce: wait 300ms after the user stops typing before calling onChange
+  // Prevents an API call on every keystroke in the industry search field
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onChange({ ...filters, industry });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [industry]);
+
   return (
     <div className="flex gap-4">
       <Input
         label="Industry"
         placeholder="e.g. Retail, Technology"
-        value={filters.industry ?? ""}
-        onChange={(e) => onChange({ ...filters, industry: e.target.value })}
+        value={industry}
+        onChange={(e) => setIndustry(e.target.value)}
       />
     </div>
   );
