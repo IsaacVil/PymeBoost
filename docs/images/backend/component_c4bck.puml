@@ -13,82 +13,144 @@ Container_Boundary(app, "Backend API (FastAPI on Cloud Run)") {
         Component(router, "API Router", "FastAPI, main.py, api/routes.py", "Endpoint registration,\nmiddleware, error mapping")
     }
 
-    System_Boundary(domains, "Domains Layer (DDD vertical slices: controllers - services - repositories - models - schemas - events)") {
-        Component(d_user, "User", "controllers, services,\nrepositories, models, events", "Accounts, login,\nprofiles, sessions")
-        Component(d_advisor, "Advisor", "controllers, services,\nrepositories, models, events", "Reputation, specializations,\nbase rates")
-        Component(d_pyme, "Pyme", "controllers, services,\nrepositories, models, events", "Business info, recommendations,\nimpact prediction")
-        Component(d_matching, "Matching", "controllers, services,\nrepositories, models, events", "Discovery, swipe decisions,\nmatch creation")
-        Component(d_contract, "Contract", "controllers, services,\nrepositories, models, events", "Proposals, counter-offers,\nnegotiation")
-        Component(d_comm, "Communication", "controllers, services,\nrepositories, models, events", "Chat access & messaging")
-        Component(d_project, "Project", "controllers, services,\nrepositories, models, events", "Lifecycle, milestones,\nhealth monitoring")
-        Component(d_review, "Review", "controllers, services,\nrepositories, models, events", "Ratings & feedback")
-        Component(d_notification, "Notification", "services, handlers", "Event-driven alerts via\nPub/Sub subscribers")
-        Component(d_event, "Event", "services, publishers", "Event audit log &\nPub/Sub publishing")
+    System_Boundary(controllers_layer, "Controllers Layer — HTTP Handler Layer") {
+        Component(c_user,     "User",          "controllers/", "Accounts, login,\nprofiles, sessions")
+        Component(c_advisor,  "Advisor",        "controllers/", "Reputation, specializations,\nbase rates")
+        Component(c_pyme,     "Pyme",           "controllers/", "Business info,\nrecommendations")
+        Component(c_matching, "Matching",       "controllers/", "Discovery, swipe decisions,\nmatch creation")
+        Component(c_contract, "Contract",       "controllers/", "Proposals, counter-offers,\nnegotiation")
+        Component(c_comm,     "Communication",  "controllers/", "Chat access & messaging")
+        Component(c_project,  "Project",        "controllers/", "Lifecycle, milestones,\nhealth monitoring")
+        Component(c_review,   "Review",         "controllers/", "Ratings & feedback")
+    }
+
+    System_Boundary(services_layer, "Services Layer — Business Logic Layer") {
+        Component(svc_user,         "User",          "services/", "Account creation, auth,\nsession management")
+        Component(svc_advisor,      "Advisor",        "services/", "Reputation calc,\nspecialization management")
+        Component(svc_pyme,         "Pyme",           "services/", "Business data,\nimpact prediction")
+        Component(svc_matching,     "Matching",       "services/", "Match creation, swipe logic,\ndiscovery")
+        Component(svc_contract,     "Contract",       "services/", "Negotiation, proposal,\nterms validation")
+        Component(svc_comm,         "Communication",  "services/", "Chat sessions,\nmessage delivery")
+        Component(svc_project,      "Project",        "services/", "Lifecycle, milestones,\nhealth monitoring")
+        Component(svc_review,       "Review",         "services/", "Rating calculation,\nfeedback processing")
+        Component(svc_notification, "Notification",   "services/, handlers/", "Event-driven alerts\nvia Pub/Sub subscribers")
+        Component(svc_event,        "Event",          "services/, publishers/", "Event audit log &\nPub/Sub publishing")
+    }
+
+    System_Boundary(acl_layer, "ACL — Anticorruption Layer (Cross-Domain Translation)") {
+        Component(acl_matching,     "Matching ACL",     "adapters/, translators/", "Translates Advisor & Pyme REST\nresponses into Matching domain model")
+        Component(acl_contract,     "Contract ACL",     "adapters/, translators/", "Translates Matching & User data\ninto Contract domain model")
+        Component(acl_project,      "Project ACL",      "adapters/, translators/", "Translates Contract data\ninto Project domain model")
+        Component(acl_notification, "Notification ACL", "adapters/, translators/", "Translates domain event payloads\ninto Notification domain model")
+    }
+
+    System_Boundary(repositories_layer, "Repositories Layer — Data Access Layer") {
+        Component(r_user,     "User",         "repositories/", "User & session queries")
+        Component(r_advisor,  "Advisor",       "repositories/", "Advisor, reputation,\nspecialization queries")
+        Component(r_pyme,     "Pyme",          "repositories/", "Pyme & industry queries")
+        Component(r_matching, "Matching",      "repositories/", "Match, swipe,\ndiscovery queries")
+        Component(r_contract, "Contract",      "repositories/", "Contract &\nnegotiation queries")
+        Component(r_comm,     "Communication", "repositories/", "Message & chat\nsession queries")
+        Component(r_project,  "Project",       "repositories/", "Project &\nmilestone queries")
+        Component(r_review,   "Review",        "repositories/", "Review & rating queries")
+    }
+
+    System_Boundary(models_layer, "Models & Schemas Layer — ORM Definitions, DTOs & Domain Events") {
+        Component(m_models,  "ORM Models",       "models/",   "SQLAlchemy table definitions\nfor all domains")
+        Component(m_schemas, "Pydantic Schemas",  "schemas/",  "Request / Response DTOs\nfor all domains")
+        Component(m_events,  "Domain Events",     "events/",   "Event class definitions\nfor all domains")
     }
 
     System_Boundary(shared, "Shared Kernel") {
-        Component(s_auth, "Auth", "jwt_validator,\npermission_checker, auth0_service", "JWT validation, JWKS,\nrole-based authorization")
-        Component(s_eventbus, "Event Bus", "event_bus, event_registry,\nevent_handler", "In-process event dispatch")
-        Component(s_messaging, "Messaging", "pubsub_client,\npublisher, subscriber", "Cloud Pub/Sub adapter")
-        Component(s_persistence, "Persistence", "database connection,\nsession, migrations", "SQLAlchemy session factory,\nrepository base")
-        Component(s_cross, "Cross-cutting", "logging, exceptions,\nvalidators, utils, config", "Structured logs, error mapping,\nvalidation, encryption utils")
+        Component(s_auth,        "Auth",          "jwt_validator,\npermission_checker, auth0_service", "JWT validation, JWKS,\nrole-based authorization")
+        Component(s_eventbus,    "Event Bus",      "event_bus, event_registry,\nevent_handler", "In-process event dispatch")
+        Component(s_messaging,   "Messaging",      "pubsub_client,\npublisher, subscriber", "Cloud Pub/Sub adapter")
+        Component(s_persistence, "Persistence",    "database connection,\nsession, migrations", "SQLAlchemy session factory,\nrepository base")
+        Component(s_cross,       "Cross-cutting",  "logging, exceptions,\nvalidators, utils, config", "Structured logs, error mapping,\nvalidation, encryption utils")
     }
 }
 
 ' --- External containers (from Level 2) ---
-ContainerDb(db, "Relational DB", "Cloud SQL - PostgreSQL 16")
-ContainerDb(redis, "Session Cache", "Memorystore - Redis")
-Container(pubsub, "Event Bus", "Cloud Pub/Sub + Cloud Tasks")
-ContainerDb(storage, "Object Storage", "Cloud Storage")
-System_Ext(auth0, "Auth0", "JWT / JWKS")
-System_Ext(document_ai, "Cloud Document AI", "OCR")
-System_Ext(langgraph, "LangGraph", "Agent Orchestration")
-System_Ext(ops, "Cloud Operations", "Logging / Monitoring / Trace")
+ContainerDb(db,         "Relational DB",    "Cloud SQL - PostgreSQL 16")
+ContainerDb(redis,      "Session Cache",    "Memorystore - Redis")
+Container(pubsub,       "Event Bus",        "Cloud Pub/Sub + Cloud Tasks")
+ContainerDb(storage,    "Object Storage",   "Cloud Storage")
+System_Ext(auth0,       "Auth0",            "JWT / JWKS")
+System_Ext(document_ai, "Cloud Document AI","OCR")
+System_Ext(langgraph,   "LangGraph",        "Agent Orchestration")
+System_Ext(ops,         "Cloud Operations", "Logging / Monitoring / Trace")
 
 ' --- Entry ---
 Rel(frontend, router, "Sends API requests", "REST + JWT / HTTPS")
 
-' --- Router to domains (representative) ---
-Rel_D(router, d_user, "routes to")
-Rel_D(router, d_advisor, "routes to")
-Rel_D(router, d_pyme, "routes to")
-Rel_D(router, d_matching, "routes to")
-Rel_D(router, d_contract, "routes to")
-Rel_D(router, d_comm, "routes to")
-Rel_D(router, d_project, "routes to")
-Rel_D(router, d_review, "routes to")
-
-' --- Every request authenticated/authorized ---
+' --- Auth validation on every request ---
 Rel(router, s_auth, "validates JWT & role", "per request")
 
-' --- Domains use the shared kernel (representative slices) ---
-Rel(d_user, s_persistence, "persists via repositories")
-Rel(d_matching, s_persistence, "persists via repositories")
-Rel(d_contract, s_persistence, "persists via repositories")
-Rel(d_project, s_persistence, "persists via repositories")
+' --- Router → Controllers ---
+Rel_D(router, c_user,     "routes to")
+Rel_D(router, c_advisor,  "routes to")
+Rel_D(router, c_pyme,     "routes to")
+Rel_D(router, c_matching, "routes to")
+Rel_D(router, c_contract, "routes to")
+Rel_D(router, c_comm,     "routes to")
+Rel_D(router, c_project,  "routes to")
+Rel_D(router, c_review,   "routes to")
 
-Rel(d_contract, s_eventbus, "publishes domain events")
-Rel(d_matching, s_eventbus, "publishes domain events")
-Rel(d_project, s_eventbus, "publishes domain events")
-Rel(d_user, s_eventbus, "publishes domain events")
+' --- Controllers → Services ---
+Rel_D(c_user,     svc_user,     "delegates to")
+Rel_D(c_advisor,  svc_advisor,  "delegates to")
+Rel_D(c_pyme,     svc_pyme,     "delegates to")
+Rel_D(c_matching, svc_matching, "delegates to")
+Rel_D(c_contract, svc_contract, "delegates to")
+Rel_D(c_comm,     svc_comm,     "delegates to")
+Rel_D(c_project,  svc_project,  "delegates to")
+Rel_D(c_review,   svc_review,   "delegates to")
 
-' --- Event flow out to Pub/Sub and back to handlers ---
-Rel(s_eventbus, d_event, "dispatches to audit & publisher")
-Rel(d_event, s_messaging, "publishes events")
-Rel(s_messaging, pubsub, "publish / subscribe", "gRPC")
-Rel(pubsub, d_notification, "delivers events", "subscription")
-Rel(d_notification, s_messaging, "consumes events")
+' --- Services → ACL (cross-domain REST / event translation) ---
+Rel(svc_matching,     acl_matching,     "translates via ACL")
+Rel(svc_contract,     acl_contract,     "translates via ACL")
+Rel(svc_project,      acl_project,      "translates via ACL")
+Rel(svc_notification, acl_notification, "translates via ACL")
 
-' --- Shared kernel to external systems ---
-Rel(s_persistence, db, "SQL queries", "SQLAlchemy / TLS")
-Rel(s_auth, auth0, "fetches JWKS / validates", "HTTPS")
-Rel(s_auth, redis, "caches sessions & JWKS", "Redis")
-Rel(d_user, redis, "session cache", "Redis")
+' --- Services → Repositories ---
+Rel_D(svc_user,     r_user,     "persists via")
+Rel_D(svc_advisor,  r_advisor,  "persists via")
+Rel_D(svc_pyme,     r_pyme,     "persists via")
+Rel_D(svc_matching, r_matching, "persists via")
+Rel_D(svc_contract, r_contract, "persists via")
+Rel_D(svc_comm,     r_comm,     "persists via")
+Rel_D(svc_project,  r_project,  "persists via")
+Rel_D(svc_review,   r_review,   "persists via")
+
+' --- Repositories → Models ---
+Rel_D(r_user,     m_models, "mapped by")
+Rel_D(r_matching, m_models, "mapped by")
+Rel_D(r_contract, m_models, "mapped by")
+Rel_D(r_project,  m_models, "mapped by")
+
+' --- Services publish domain events ---
+Rel(svc_user,     s_eventbus, "publishes domain events")
+Rel(svc_matching, s_eventbus, "publishes domain events")
+Rel(svc_contract, s_eventbus, "publishes domain events")
+Rel(svc_project,  s_eventbus, "publishes domain events")
+
+' --- Event flow: in-process bus → Event service → Pub/Sub → Notification service ---
+Rel(s_eventbus,   svc_event,        "dispatches to audit & publisher")
+Rel(svc_event,    s_messaging,      "publishes events")
+Rel(s_messaging,  pubsub,           "publish / subscribe", "gRPC")
+Rel(pubsub,       svc_notification, "delivers events", "subscription")
+Rel(svc_notification, s_messaging,  "consumes events")
+
+' --- Shared Kernel → External systems ---
+Rel(s_persistence, db,    "SQL queries",                "SQLAlchemy / TLS")
+Rel(s_auth,        auth0, "fetches JWKS / validates",   "HTTPS")
+Rel(s_auth,        redis, "caches sessions & JWKS",     "Redis")
+Rel(svc_user,      redis, "session cache",              "Redis")
 
 ' --- Domain-specific external integrations ---
-Rel(d_pyme, langgraph, "requests recommendations", "HTTPS")
-Rel(d_user, document_ai, "validates documents (OCR)", "HTTPS")
-Rel(d_user, storage, "stores legal documents", "HTTPS")
+Rel(svc_pyme, langgraph,   "requests recommendations", "HTTPS")
+Rel(svc_user, document_ai, "validates documents (OCR)", "HTTPS")
+Rel(svc_user, storage,     "stores legal documents",   "HTTPS")
 
 ' --- Observability ---
 Rel(s_cross, ops, "logs, metrics, traces", "OpenTelemetry")

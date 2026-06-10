@@ -1641,13 +1641,13 @@ The repository is structured to make navigation, maintenance, and scaling predic
 
 Examples:
 
-- HTTP handler for creating an SME account: `backend/domains/user/controllers/create_sme_account_controller.py`
-- Business logic for calculating an advisor's reputation: `backend/domains/advisor/services/reputation_service.py`
-- Database queries for matching results: `backend/domains/matching/repositories/match_repository.py`
-- Event published when a contract is accepted: `backend/domains/contract/events/contract_accepted_event.py`
-- Shared JWT validation used by all domains: `backend/shared/auth/jwt_validator.py`
-- Unit test for API endpoints: `backend/tests/unit/api/`
-- Integration test suite: `backend/tests/integration/`
+- HTTP handler for creating an SME account: [create_sme_account_controller.py](backend/domains/user/controllers/create_sme_account_controller.py)
+- Business logic for calculating an advisor's reputation: [reputation_service.py](backend/domains/advisor/services/reputation_service.py)
+- Database queries for matching results: [match_repository.py](backend/domains/matching/repositories/match_repository.py)
+- Event published when a contract is accepted: [contract_accepted_event.py](backend/domains/contract/events/contract_accepted_event.py)
+- Shared JWT validation used by all domains: [jwt_validator.py](backend/shared/auth/jwt_validator.py)
+- Unit test for API endpoints: [backend/tests/unit/api/](backend/tests/unit/api/)
+- Integration test suite: [backend/tests/integration/](backend/tests/integration/)
 
 ### Core Domains
 
@@ -2231,45 +2231,45 @@ Used for state changes that other domains react to. The source publishes a domai
 Shared infrastructure lives in `backend/shared/` and is used by all domains:
 
 **shared/database/:**
-- `connection.py` — Database connection pool, session factory.
-- `session.py` — SQLAlchemy session management, transaction handling.
-- `migrations/` — Alembic migrations (versioned schema changes). (similar to flyway)
-- `seeders/` — Data fixtures for development and testing.
+- [connection.py](backend/shared/database/connection.py) — Database connection pool, session factory.
+- [session.py](backend/shared/database/session.py) — SQLAlchemy session management, transaction handling.
+- [migrations/](backend/shared/database/migrations/) — Alembic migrations (versioned schema changes). (similar to flyway)
+- [seeders/](backend/shared/database/seeders/) — Data fixtures for development and testing.
 
 **shared/auth/:**
-- `jwt_validator.py` — Validates JWT tokens from Auth0; caches JWKS locally.
-- `permission_checker.py` — Checks user permissions against endpoint requirements.
-- `auth0_service.py` — Creates/updates users in Auth0 (called by User domain).
+- [jwt_validator.py](backend/shared/auth/jwt_validator.py) — Validates JWT tokens from Auth0; caches JWKS locally.
+- [permission_checker.py](backend/shared/auth/permission_checker.py) — Checks user permissions against endpoint requirements.
+- [auth0_service.py](backend/shared/auth/auth0_service.py) — Creates/updates users in Auth0 (called by User domain).
 
 **shared/events/:**
-- `event_bus.py` — In-memory event broker for publishing/subscribing to domain events.
-- `event_handler.py` — Base class for event handlers. Each handler subscribes to specific events.
-- `event_registry.py` — Registry of all event handlers. Loaded at startup.
+- [event_bus.py](backend/shared/events/event_bus.py) — In-memory event broker for publishing/subscribing to domain events.
+- [event_handler.py](backend/shared/events/event_handler.py) — Base class for event handlers. Each handler subscribes to specific events.
+- [event_registry.py](backend/shared/events/event_registry.py) — Registry of all event handlers. Loaded at startup.
 
 **shared/exceptions/:**
-- `domain_exception.py` — Base exception for domain-specific errors.
-- `validation_exception.py` — Input validation failures.
-- `auth_exception.py` — Authentication/authorization failures.
-- `not_found_exception.py` — Resource not found.
+- [domain_exception.py](backend/shared/exceptions/domain_exception.py) — Base exception for domain-specific errors.
+- [validation_exception.py](backend/shared/exceptions/validation_exception.py) — Input validation failures.
+- [auth_exception.py](backend/shared/exceptions/auth_exception.py) — Authentication/authorization failures.
+- [not_found_exception.py](backend/shared/exceptions/not_found_exception.py) — Resource not found.
 
 **shared/logging/:**
-- `logger.py` — Structured JSON logging with correlation IDs.
-- `structured_logging.py` — Middleware to inject trace_id, request_id, user_id into logs.
+- [logger.py](backend/shared/logging/logger.py) — Structured JSON logging with correlation IDs.
+- [structured_logging.py](backend/shared/logging/structured_logging.py) — Middleware to inject trace_id, request_id, user_id into logs.
 
 **shared/messaging/:**
-- `pubsub_client.py` — Google Cloud Pub/Sub connection and utilities.
-- `message_publisher.py` — Publish messages to topics (for external integrations, email notifications).
-- `message_subscriber.py` — Subscribe to topics and process messages asynchronously.
+- [pubsub_client.py](backend/shared/messaging/pubsub_client.py) — Google Cloud Pub/Sub connection and utilities.
+- [message_publisher.py](backend/shared/messaging/message_publisher.py) — Publish messages to topics (for external integrations, email notifications).
+- [message_subscriber.py](backend/shared/messaging/message_subscriber.py) — Subscribe to topics and process messages asynchronously.
 
 **shared/validators/:**
-- `email_validator.py` — Email format and uniqueness validation.
-- `phone_validator.py` — Phone number format validation.
-- `business_validator.py` — Business rule validations (e.g., valid industry codes).
+- [email_validator.py](backend/shared/validators/email_validator.py) — Email format and uniqueness validation.
+- [phone_validator.py](backend/shared/validators/phone_validator.py) — Phone number format validation.
+- [business_validator.py](backend/shared/validators/business_validator.py) — Business rule validations (e.g., valid industry codes).
 
 **shared/utils/:**
-- `uuid_generator.py` — Generate consistent UUIDs.
-- `datetime_utils.py` — Datetime parsing, formatting, timezone handling.
-- `encryption_utils.py` — Encrypt/decrypt sensitive fields.
+- [uuid_generator.py](backend/shared/utils/uuid_generator.py) — Generate consistent UUIDs.
+- [datetime_utils.py](backend/shared/utils/datetime_utils.py) — Datetime parsing, formatting, timezone handling.
+- [encryption_utils.py](backend/shared/utils/encryption_utils.py) — Encrypt/decrypt sensitive fields.
 
 
 ### Naming Conventions
@@ -2539,12 +2539,12 @@ Shared infrastructure lives in `backend/shared/` and is used by all domains:
  
 ### CI/CD Pipeline
 
-Workflow file: `.github/workflows/backend-tests.yml`
+Workflow file: [backend-tests.yml](.github/workflows/backend-tests.yml)
 
 On every push to the working branch, GitHub Actions runs the jobs in order:
 
-1. `unit-tests` runs `run_unit_tests.sh` (includes API, contract, and health checks) with coverage.
-2. `integration-tests` runs `run_integration_tests.sh` with coverage.
+1. `unit-tests` runs [run_unit_tests.sh](backend/tests/unit/run_unit_tests.sh) (includes API, contract, and health checks) with coverage.
+2. `integration-tests` runs [run_integration_tests.sh](backend/tests/integration/run_integration_tests.sh) with coverage.
 3. `coverage-gate` fails the pipeline if total coverage is below 80%.
 4. `promote-to-main` runs only if all previous jobs pass and promotes the current branch into `main`.
 
@@ -2552,16 +2552,16 @@ The `promote-to-main` job is the last step because the hosting service builds th
 
 #### GitHub Actions Workflows
 
-Workflow file: `.github/workflows/backend-ci.yml`
+Workflow file: [backend-ci.yml](.github/workflows/backend-ci.yml)
 **On every push to working branch:**
 
 1. **Unit Tests** (Pytest)
-   - Run `backend/tests/unit/run_unit_tests.sh` (includes API, contract, and health check suites)
+   - Run [run_unit_tests.sh](backend/tests/unit/run_unit_tests.sh) (includes API, contract, and health check suites)
    - Report coverage with --cov-report=term-missing
    - Fail if < 80% coverage
 
 2. **Integration Tests** (Pytest)
-   - Run `backend/tests/integration/run_integration_tests.sh`
+   - Run [run_integration_tests.sh](backend/tests/integration/run_integration_tests.sh)
    - Real PostgreSQL test database, in-memory event bus, external providers stubbed
    - Fail if < 80% coverage
 
@@ -2591,7 +2591,7 @@ All backend tests run with Pytest 8.3.3 on Python 3.12 and execute automatically
 
 #### Unit Testing Strategy
 
-Runner script: `backend/tests/unit/run_unit_tests.sh`
+Runner script: [run_unit_tests.sh](backend/tests/unit/run_unit_tests.sh)
 
 Unit tests validate isolated components (controllers, services, repositories, validators) with all external dependencies mocked (database, Auth0, Pub/Sub, Cloud Storage). API, contract, and health checks are treated as part of unit testing and run inside this same suite and coverage report.
 
@@ -2599,25 +2599,25 @@ Coverage command: `pytest backend/tests/unit --cov=backend --cov-report=term-mis
 
 ##### API Unit Testing Strategy
 
-Runner script: `backend/tests/unit/api/run_api_tests.sh`
+Runner script: [run_api_tests.sh](backend/tests/unit/api/run_api_tests.sh)
 
 Tests each controller and endpoint in isolation using FastAPI TestClient with mocked services. Validates status codes, request validation errors, and response shapes for every route.
 
 ##### Contract Unit Testing Strategy
 
-Runner script: `backend/tests/unit/contract/run_contract_tests.sh`
+Runner script: [run_contract_tests.sh](backend/tests/unit/contract/run_contract_tests.sh)
 
 Validates that request and response Pydantic schemas match the published OpenAPI 3.1 contract, so DTOs never drift from the documented API.
 
 ##### Health Checks Unit Testing Strategy
 
-Runner script: `backend/tests/unit/health/run_health_tests.sh`
+Runner script: [run_health_tests.sh](backend/tests/unit/health/run_health_tests.sh)
 
 Tests the `/health/live` and `/health/ready` endpoints return the expected status and payload, keeping the Cloud Run liveness and readiness probes reliable.
 
 #### Integration Testing Strategy
 
-Runner script: `backend/tests/integration/run_integration_tests.sh`
+Runner script: [run_integration_tests.sh](backend/tests/integration/run_integration_tests.sh)
 
 Integration tests exercise full domain workflows against a real PostgreSQL test database and the in-memory event bus, with external providers stubbed. Coverage is reported the same way as unit tests.
 
@@ -2653,9 +2653,9 @@ Naming rule: every test file is prefixed with `test_` and mirrors the module nam
 
 | Config file | Location | Purpose |
 |-------------|----------|---------|
-| `pytest.ini` | `backend/` | Defines `testpaths`, and markers (`unit`, `integration`) |
-| `conftest.py` (unit) | `backend/tests/unit/` | Shared mocks: database session, Auth0 JWT, Pub/Sub client |
-| `conftest.py` (integration) | `backend/tests/integration/` | Real PostgreSQL test DB setup/teardown, in-memory event bus |
+| [pytest.ini](backend/pytest.ini) | `backend/` | Defines `testpaths`, and markers (`unit`, `integration`) |
+| [conftest.py](backend/tests/unit/conftest.py) (unit) | `backend/tests/unit/` | Shared mocks: database session, Auth0 JWT, Pub/Sub client |
+| [conftest.py](backend/tests/integration/conftest.py) (integration) | `backend/tests/integration/` | Real PostgreSQL test DB setup/teardown, in-memory event bus |
 
 Conftest helps creating mocked requirements for the test. Example: For integration tests Conftest creates real test DBs and after the test it eliminates them.
 Although for unit test it only creates a MagicMock instead of a database, it doesnt have a real connection. 
@@ -2752,6 +2752,100 @@ Retry with Backoff: Exponential backoff (100ms → 200ms → 400ms) for transien
 Bulkhead: OCR processing isolated to 20 max concurrent threads via Pub/Sub concurrency limits
 Degraded Mode: If OCR or AI unavailable, returns partial response with cached data and user notification
 Health Checks: /health/ready endpoint checked every 30 seconds by Cloud Run; auto-restart if unhealthy
+
+---
+
+### Error Handling
+
+Auth-specific error flows are in [2.8 Caching Strategy](#28-caching-strategy).
+
+#### API Error Response Format
+
+All error responses follow a single format, consistent with the frontend contract defined in [section 1.6](#16-state-management--api-communication):
+
+```json
+{
+  "success": false,
+  "error": "Human-readable message describing what went wrong"
+}
+```
+
+**Rules:**
+- `success` is always `false` on any non-2xx response (other than 200-299 response).
+- `error` is always a single string; no nested objects.
+- Stack traces, internal class names, and database details are **never** included in the response body — they go to Cloud Logging only.
+- Pydantic validation failures (422) are intercepted by a custom FastAPI exception handler in [`main.py`](backend/main.py) and converted to this format before reaching the client.
+
+---
+
+#### Exception Class → HTTP Status Mapping
+
+Domain exceptions defined in [`shared/exceptions/`](backend/shared/exceptions/) are registered as FastAPI exception handlers at startup in [`main.py`](backend/main.py). Each exception class maps to exactly one HTTP status code.
+
+| Exception class | HTTP status | When it is raised | Example |
+|----------------|-------------|-------------------|---------|
+| `ValidationException` | `400 Bad Request` | Input format valid but value violates a domain rule | Commission percentage outside allowed range |
+| `AuthException` (unauthenticated) | `401 Unauthorized` | JWT missing, expired, or signature invalid | Request arrives without `Authorization` header |
+| `AuthException` (forbidden) | `403 Forbidden` | Valid JWT but insufficient role or resource ownership | PYME tries to read another PYME's contract |
+| `NotFoundException` | `404 Not Found` | Requested resource does not exist | Advisor ID not found in the database |
+| `DomainException` | `409 Conflict` | Business rule violated due to existing state | PYME already has an active contract with this advisor |
+| Pydantic `RequestValidationError` | `422 Unprocessable Entity` | Request body fails schema validation | Required field missing, wrong type |
+| Any unhandled exception | `500 Internal Server Error` | Unexpected failure not caught by any handler | Bug in service logic, null pointer |
+
+**Global unhandled exception handler:**
+A catch-all handler registered in `main.py` intercepts any exception not matched above. It:
+1. Logs the full traceback with `trace_id` and `user_id` to Cloud Logging.
+2. Sends the error to Sentry.
+3. Returns `{ "success": false, "error": "An unexpected error occurred" }` — no internal details exposed.
+
+---
+
+#### Cross-Domain Call Failures
+
+When one domain calls another via REST (synchronous query — see [Communication Strategy](#communication-strategy)), the calling service wraps the request with retry logic from [`shared/utils/`](backend/shared/utils/):
+
+| Step | Behavior |
+|------|----------|
+| Attempt 1 | Call with 2-second timeout |
+| Failure (network error or 5xx) | Wait 100 ms, retry |
+| Attempt 2 failure | Wait 200 ms, retry |
+| Attempt 3 failure | Wait 400 ms, final attempt |
+| All 3 exhausted | Raise `DomainException` in the calling service |
+
+**After exhaustion:** the calling service raises `DomainException`, which maps to a domain-appropriate error code. The failure is logged to Cloud Logging with the target domain, endpoint, and last HTTP status.
+
+**4xx responses from the target domain are not retried.** A `404` or `422` from the target means the request was invalid; retrying would produce the same result.
+
+---
+
+#### Database Failure (Cloud SQL)
+
+Cloud SQL HA handles infrastructure-level failover automatically (covered above in Component SLAs). At the application level, transient connection errors (pool exhaustion, brief network interruption during failover) are handled in the repository layer:
+
+| Step | Behavior |
+|------|----------|
+| Connection attempt 1 | Normal query execution |
+| `OperationalError` / pool timeout | Wait 100 ms, retry |
+| Attempt 2 failure | Wait 200 ms, retry |
+| Attempt 3 failure | Raise exception, do not retry further |
+| Exception propagates to controller | FastAPI returns `503 Service Unavailable` with `{ "success": false, "error": "Service temporarily unavailable" }` |
+
+**Cloud Run health check** (`/health/ready`) detects sustained DB unavailability and stops routing traffic to the affected instance, triggering an automatic restart.
+
+---
+
+#### Error Logging
+
+Every error is logged to **Cloud Logging** with the following structured fields:
+
+| Field | Content |
+|-------|---------|
+| `trace_id` | Unique ID per request, injected by [`structured_logging.py`](backend/shared/logging/structured_logging.py) |
+| `user_id` | Auth0 user ID from the validated JWT (null for unauthenticated requests) |
+| `domain` | Domain that raised the error (e.g., `contract`, `matching`) |
+| `exception_type` | Class name of the exception (e.g., `NotFoundException`) |
+| `http_status` | Status code returned to the client |
+| `message` | Developer-facing message (never exposed to the client for 500s) |
 
 ---
 
@@ -2867,6 +2961,85 @@ PymeBoost uses **3 hours as a conservative grace buffer** because:
 | JWKS Cache | 3 hours | Local validation without depending on Auth0 |
 
 This strategy guarantees **PymeBoost maintains availability even during Auth0 interruptions, with a balance between security, UX, and service continuity**.
+
+---
+
+### Redis Instance Configuration
+
+| Parameter | Value | Justification |
+|-----------|-------|---------------|
+| **Service** | Google Cloud Memorystore for Redis | Managed Redis; no ops overhead, native GCP VPC peering with Cloud Run |
+| **Tier** | Standard | Provides 1 primary + 1 read replica with automatic failover; required for HA in production |
+| **Region** | `us-central1` (Iowa) | Closest major GCP region to Costa Rica (~3,200 km); minimizes round-trip latency between Cloud Run and Redis |
+| **Memory** | 1 GB | Sized for up to 500 concurrent sessions (~2 KB each = ~1 MB active data) plus JWKS (~5 KB). 1 GB is the Standard tier minimum and provides ~999× headroom for growth. |
+| **Replicas** | 1 primary + 1 replica | Replica handles automatic failover if primary goes down; no manual intervention needed |
+| **Failover** | Automatic (Standard tier) | Cloud Memorystore promotes replica to primary in <60 seconds on primary failure |
+| **Redis version** | 7.x | Latest stable; supported by Cloud Memorystore Standard |
+| **Auth mode** | AUTH string via Secret Manager | Redis AUTH token stored in Google Secret Manager; never hardcoded |
+
+---
+
+### What Lives Where
+
+| Data | Storage | TTL | Why |
+|------|---------|-----|-----|
+| User session (ID, roles, permissions) | Redis | 3 hours | Shared across all Cloud Run instances; a new instance picks up an existing session without hitting the DB |
+| JWKS (Auth0 public certificates) | Redis | 3 hours | One download per TTL window regardless of how many Cloud Run instances are running; consistent across scale-out events |
+| JWT token itself | Client memory (authStore) | 1 h / 3 h grace | Never stored server-side; validated on every request using cached JWKS |
+| Refresh token | Auth0 (client-side only) | 30 days | Managed by Auth0; backend never stores or reads it |
+| In-flight request state | FastAPI process memory | Request lifetime | Short-lived; no reason to persist to Redis |
+
+---
+
+### Key Structure
+
+All Redis keys follow a `{namespace}:{identifier}` convention. Namespaces are lowercase and match the domain that owns the data.
+
+| Key pattern | Example | TTL | Owner |
+|-------------|---------|-----|-------|
+| `session:{user_id}` | `session:a3f1c2d4-...` | 3 h (sliding) | User domain — `session_cache_service.py` |
+| `jwks:{auth0_domain}` | `jwks:pymeboost.us.auth0.com` | 3 h (fixed) | Shared auth — `jwt_validator.py` |
+
+**Rules:**
+- Keys always include a namespace prefix; never store bare IDs.
+- TTLs are always set at write time with `SETEX` or `SET ... EX`; keys without TTL are forbidden.
+- Session TTL is **sliding** (`refresh_session_ttl` resets the clock on every authenticated request). JWKS TTL is **fixed** (expires and is re-fetched from Auth0 regardless of usage).
+
+---
+
+### Eviction Policy
+
+**Policy: `volatile-lru`**
+
+Evicts the least-recently-used key **among keys that have an explicit TTL set**. Keys without TTL are never evicted.
+
+This is safe for PymeBoost because:
+- Every key written to Redis has a TTL (enforced by the key rules above).
+- If memory pressure ever forces an eviction before TTL expires, the worst outcome is a session miss or JWKS miss — both have defined fallbacks (session miss → DB lookup; JWKS miss → Auth0 fetch).
+- Because all writes enforce a TTL (see Key Structure rules), no key without TTL should exist in Redis. If one were written accidentally, `volatile-lru` would never evict it — it would accumulate indefinitely. The mandatory-TTL rule is the actual guard against this; `volatile-lru` is not.
+
+With 1 GB memory and a maximum of ~500 concurrent sessions (~1 MB total), eviction should never trigger in normal operation. The policy exists as a safety net for edge cases.
+
+---
+
+### Connection Management
+
+Cloud Run scales to a maximum of 50 instances. Each FastAPI instance maintains an **async connection pool** to Redis (via `redis-py` with asyncio support).
+
+| Parameter | Value | Calculation |
+|-----------|-------|-------------|
+| Pool size per Cloud Run instance | 10 connections | Enough for concurrent async handlers; avoids connection churn |
+| Max instances | 50 | Defined in Cloud Run auto-scaling config |
+| Max total connections to Redis | 500 | 50 instances × 10 connections/instance |
+| Cloud Memorystore 1 GB Standard max connections | 65,000 | Per GCP documentation; 500 is 0.76% of the limit |
+| Connection timeout | 2 seconds | Fail fast; Cloud Run can retry or scale |
+| Socket keepalive | Enabled | Prevents idle connections from being dropped by the VPC firewall |
+
+**Connection lifecycle:**
+- Pool is initialized once at FastAPI startup (`lifespan` hook in `main.py`).
+- Connections are reused across requests; not opened per-request.
+- If Redis is unreachable at startup, the application logs an error and continues (Redis is not a hard boot dependency — sessions fall back to DB lookup).
+- Pool is closed cleanly on FastAPI shutdown.
 
 ---
 
