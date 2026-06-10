@@ -1,0 +1,79 @@
+
+## 1.9 Testing, Observability & CI/CD
+
+### CI/CD Pipeline
+
+### GitHub Actions Workflows
+
+**On every push to main:**
+
+1. **Lint & Format** (ESLint, Prettier)
+   - Check code style
+   - Fail if errors found
+
+2. **Unit Tests** (Vitest)
+   - Run all unit tests with `npm run test:run`
+   - Report coverage
+   - Fail if <80% coverage
+
+3. **Integration Tests** (Playwright)
+   - Run critical user flows
+   - Fail if any flow breaks
+
+4. **Build** (Next.js)
+   - Build production bundle
+   - Check for TypeScript errors
+   - Verify build succeeds
+
+5. **Deploy to Staging** (Google App Engine)
+   - Deploy to staging environment
+   - Run smoke tests
+   - Notify team if failed
+
+**On PR merge to main:**
+
+6. **Deploy to Production** (Google App Engine)
+   - Deploy to production
+   - Monitor Sentry + Cloud Logging for 10 min
+   - Rollback if critical errors detected
+
+
+### Quality Gates
+
+Code must pass these checks before merging to main:
+
+| Gate | Tool | Rule |
+|------|------|------|
+| **Lint** | ESLint | No style violations |
+| **Tests** | Vitest | 80%+ coverage, all tests pass |
+| **Build** | Next.js | No TypeScript errors |
+| **E2E** | Playwright | All critical workflows pass |
+| **Security** | Snyk | No critical vulnerabilities |
+| **Performance** | Lighthouse | Core Web Vitals meet targets |
+
+---
+
+### Monitoring Alerts
+
+**Critical alerts (page team immediately):**
+- Unhandled errors spike (>10 in 5 min)
+- API error rate >5%
+- Page load time >3s
+- Failed deployments
+
+**Warning alerts (check next morning):**
+- Sentry error threshold crossed
+- Code coverage dropped below 80%
+- Bundle size increased >10%
+
+---
+
+### Key Rules
+
+- **Test critical workflows.** Unit tests for logic, integration tests for user flows.
+- **100% test pass before merging.** No exceptions.
+- **Monitor in real-time.** Sentry + Cloud Logging always on.
+- **Errors don't crash app.** Graceful error handling with user-friendly messages.
+- **Auto-deploy to staging.** Manual approval for production.
+- **Coverage target 80%.** Acceptable trade-off between speed and reliability.
+- **Rollback one-click away.** If production breaks, roll back immediately.

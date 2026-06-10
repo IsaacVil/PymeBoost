@@ -1334,7 +1334,7 @@ The 500ms global target applies to standard CRUD endpoints. AI-driven endpoints 
 
 ### Code Splitting
 
-Next.js splits the bundle automatically by route. The split works well only because the feature-based architecture enforces strict boundaries — features never import from each other, so no feature's code leaks into another route's chunk.
+Next.js splits the bundle automatically by route. The split works well only because the feature-based architecture enforces strict boundaries — features never import from each other (see [1.2 Key Rules](frontend/src/features/)), so no feature's code leaks into another route's chunk.
 
 | Route | Chunk size | What drives the weight |
 |-------|-----------|------------------------|
@@ -1345,139 +1345,102 @@ Next.js splits the bundle automatically by route. The split works well only beca
 | `/messages` | +25KB | WebSocket client, ChatPanel, MessageList |
 | `/reports` | +20KB | ReportViewer, PDF rendering utilities |
 
-Heavy components that are only visible inside modals are lazy-loaded so their JS is excluded from the initial route chunk and only downloaded when the user triggers them. [ContractsPage](frontend/src/features/contracts/page.tsx) applies this to `ContractNegotiation` — the negotiation panel never appears on first render, so its code (ContractViewer + ContractTerms + Zod validation logic) is deferred until the user clicks "View":
+Framer Motion is scoped only to [MatchingCard.tsx](frontend/src/features/matching/components/MatchingCard.tsx) and never imported in shared components — if it were in `shared/`, it would inflate every route's chunk.
+
+For heavy components that are not visible on initial render (modals, negotiation forms), `next/dynamic` defers loading until the user triggers them:
 
 ```typescript
-// frontend/src/features/contracts/page.tsx
-const ContractNegotiation = lazy(
-  () => import("./components/ContractNegotiation")
-        .then((m) => ({ default: m.ContractNegotiation }))
+// ContractNegotiation only loads when the user opens the negotiation modal
+const ContractNegotiation = dynamic(
+  () => import("@/features/contracts/components/ContractNegotiation"),
+  { loading: () => <Skeleton /> }
 );
-
-// In JSX — Suspense shows a fallback while the chunk downloads
-<Suspense fallback={<p className="animate-pulse">Loading contract…</p>}>
-  {selected && <ContractNegotiation contract={selected} ... />}
-</Suspense>
 ```
 
-Without this, `ContractNegotiation` (which pulls in `ContractViewer`, `ContractTerms`, and their Zod schemas) would be bundled into the `/contracts` route chunk even for users who only open the list and never click into a contract.
+Used in [ContractsPage](frontend/src/features/contracts/page.tsx) and [MessagingPage](frontend/src/features/messaging/page.tsx) for modal-only components that would otherwise inflate the initial chunk unnecessarily.
 
 ---
 
 ### Image Optimization
 
-PymeBoost has images in three specific places: advisor avatars in [MatchingCard](frontend/src/features/matching/components/MatchingCard.tsx) (64px), advisor avatars in the chat header (48px), and previous project screenshots inside each card. All use Next.js `<Image>`, which handles WebP conversion and lazy loading automatically.
-
-| Image | Size | `priority` | Why |
-|-------|------|-----------|-----|
-| PymeBoost logo (navbar) | 120×32px | `true` | Always above the fold |
-| First MatchingCard avatar | 64×64px | `true` | First visible element on `/matching` |
-| Remaining MatchingCard avatars | 64×64px | `false` (lazy) | Below fold, loaded on scroll |
-| Project screenshots | 320×180px | `false` (lazy) | Secondary content inside card |
-| Chat header avatar | 48×48px | `false` (lazy) | Only visible after selecting a conversation |
-
-`width` and `height` are always declared explicitly to let Next.js reserve the space before the image loads — this keeps CLS below 0.1. Images are compressed with TinyPNG before upload; advisor avatars must stay under 80KB.
+**Rules:**
+- Use Next.js `<Image>` component (automatic lazy loading, responsive sizes)
+- Compress images before upload (use TinyPNG)
+- WebP format for advisors avatars, project screenshots
+- Lazy load images below fold (native `loading="lazy"`)
 
 ---
 
 ### Caching Strategy
 
-[queryClient.ts](frontend/src/lib/queryClient.ts) defines three named cache strategies (`realtime`, `dynamic`, `stable`). Feature hooks pick the one that matches how often their data changes:
-
-| Feature | Strategy | `staleTime` | `gcTime` | Why |
-|---------|----------|------------|---------|-----|
-| Advisor recommendations | `dynamic` | 2 min | 5 min | AI scores update periodically but not per second |
-| Contracts / reports | `stable` | 10 min | 20 min | Status changes only on explicit user actions |
-| User profile / permissions | `stable` | 10 min | 20 min | Account type rarely changes mid-session |
-| Chat messages | none (WebSocket) | — | — | Messages arrive via WebSocket into [useMessaging](frontend/src/features/messaging/hooks/useMessaging.ts) local state, not polled |
-| Static assets (CSS, JS) | Browser cache | — | 1 year | Cache-busted by hash on every Vercel deploy |
-
-**`staleTime` vs `gcTime`:** `staleTime` controls when a background refetch triggers — data is still shown immediately from cache. `gcTime` controls when unused data is garbage collected from memory. A user navigating away from `/matching` and back within 5 minutes sees instant data with no spinner.
-
-**Invalidation on mutation:** When a swipe is registered, [useAdvisorMatching](frontend/src/features/matching/hooks/useAdvisorMatching.ts) calls `queryClient.invalidateQueries` immediately so the swiped advisor disappears without waiting for `staleTime` to expire.
+| Data | Cache Duration | Tool |
+|------|-----------------|------|
+| **Advisors list** | 5 minutes | TanStack Query |
+| **Active contracts** | 1 minute (refetch on mutation) | TanStack Query |
+| **Chat messages** | Infinite (sync via WebSocket) | TanStack Query |
+| **User profile** | 30 minutes | TanStack Query |
+| **Static assets (CSS, JS)** | 1 year (cache busted on deploy) | Browser cache |
 
 ---
 
-### Component Memorization
+### Component Memoization
 
-Re-renders in the matching grid are expensive — `MatchingGrid` renders multiple `MatchingCard` components, and each card contains images, badges, and action buttons. Without memoization, a single state change in `MatchingPage` (e.g. swipe loading state) re-renders every card in the grid.
+Prevent unnecessary re-renders:
 
-| API | Applied to | Why |
-|-----|-----------|-----|
-| `React.memo` | [MatchingCard](frontend/src/features/matching/components/MatchingCard.tsx) | Skips re-render if `match`, `onApprove`, `onReject` props haven't changed |
-| `React.memo` | [ContractViewer](frontend/src/features/contracts/components/ContractViewer.tsx) | Contract data is stable once loaded — no reason to re-render on parent updates |
-| `useCallback` | [useAdvisorMatching](frontend/src/features/matching/hooks/useAdvisorMatching.ts) — `swipeApproved`, `swipeRejected` | Stable function references prevent `MatchingCard` memo from being invalidated on every hook execution |
-
-`React.memo` only works when the props passed to it are stable. That's why `useCallback` on the swipe handlers is required — without it, new function references on every render would bypass memo on every card.
+- **Heavy components:** Use `React.memo()` (MatchingCard, ContractViewer)
+- **Expensive hooks:** Use `useMemo()` for calculations (advisor compatibility score)
+- **Callback stability:** Use `useCallback()` for handlers passed to children
 
 ---
 
 ### Bundle Analysis
 
-Every PR runs `npm run analyze` in CI, which generates a Webpack Bundle Analyzer report and fails if any route chunk grows beyond its limit. A 10KB increase in any single chunk triggers a failure.
+**Track bundle size in CI/CD:**
+- Generate bundle report on every PR
+- Fail if bundle increases >10KB
+- Monitor third-party dependencies bloat
 
-The heaviest third-party dependencies are tracked explicitly: 
-- Framer Motion (`/matching`)
-- Radix UI (shared components)
-- Zod (validators). 
-
-If any of these upgrades bloat their chunk beyond the limit, the PR is blocked until the import is optimized or the limit is re-justified.
-
-**Run locally:** `npm run analyze` — opens the bundle treemap in the browser.
+**Tools:** Webpack Bundle Analyzer, Next.js built-in stats
 
 ---
 
-### API Request Optimization
+### Database Query Optimization
 
-The frontend controls three things that directly affect how many requests hit the backend and how expensive they are:
-
-**Request guards** — [useAdvisorMatching](frontend/src/features/matching/hooks/useAdvisorMatching.ts) uses `enabled: !!pymeId` to block the query from running until a valid PYME ID exists. Without this, the hook fires on mount with an empty ID and hits the backend with a useless request on every page load.
-
-**Scoped cache keys** — `queryKey: ["recommendations", pymeId]` scopes the cache per user. If two different PYMEs use the app in the same session, their recommendation lists never bleed into each other's cache.
-
-**Pagination params** — Services send `?page` and `?limit=20` to the backend so the API returns 20 advisors per request instead of the full dataset. The backend controls the actual query; the frontend controls what it asks for.
+- **Only fetch needed fields** (don't select *)
+- **Paginate results** (advisors list: 20 per page)
+- **Index frequently filtered columns** (advisor specialization, contract status)
+- **Avoid N+1 queries** (use JOINs, not loops)
 
 ---
 
 ### Network Optimization
 
-The frontend network layer lives in [apiClient.ts](frontend/src/lib/apiClient.ts). Two decisions there directly reduce network cost:
-
-**Retry with exponential backoff** — if a request fails due to a transient error (network blip, 5xx), `executeWithRetry` retries up to 3 times with increasing delay (1s → 2s → 3s) before giving up. Components never handle retry logic — it's centralized once in the client.
-
-**`X-Trace-ID` on every request** — each request gets a unique trace ID injected in the header. This correlates frontend requests with backend logs in Google Cloud Logging, so when a user reports an error, the exact request can be found across both systems without guesswork.
+- **Compression:** gzip enabled on backend + frontend
+- **HTTP/2:** Enabled by default on Google App Engine
+- **CDN:** Static assets served from Google Cloud CDN (geo-distributed)
+- **Request batching:** Combine multiple requests where possible (e.g., fetch user + contracts in one call)
 
 ---
 
 ### Real-time Performance
 
-**WebSocket for chat** — [useMessaging](frontend/src/features/messaging/hooks/useMessaging.ts) opens a WebSocket connection per `matchId` on mount. Messages from the backend arrive instantly via `socket.onmessage` and are appended to local state. The connection closes cleanly on unmount, and `socket.onerror` notifies the user if the connection drops. No polling — the backend pushes, the frontend listens.
-
-**Debounce on advisor search** — [MatchingFilters](frontend/src/features/matching/components/MatchingFilters.tsx) keeps a local `industry` state and wraps `onChange` in a `useEffect` with a 300ms `setTimeout`. The API call only fires after the user stops typing for 300ms. The `clearTimeout` in the cleanup function cancels any pending call if the user types again before the delay expires.
+- **WebSocket for chat:** Reduce polling, instant updates
+- **Debounce search inputs:** Wait 300ms before API call (advisor search)
+- **Pagination:** Load 20 advisors per page, not all 1000
+- **Virtual scrolling:** For long lists (if contract history >100 items)
 
 ---
 
 ### Monitoring Performance
 
-**In production:** Sentry captures slow renders and API timeouts in real user sessions. Google Cloud Monitoring tracks Core Web Vitals continuously. 
+**In production:**
+- Google Cloud Monitoring tracks Core Web Vitals
+- Sentry tracks frontend performance (API times, slow renders)
+- Alerts if FCP >3s or API response >1s
 
-Alerts fire when any page breaches its specific target from Core Performance Targets.
-
-- `/login` FCP >0.8s,
-- `/matching` FCP >1.8s
-- `/dashboard` FCP >2.0s
-- standard API endpoint >200ms
-- matching recommendations >1.5s
-
-These thresholds match the targets exactly so a degradation is caught before users report it.
-
-**Locally before committing:**
-
-| Command | What it does | When to run |
-|---------|-------------|-------------|
-| `npm run lighthouse` | Audits the running app on `localhost:3000` — scores performance, accessibility, and SEO for each route | Before any PR that touches page layout or data fetching |
-| `npm run test:run` | Runs all unit tests once and exits | Before every commit |
-| `npm run analyze` | Opens the bundle treemap — shows which library is eating chunk size | Before any PR that adds or upgrades a dependency |
+**Locally:**
+- Run `npm run lighthouse` before commits
+- Check bundle size: `npm run analyze`
 
 ---
 
