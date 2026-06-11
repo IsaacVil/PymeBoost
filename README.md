@@ -4238,7 +4238,7 @@ Published by: AI Domain (`Use Case PDF Processing`)
 ### Container Diagram
 ![container_diagram.png](docs/images/backend/containers_c4bck.png)
 ### Component Diagram
-![component_diagram.png](docs/images/backend/component_c4bck.png)
+![component_diagram.png](docs/images/backend/component_c4bck.svg)
 ---
 
 ## 2.12 Design Considerations
