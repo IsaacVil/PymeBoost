@@ -8,20 +8,22 @@ title PymeBoost Backend - C4 Level 2 (Containers)
 Person(pyme, "PYME Owner", "Registers, browses advisors,\nnegotiates contracts,\ntracks projects")
 Person(advisor, "Advisor", "Receives matches,\nnegotiates, submits reports")
 
-System_Ext(frontend, "PymeBoost Frontend", "Next.js / React", "Web client used by\nPYMEs, Advisors and Admins")
-
 System_Boundary(backend_boundary, "PymeBoost Backend (GCP Private VPC)") {
     Container(api_gateway, "API Gateway", "Google Cloud API Gateway + Cloud Armor", "Routing, rate limiting,\nWAF / firewall, endpoint validation")
     Container(app, "Backend API", "Python 3.12, FastAPI, Cloud Run", "DDD + event-driven domains,\nREST API (OpenAPI 3.1),\nJWT validation, business logic")
-    ContainerDb(db, "Relational Database", "Cloud SQL - PostgreSQL 16", "Domain data; private IP,\nHA + automated backups,\nAES-256 at rest (CMEK)")
-    ContainerDb(redis, "Session Cache", "Memorystore - Redis", "Sessions, JWKS cache,\nTTL-based caching")
-    Container(pubsub, "Event Bus", "Cloud Pub/Sub + Cloud Tasks", "Async domain events,\nnotifications, DLQ + retries")
-    ContainerDb(storage, "Object Storage", "Google Cloud Storage", "Legal documents,\nreports & files")
+    ContainerDb(db, "Relational DB + Vector Store", "Cloud SQL - PostgreSQL 16 + pgvector", "Domain data; private IP,\nHA + automated backups,\nAES-256 at rest (CMEK),\nvector similarity search")
+    ContainerDb(redis, "Session Cache", "Memorystore - Redis", "Sessions, JWKS cache,\nrecommendation cache,\nTTL-based caching")
+    Container(pubsub, "Event Bus", "Cloud Pub/Sub + Cloud Tasks", "Async domain events,\nnotifications, AI processing triggers,\nDLQ + retries")
+    ContainerDb(storage, "Object Storage", "Google Cloud Storage", "Advisor use case PDFs,\nproject completion documents,\nlegal files")
+    Container(scheduler, "Cloud Scheduler", "Google Cloud Scheduler", "Triggers recommendation\nbatch job every 24 hours")
 }
 
+System_Ext(frontend, "PymeBoost Frontend", "Next.js / React", "Web client used by\nPYMEs, Advisors and Admins")
 System_Ext(auth0, "Auth0", "Authentication / IdP", "JWT issuance & JWKS,\nGoogle OAuth")
-System_Ext(document_ai, "Cloud Document AI", "OCR Processing", "Legal document\nvalidation (OCR)")
-System_Ext(langgraph, "LangGraph", "Agent Orchestration", "Advisor recommendations\n& impact prediction")
+System_Ext(document_ai, "Cloud Document AI", "OCR Processing", "Use case PDF & project\ncompletion document processing")
+System_Ext(langgraph, "LangGraph", "Agent Orchestration", "Recommendation engine\n& AI-driven scoring")
+System_Ext(proxycurl, "ProxyCurl API", "LinkedIn Extraction (Nubela)", "Extracts advisor profile data\nfrom LinkedIn URL at registration")
+System_Ext(hacienda_api, "Hacienda API", "Costa Rica Registry", "Validates cédula jurídica\nvia api.hacienda.go.cr")
 System_Ext(kms, "Cloud KMS", "Key Management", "Customer-managed\nencryption keys (CMEK)")
 System_Ext(secrets, "Secret Manager", "Secrets", "API keys, DB & Redis\ncredentials, KMS keys")
 System_Ext(ops, "Cloud Operations Suite", "Observability", "Cloud Logging, Monitoring,\nTrace (OpenTelemetry)")
@@ -35,18 +37,23 @@ Rel(frontend, api_gateway, "Sends API requests", "REST + JWT / HTTPS")
 Rel(api_gateway, app, "Routes validated requests", "HTTPS / TLS 1.3")
 
 ' --- Backend app to data stores ---
-Rel(app, db, "Reads / writes domain data", "SQL / TLS 1.3")
-Rel(app, redis, "Stores & reads sessions, JWKS", "Redis / TLS")
-Rel(app, pubsub, "Publishes domain events", "gRPC / HTTPS")
+Rel(app, db, "Reads / writes domain data + vector queries", "SQL / pgvector / TLS 1.3")
+Rel(app, redis, "Stores & reads sessions, JWKS, recommendation cache", "Redis / TLS")
+Rel(app, pubsub, "Publishes domain events & AI processing triggers", "gRPC / HTTPS")
 Rel_Back(app, pubsub, "Delivers events to handlers", "Push / pull subscription")
-Rel(app, storage, "Uploads & fetches documents", "HTTPS")
+Rel(app, storage, "Uploads & fetches PDFs and documents", "HTTPS")
+
+' --- Scheduler triggers batch job ---
+Rel(scheduler, pubsub, "Fires recommendation batch job", "HTTP / gRPC")
 
 ' --- Backend app to external systems ---
-Rel(app, auth0, "Validates JWT, fetches JWKS", "HTTPS / OAuth 2.0")
-Rel(app, document_ai, "Processes OCR documents", "HTTPS")
-Rel(app, langgraph, "Generates recommendations", "HTTPS")
-Rel(app, kms, "Encrypts / decrypts secrets", "HTTPS")
-Rel(app, secrets, "Loads secrets at startup", "HTTPS")
-Rel(app, ops, "Sends logs, metrics & traces", "gRPC / OpenTelemetry")
+Rel(app, auth0,       "Validates JWT, fetches JWKS",         "HTTPS / OAuth 2.0")
+Rel(app, document_ai, "Processes use case & completion PDFs", "HTTPS")
+Rel(app, langgraph,   "Orchestrates recommendations",         "HTTPS")
+Rel(app, proxycurl,   "Extracts LinkedIn profile at signup",  "HTTPS")
+Rel(app, hacienda_api,"Validates cédula jurídica",            "HTTPS")
+Rel(app, kms,         "Encrypts / decrypts secrets",          "HTTPS")
+Rel(app, secrets,     "Loads secrets at startup",             "HTTPS")
+Rel(app, ops,         "Sends logs, metrics & traces",         "gRPC / OpenTelemetry")
 
 @enduml
