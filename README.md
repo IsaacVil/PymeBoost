@@ -1618,7 +1618,7 @@ TanStack Query → ApiClient → Backend API / Auth0
 - Session cache: Google Cloud Memorystore (Redis)
 - Agent orchestration framework: LangGraph 0.2.41
 - Container registry: Google Artifact Registry
-- Vector store: pgvector (PostgreSQL extension on Cloud SQL) — stores and queries vector embeddings directly within the existing PostgreSQL instance. Used for advisor use case similarity search, recommendation scoring, and similar project retrieval. Eliminates the need for a separate vector database service.
+- Vector store: pgvector (PostgreSQL extension on Cloud SQL) 
 - LinkedIn profile extraction: ProxyCurl API (Nubela) 
 
 ---
@@ -3575,22 +3575,65 @@ The advisor profile stores two fields to make this O(1): `reputation_score` (the
 4. `rating_count` is incremented by 1.
 5. Both the updated `reputation_score` (stored unrounded) and `rating_count` are written back to the advisor's profile record.
 6. If the advisor's profile is cached in Redis, the cache entry is invalidated so the next read reflects the updated score.
+7. An `AdvisorReputationUpdated` event is published with `advisor_id` and `new_score`.
+
+#### Pyme Reputation Calculation
+
+Implementation: [backend/domains/pyme/services/pyme_service.py](backend/domains/pyme/services/pyme_service.py)
+
+Triggered by the `ReviewSubmitted` event published by the Review Domain each time an advisor leaves a review for a PYME. Recomputes the PYME's reputation score as a plain average of all their star ratings and updates the stored value on their profile.
+
+The PYME profile stores two fields to make this O(1): `reputation_score` (the running average, never rounded) and `rating_count` (total number of ratings received so far).
+
+1. The Pyme Domain receives the `ReviewSubmitted` event containing the `pyme_id` (as `subject_id`) and the `rating` value.
+2. The current `reputation_score` and `rating_count` are retrieved from the PYME's profile record.
+3. The new reputation score is computed incrementally — no query against the reviews table: `(reputation_score * rating_count + rating) / (rating_count + 1)`.
+4. `rating_count` is incremented by 1.
+5. Both the updated `reputation_score` (stored unrounded) and `rating_count` are written back to the PYME's profile record.
+6. If the PYME's profile is cached in Redis, the cache entry is invalidated so the next read reflects the updated score.
+7. A `PymeReputationUpdated` event is published with `pyme_id` and `new_score`.
 
 ### Matching Domain Workflows
+
+#### Get Advisor Candidates
+
+Implementation: [backend/domains/matching/controllers/get_advisor_matches_controller.py](backend/domains/matching/controllers/get_advisor_matches_controller.py)
+
+Returns the PYME's current list of advisor candidates enriched with profile data, the most similar past project, and the most relevant promise. This is the data that populates each swipe card in the matching interface.
+
+1. The PYME sends a GET request to `/api/pymes/{pyme_id}/matches`.
+2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `pyme_id` from the token claims.
+5. The PYME's industry is retrieved from their profile.
+6. The pre-computed recommendation list for this PYME is fetched following the `Advisor Recommendation` workflow (checks Redis first, then database, triggers on-demand computation if empty).
+7. Advisors who were previously rejected (swipe `approved = false`) or whose match with this PYME was cancelled (match status `CANCELLED`) are filtered out.
+8. For each remaining advisor candidate, the following data is assembled:
+
+   **a. Profile data** — retrieved from the Advisor Domain: full name, industries, and reputation score (rating).
+
+   **b. Top 1 similar project** — the `Advisor Similar Project Retrieval` workflow is called for this advisor passing the PYME's industry and needs vector. Only the single highest-scoring use case is returned: company context, initial situation, key actions, and before/after metrics.
+
+   **c. Most relevant promise** — the advisor's active promises are read from the database, already sorted by `industry_tags` closeness to the PYME's industry (pre-computed by `Promise Industry Classification`). The first entry in that sorted list is selected.
+
+9. The enriched candidate list is returned. Each card entry contains: `advisor_id`, `name`, `industries`, `rating`, `top_project` (summary), and `top_promise` (text).
+
+---
 
 #### Advisor Swipe Decision
 
 Implementation: [backend/domains/matching/controllers/create_swipe_decision_controller.py](backend/domains/matching/controllers/create_swipe_decision_controller.py)
 
+The candidates available to swipe on are those returned by the `Get Advisor Candidates` workflow. The `advisor_id` values surfaced by that workflow are the only valid targets for a swipe decision.
+
 1. The PYME sends a POST request to `/api/matching/swipe` with: `pyme_id`, `advisor_id`, and `approved` (`true` for right swipe, `false` for left swipe).
 2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
 3. Google Cloud API Gateway routes the request to Cloud Run.
 4. FastAPI validates the JWT using Auth0 JWKS and extracts the `pyme_id` from the token claims.
-5. The system retrieves the PYME's current recommendation list from the database, excluding advisors who were previously rejected (existing swipe with match status `Negative`) or whose match with this PYME was cancelled (match status `CANCELLED`).
-6. The system verifies that the advisor being swiped appears in that filtered list. If not, the request is rejected.
-7. The system checks that no swipe decision already exists for this PYME–advisor pair. If one exists, the request is rejected with `409 Conflict`.
+5. The system verifies that the advisor being swiped appears in the candidate list produced by `Get Advisor Candidates` for this PYME. If not, the request is rejected.
+6. The system checks that no swipe decision already exists for this PYME–advisor pair. If one exists, the request is rejected with `409 Conflict`.
 7. A swipe record is persisted with `pyme_id`, `advisor_id`, and the `approved` flag.
-8. If `approved` is `false` (left swipe): the swipe is recorded as match status `Negative` and no further action is taken. The recommendation slot is consumed and the next advisor will be served on the following request.
+8. If `approved` is `false` (left swipe): the swipe is recorded and no further action is taken. The advisor is excluded from future `Get Advisor Candidates` results for this PYME.
 9. If `approved` is `true` (right swipe): a `MatchSwiped` event is published to the event bus with `pyme_id` and `advisor_id`, which triggers the `Create Match` workflow automatically.
 
 ---
@@ -3795,11 +3838,103 @@ A simple rejection of the current proposal. The match remains active and the pro
 
 ### Project Domain Workflows
 
-#### Project Milestone Validation	
-#### Project Health Monitoring	
-#### Project Completion Validation	
-#### Project Status Management
+#### Project Milestone Validation
 
+Implementation: [backend/domains/project/controllers/validate_milestone_controller.py](backend/domains/project/controllers/validate_milestone_controller.py)
+
+When a project phase ends, the advisor is presented with a form pre-populated with every metric defined in the contract. For each metric the advisor enters the current observed value. The system automatically computes improvement percentages and determines milestone completion — no file upload or AI processing involved.
+
+1. The advisor sends a POST request to `/api/projects/{project_id}/milestones/{milestone_id}/validate` with a body containing the current observed value for each contract metric.
+2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `user_id`.
+5. The system verifies the requesting user is the advisor assigned to this project. If not, `403 Forbidden` is returned.
+6. The system verifies the project status is `ACTIVE` and the milestone exists, belongs to this project, and has not already been completed.
+7. The system loads the contract's `expected_metrics` for this project, which contains for each metric: `baseline_value` (recorded at project creation) and `target_improvement_pct` (the contracted improvement goal).
+8. For each submitted metric reading the system computes the **actual improvement percentage**:
+
+   ```
+   actual_improvement_pct = ((current_value − baseline_value) / baseline_value) × 100
+   ```
+
+9. The system then computes **completion per metric** against the contracted target:
+
+   ```
+   metric_completion_pct = (actual_improvement_pct / target_improvement_pct) × 100   (capped at 100 %)
+   ```
+
+10. The **overall milestone completion** is the average `metric_completion_pct` across all metrics.
+11. The computed results (actual improvement % and completion % per metric) are persisted and linked to the milestone record.
+12. If the overall milestone completion reaches 100 %, the milestone `completed` flag is set to `true`.
+13. A `MilestoneCompleted` event is published to the event bus with `milestone_id` and `project_id`.
+14. After marking the milestone complete, the system checks whether **all** milestones for the project now have `completed = true`. If so, an `AllMilestonesMet` event is published with `project_id` — this triggers the `Project Completion Validation` workflow.
+15. The computed milestone report is returned in the response.
+
+#### Project Health Monitoring
+
+Implementation: [backend/domains/project/controllers/monitor_health_controller.py](backend/domains/project/controllers/monitor_health_controller.py)
+
+Health is recalculated automatically every time a `MilestoneCompleted` event fires.
+
+1. The Project Domain receives a `MilestoneCompleted` event with `milestone_id` and `project_id`.
+2. The service loads the project record, which includes `start_date` and `end_date` derived from the contract duration.
+3. It computes the **completion ratio**: `completed_milestones / total_milestones`.
+4. It computes the **time progress ratio**: `(today − start_date) / (end_date − start_date)`, clamped to [0, 1].
+5. The `health_score` reflects how far ahead or behind the project is relative to elapsed time:
+
+   ```
+   health_score = (completion_ratio / time_progress_ratio) × 100 
+   ```
+
+6. The new `health_score` is upserted into the `project_health` table for this project.
+7. A `ProjectStatusChanged` event is published to the event bus with `project_id` and the derived status label:
+   - `health_score ≥ 80` → `ON_TRACK`
+   - `50 ≤ health_score < 80` → `AT_RISK`
+   - `health_score < 50` → `OFF_TRACK`
+8. The Notification Domain reacts to `ProjectStatusChanged` and alerts both parties if the status label has changed from the previous value.
+
+
+#### Project Completion Validation
+
+Implementation: [backend/domains/project/controllers/close_project_controller.py](backend/domains/project/controllers/close_project_controller.py)
+
+Triggered by the `AllMilestonesMet` event.
+
+Upon receiving the `AllMilestonesMet` event, the Project Domain sets the project status to `AWAITING_COMPLETION_DOCUMENT` and notifies the advisor to submit the final document.
+
+The completion document follows the same PDF structure as the advisor's use case files:
+
+| Section | Description |
+|---|---|
+| 1. Company Information | Name, industry, company size |
+| 2. Company Context | Business model and starting context |
+| 3. Initial Situation | Problem or opportunity that triggered the engagement |
+| 4. Actions Performed | Steps and interventions executed during the project |
+| 5. Metrics Before | Baseline KPI values at project start |
+| 6. Metrics After | Final KPI values at project end |
+
+1. The advisor sends a POST request to `/api/projects/{project_id}/completion-document` with the PDF file attached (multipart/form-data).
+2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `user_id`.
+5. The system verifies the requesting user is the advisor assigned to the project and that the project status is `AWAITING_COMPLETION_DOCUMENT`. If not, `403 Forbidden` or `409 Conflict` is returned.
+6. The PDF is stored in Google Cloud Storage under the project's namespace. The file reference is recorded in the database with status `PENDING`.
+7. A `UseCaseUploaded`-equivalent event is published to the AI Domain via Pub/Sub to trigger the `Use Case PDF Processing` workflow.
+8. The AI Domain processes the file (OCR → block extraction → embedding → structured data), extracting the **Metrics Before** and **Metrics After** sections as key/value KPI pairs.
+9. The extracted final KPI values are compared against the contracted `expected_metrics` for each metric:
+
+   ```
+   final_improvement_pct = ((metrics_after_value − metrics_before_value) / metrics_before_value) × 100
+   ```
+
+   Each metric is flagged as `MET` if `final_improvement_pct ≥ target_improvement_pct`, or `PARTIAL` otherwise.
+
+10. The KPI validation report (met/partial per metric) is persisted and linked to the project.
+11. The project status is updated to `COMPLETED`.
+12. A `ProjectCompleted` event is published to the event bus with `project_id`, `advisor_id`, and `pyme_id`.
+13. The Review Domain reacts to the event by unlocking the review flow for both parties (PYME can review the advisor; advisor can review the PYME).
+14. The Notification Domain notifies both parties that the project has been officially completed.
+15. A confirmation response is returned.
 
 ### Review Domain Workflows
 
@@ -3823,6 +3958,7 @@ A PYME may leave a review for an advisor only after the shared project has been 
 12. The review confirmation is returned to the PYME.
 
 The Notification Domain receives the `ReviewSubmitted` event and notifies the advisor that a review was submitted.
+
 ---
 
 #### Leave a Review for a Pyme (that you have been hired by in the past)
@@ -3849,13 +3985,229 @@ An advisor may leave a review for a PYME only after the shared project has been 
 ### Event Domain Workflows
 
 #### Event Audit Logging
+
+Implementation: [backend/domains/event/services/event_audit_service.py](backend/domains/event/services/event_audit_service.py)
+
+Cross-cutting. Every event published to the EventBus is intercepted and persisted to `domain_events` before any consumer handler runs, with `event_type`, `payload` (JSON), and `occurred_at`.
+
+---
+
+#### SmeAccountCreated Event
+
+Payload: `sme_id`, `email`, `company_name`
+Published by: `Create SME Account` (User Domain)
+→ Pyme Domain
+→ Notification Domain
+
+---
+
+#### AdvisorAccountCreated Event
+
+Payload: `advisor_id`, `email`, `specialization`
+Published by: `Create Advisor Account` (User Domain)
+→ Advisor Domain
+→ Notification Domain
+
+---
+
+#### SmeInformationUpdated Event
+
+Payload: `sme_id`
+Published by: `Update SME Profile` (User Domain)
+→ Notification Domain
+
+---
+
+#### AdvisorInformationUpdated Event
+
+Payload: `advisor_id`
+Published by: `Update Advisor Profile` (User Domain)
+→ Matching Domain
+→ Notification Domain
+
+---
+
 #### AdvisorIndustryUpdated Event
-#### MatchCreated Event
-#### ProjectStatusChanged Event
+
+Payload: `advisor_id`, `industry_tags`
+Published by: `Update Advisor Industry` (Advisor Domain)
+→ Pyme Domain
+→ Matching Domain
+
+---
+
+#### UseCaseUploaded Event
+
+Payload: `advisor_id`, `file_path`
+Published by: `Advisor Uploads Use Cases` (User Domain) via Pub/Sub
+→ AI Domain → triggers `Use Case PDF Processing`
+
+---
+
+#### PromiseTextUpdated Event
+
+Payload: `promise_id`, `promise_text`
+Published by: `Add / Edit Promise` (Pyme Domain) via Pub/Sub
+→ AI Domain → triggers `Promise Industry Classification`
+
+---
+
 #### RecommendationUpdated Event
-#### ProjectAssigned Event
 
+Payload: `pyme_id`
+Published by: Pyme Domain (after AI Domain completes recommendation batch or on-demand run)
+→ Matching Domain
+→ Notification Domain
 
+---
+
+#### MatchCreated Event
+
+Payload: `match_id`, `pyme_id`, `advisor_id`
+Published by: `Create Match` (Matching Domain)
+→ Communication Domain
+→ Contract Domain
+→ Notification Domain
+
+---
+
+#### MatchSwiped Event
+
+Payload: `pyme_id`, `advisor_id`, `approved`
+Published by: `Advisor Swipe Decision` (Matching Domain) — only when `approved = true`
+→ Matching Domain (self) → triggers `Create Match`
+
+---
+
+#### MatchCancelled Event
+
+Payload: `match_id`
+Published by: `Cancel Match` (Matching Domain)
+→ Communication Domain
+→ Contract Domain
+→ Notification Domain
+
+---
+
+#### MessageSent Event
+
+Payload: `message_id`, `session_id`, `sender_id`
+Published by: `Send Message` (Communication Domain)
+→ Notification Domain
+
+---
+
+#### ContractProposed Event
+
+Payload: `contract_id`, `match_id`
+Published by: `Propose Contract` / `Counter Offer` (Contract Domain)
+→ Communication Domain
+→ Notification Domain
+
+---
+
+#### ContractRejected Event
+
+Payload: `contract_id`, `match_id`
+Published by: `Reject Contract` (Contract Domain)
+→ Notification Domain
+
+---
+
+#### ContractAccepted Event
+
+Payload: `contract_id`, `match_id`
+Published by: `Accept Contract` (Contract Domain)
+→ Project Domain → publishes `ProjectCreated`
+→ Notification Domain
+
+---
+
+#### ProjectCreated Event
+
+Payload: `project_id`, `contract_id`
+Published by: Project Domain (handler of `ContractAccepted`)
+→ Notification Domain
+→ Communication Domain
+
+---
+
+#### ProjectStatusChanged Event
+
+Payload: `project_id`, `new_status`
+Published by: `Project Health Monitoring` (Project Domain)
+→ Notification Domain
+
+---
+
+#### MilestoneCompleted Event
+
+Payload: `milestone_id`, `project_id`
+Published by: `Project Milestone Validation` (Project Domain)
+→ Notification Domain
+
+---
+
+#### AllMilestonesMet Event
+
+Payload: `project_id`
+Published by: `Project Milestone Validation` (Project Domain)
+→ Project Domain (self) → triggers `Project Completion Validation`
+→ Notification Domain
+
+---
+
+#### ProjectCompleted Event
+
+Payload: `project_id`
+Published by: `Project Completion Validation` (Project Domain)
+→ Review Domain
+→ Notification Domain
+
+---
+
+#### ReviewSubmitted Event
+
+Payload: `review_id`, `subject_id`, `rating`
+Published by: `Leave a Review` (Review Domain)
+→ Advisor Domain → publishes `AdvisorReputationUpdated` (if subject is advisor)
+→ Pyme Domain → publishes `PymeReputationUpdated` (if subject is PYME)
+→ Notification Domain
+
+---
+
+#### AdvisorReputationUpdated Event
+
+Payload: `advisor_id`, `new_score`
+Published by: Advisor Domain (handler of `ReviewSubmitted`)
+→ Matching Domain
+→ Notification Domain
+
+---
+
+#### PymeReputationUpdated Event
+
+Payload: `pyme_id`, `new_score`
+Published by: Pyme Domain (handler of `ReviewSubmitted`)
+→ Matching Domain
+→ Notification Domain
+
+---
+
+#### SmeNeedsAssessmentUpdated Event
+
+Payload: `pyme_id`
+Published by: `Submit Needs Assessment` (Pyme Domain)
+→ Pyme Domain (self)
+→ AI Domain via `RecommendationRequested` (Pub/Sub)
+
+---
+
+#### AdvisorUseCaseProcessed Event
+
+Payload: `advisor_id`, `success`
+Published by: AI Domain (`Use Case PDF Processing`)
+→ Notification Domain
 
 ---
 
