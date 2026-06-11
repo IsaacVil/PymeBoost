@@ -2508,7 +2508,7 @@ Shared infrastructure lives in `backend/shared/` and is used by all domains:
 - Database connection failures: Retry with exponential backoff
 
 **Fallback & Degradation:**
-- Document AI down: Return partial validation, notify user
+- Document AI down: Retry 3 times; circuit breaker opens after 5 consecutive failures → 4xx returned to client
 - Redis down: Query database directly (slower but functional)
 - Pub/Sub unavailable: Dead Letter Policy for failed messages; exponential backoff retry (100ms → 200ms → 400ms); max 3 retries
 
@@ -2771,7 +2771,7 @@ Code must pass these checks before merging to main:
 | **Google Secret Manager** | 99.99% | Geo-replicated; retry with backoff on transient failures |
 | **Google Cloud API Gateway** | 99.95% | Premium tier; circuit breaker for backend failures |
 | **Google Cloud Pub/Sub** | 99.99% | Dead Letter Policy for failed messages; exponential backoff retry |
-| **Google Cloud Document AI** | 99.9% | Retry with exponential backoff; degraded mode returns partial data |
+| **Google Cloud Document AI** | 99.9% | Retry with exponential backoff (3 attempts); circuit breaker opens after 5 failures → 4xx returned |
 | **Auth0** | 99.99% | Managed HA by Auth0; JWT cache allows short-term offline tolerance |
 | **Google Cloud Logging** | 99.95% | Best-effort; non-critical for availability |
 
@@ -2792,16 +2792,37 @@ Code must pass these checks before merging to main:
    6. **Result:** Every JWT signature validated cryptographically; no unverified claims extraction needed
    7. If Redis also down → Fallback to database, no JWT validation (fails safely with 401)
 
-- Document AI: If unavailable, OCR fails; mitigated with retry and partial response fallback
+- Document AI: If unavailable, OCR fails; mitigated with retry (3 attempts) and circuit breaker — returns 4xx after exhaustion
 
 - Cloud SQL: Mitigated with Cloud SQL HA (Secondary Instance of the DB) and automatic failover
 
 ### Resilience Patterns (Production)
-Circuit Breaker: Prevents cascading failures by opening circuit after 5 consecutive failures; 30-second timeout before retry (Document AI)
-Retry with Backoff: Exponential backoff (100ms → 200ms → 400ms) for transient failures
-Bulkhead: OCR processing isolated to 20 max concurrent threads via Pub/Sub concurrency limits
-Degraded Mode: If OCR or AI unavailable, returns partial response with cached data and user notification
-Health Checks: /health/ready endpoint checked every 30 seconds by Cloud Run; auto-restart if unhealthy
+
+#### Circuit Breaker — Document AI
+Applied in the AI Domain service for all calls to Google Cloud Document AI (PDF use case processing pipeline).
+
+| State | Trigger | Behavior |
+|-------|---------|---------|
+| **Closed** | Default | Calls pass through to Document AI |
+| **Open** | 5 consecutive failures | Calls blocked immediately; 4xx returned without calling Document AI |
+| **Half-Open** | 30 seconds after opening | One probe call allowed — success → Closed; failure → Open again |
+
+#### Retry with Backoff
+Three independent layers apply exponential backoff:
+
+| Layer | Scope | Attempts | Backoff | On exhaustion |
+|-------|-------|---------|---------|--------------|
+| Cross-domain REST | Service-to-service calls via [`shared/utils/`](backend/shared/utils/) | 3 | 100 ms → 200 ms → 400 ms | Raises `DomainException`; mapped to domain error response |
+| Database | Repository layer — Cloud SQL connections | 3 | 100 ms → 200 ms → 400 ms | Exception propagates → `503 Service Unavailable` |
+| Pub/Sub | Message delivery | 3 | 100 ms → 200 ms → 400 ms | Message moved to Dead Letter Queue (DLQ) |
+
+4xx responses are not retried in any layer — they indicate a permanent client error.
+
+#### Bulkhead — OCR Processing
+Pub/Sub subscriber for Document AI is capped at **20 max concurrent threads**. Messages beyond that remain queued in Pub/Sub until a thread is free; no messages are dropped.
+
+#### Health Checks
+Cloud Run probes `/health/ready` every 30 seconds. It verifies connectivity to Cloud SQL, Redis, and Pub/Sub. On failure, the instance is removed from the load balancer and restarted automatically.
 
 ---
 
