@@ -14,27 +14,28 @@ Container_Boundary(app, "Backend API (FastAPI on Cloud Run)") {
     }
 
     System_Boundary(controllers_layer, "Controllers Layer — HTTP Handler Layer") {
-        Component(c_user,     "User",          "controllers/", "Accounts, login,\nprofiles, sessions")
+        Component(c_user,     "User",          "controllers/", "Accounts, login, profiles,\ncédula verification, use case upload,\nLinkedIn extraction")
         Component(c_advisor,  "Advisor",        "controllers/", "Reputation, specializations,\nbase rates")
-        Component(c_pyme,     "Pyme",           "controllers/", "Business info,\nrecommendations")
-        Component(c_matching, "Matching",       "controllers/", "Discovery, swipe decisions,\nmatch creation")
-        Component(c_contract, "Contract",       "controllers/", "Proposals, counter-offers,\nnegotiation")
+        Component(c_pyme,     "Pyme",           "controllers/", "Business info, needs assessment,\nrecommendations, similar projects")
+        Component(c_matching, "Matching",       "controllers/", "Discovery, swipe decisions,\nmatch create / cancel / finalize")
+        Component(c_contract, "Contract",       "controllers/", "Proposals, counter-offers,\naccept / reject negotiation")
         Component(c_comm,     "Communication",  "controllers/", "Chat access & messaging")
-        Component(c_project,  "Project",        "controllers/", "Lifecycle, milestones,\nhealth monitoring")
+        Component(c_project,  "Project",        "controllers/", "Lifecycle, milestones,\nhealth monitoring, closure")
         Component(c_review,   "Review",         "controllers/", "Ratings & feedback")
     }
 
     System_Boundary(services_layer, "Services Layer — Business Logic Layer") {
-        Component(svc_user,         "User",          "services/", "Account creation, auth,\nsession management")
-        Component(svc_advisor,      "Advisor",        "services/", "Reputation calc,\nspecialization management")
-        Component(svc_pyme,         "Pyme",           "services/", "Business data,\nimpact prediction")
-        Component(svc_matching,     "Matching",       "services/", "Match creation, swipe logic,\ndiscovery")
-        Component(svc_contract,     "Contract",       "services/", "Negotiation, proposal,\nterms validation")
+        Component(svc_user,         "User",          "services/", "Account creation, auth,\nsession cache, cédula verification,\nLinkedIn profile extraction")
+        Component(svc_advisor,      "Advisor",        "services/", "Reputation calc,\nspecialization management, base rates")
+        Component(svc_pyme,         "Pyme",           "services/", "Business data, impact prediction,\nneeds assessment")
+        Component(svc_matching,     "Matching",       "services/", "Match creation, swipe logic,\ndiscovery, match expiration")
+        Component(svc_contract,     "Contract",       "services/", "Negotiation, proposal,\nterms validation, contract generation")
         Component(svc_comm,         "Communication",  "services/", "Chat sessions,\nmessage delivery")
-        Component(svc_project,      "Project",        "services/", "Lifecycle, milestones,\nhealth monitoring")
+        Component(svc_project,      "Project",        "services/", "Lifecycle, milestones,\nhealth monitoring, completion")
         Component(svc_review,       "Review",         "services/", "Rating calculation,\nfeedback processing")
-        Component(svc_notification, "Notification",   "services/, handlers/", "Event-driven alerts\nvia Pub/Sub subscribers")
+        Component(svc_notification, "Notification",   "services/, handlers/", "Event-driven alerts,\nemail & in-app notifications")
         Component(svc_event,        "Event",          "services/, publishers/", "Event audit log &\nPub/Sub publishing")
+        Component(svc_ai,           "AI",             "services/, handlers/", "PDF ingestion, OCR,\nembedding generation, thematic\nclassification, recommendation engine")
     }
 
     System_Boundary(acl_layer, "ACL — Anticorruption Layer (Cross-Domain Translation)") {
@@ -42,17 +43,19 @@ Container_Boundary(app, "Backend API (FastAPI on Cloud Run)") {
         Component(acl_contract,     "Contract ACL",     "adapters/, translators/", "Translates Matching & User data\ninto Contract domain model")
         Component(acl_project,      "Project ACL",      "adapters/, translators/", "Translates Contract data\ninto Project domain model")
         Component(acl_notification, "Notification ACL", "adapters/, translators/", "Translates domain event payloads\ninto Notification domain model")
+        Component(acl_ai,           "AI ACL",           "adapters/, translators/", "Translates UseCaseUploaded events\ninto AI domain model")
     }
 
     System_Boundary(repositories_layer, "Repositories Layer — Data Access Layer") {
         Component(r_user,     "User",         "repositories/", "User & session queries")
         Component(r_advisor,  "Advisor",       "repositories/", "Advisor, reputation,\nspecialization queries")
-        Component(r_pyme,     "Pyme",          "repositories/", "Pyme & industry queries")
+        Component(r_pyme,     "Pyme",          "repositories/", "Pyme, industry, needs vector,\nquestion catalog queries")
         Component(r_matching, "Matching",      "repositories/", "Match, swipe,\ndiscovery queries")
         Component(r_contract, "Contract",      "repositories/", "Contract &\nnegotiation queries")
         Component(r_comm,     "Communication", "repositories/", "Message & chat\nsession queries")
         Component(r_project,  "Project",       "repositories/", "Project &\nmilestone queries")
         Component(r_review,   "Review",        "repositories/", "Review & rating queries")
+        Component(r_ai,       "AI",            "repositories/", "Use case, document blocks,\nrecommendation results (pgvector)")
     }
 
     System_Boundary(models_layer, "Models & Schemas Layer — ORM Definitions, DTOs & Domain Events") {
@@ -71,13 +74,14 @@ Container_Boundary(app, "Backend API (FastAPI on Cloud Run)") {
 }
 
 ' --- External containers (from Level 2) ---
-ContainerDb(db,         "Relational DB",    "Cloud SQL - PostgreSQL 16")
+ContainerDb(db,         "Relational DB + Vector Store", "Cloud SQL - PostgreSQL 16 + pgvector")
 ContainerDb(redis,      "Session Cache",    "Memorystore - Redis")
 Container(pubsub,       "Event Bus",        "Cloud Pub/Sub + Cloud Tasks")
 ContainerDb(storage,    "Object Storage",   "Cloud Storage")
 System_Ext(auth0,       "Auth0",            "JWT / JWKS")
 System_Ext(document_ai, "Cloud Document AI","OCR")
 System_Ext(langgraph,   "LangGraph",        "Agent Orchestration")
+System_Ext(proxycurl,   "ProxyCurl API",    "LinkedIn Profile Extraction (Nubela)")
 System_Ext(ops,         "Cloud Operations", "Logging / Monitoring / Trace")
 
 ' --- Entry ---
@@ -111,6 +115,10 @@ Rel(svc_matching,     acl_matching,     "translates via ACL")
 Rel(svc_contract,     acl_contract,     "translates via ACL")
 Rel(svc_project,      acl_project,      "translates via ACL")
 Rel(svc_notification, acl_notification, "translates via ACL")
+Rel(svc_ai,           acl_ai,           "translates via ACL")
+
+' --- Cross-domain service calls ---
+Rel(svc_pyme, svc_ai, "requests recommendations", "REST / on-demand")
 
 ' --- Services → Repositories ---
 Rel_D(svc_user,     r_user,     "persists via")
@@ -121,36 +129,44 @@ Rel_D(svc_contract, r_contract, "persists via")
 Rel_D(svc_comm,     r_comm,     "persists via")
 Rel_D(svc_project,  r_project,  "persists via")
 Rel_D(svc_review,   r_review,   "persists via")
+Rel_D(svc_ai,       r_ai,       "persists via")
 
 ' --- Repositories → Models ---
 Rel_D(r_user,     m_models, "mapped by")
 Rel_D(r_matching, m_models, "mapped by")
 Rel_D(r_contract, m_models, "mapped by")
 Rel_D(r_project,  m_models, "mapped by")
+Rel_D(r_ai,       m_models, "mapped by")
 
 ' --- Services publish domain events ---
 Rel(svc_user,     s_eventbus, "publishes domain events")
 Rel(svc_matching, s_eventbus, "publishes domain events")
 Rel(svc_contract, s_eventbus, "publishes domain events")
 Rel(svc_project,  s_eventbus, "publishes domain events")
+Rel(svc_ai,       s_eventbus, "publishes domain events")
 
-' --- Event flow: in-process bus → Event service → Pub/Sub → Notification service ---
-Rel(s_eventbus,   svc_event,        "dispatches to audit & publisher")
-Rel(svc_event,    s_messaging,      "publishes events")
-Rel(s_messaging,  pubsub,           "publish / subscribe", "gRPC")
-Rel(pubsub,       svc_notification, "delivers events", "subscription")
-Rel(svc_notification, s_messaging,  "consumes events")
+' --- Event flow: in-process bus → Event service → Pub/Sub → subscribers ---
+Rel(s_eventbus,       svc_event,        "dispatches to audit & publisher")
+Rel(svc_event,        s_messaging,      "publishes events")
+Rel(s_messaging,      pubsub,           "publish / subscribe", "gRPC")
+Rel(pubsub,           svc_notification, "delivers events",                  "subscription")
+Rel(pubsub,           svc_ai,           "delivers UseCaseUploaded events",   "subscription")
+Rel(svc_notification, s_messaging,      "consumes events")
+Rel(svc_ai,           s_messaging,      "consumes events")
 
 ' --- Shared Kernel → External systems ---
-Rel(s_persistence, db,    "SQL queries",                "SQLAlchemy / TLS")
-Rel(s_auth,        auth0, "fetches JWKS / validates",   "HTTPS")
-Rel(s_auth,        redis, "caches sessions & JWKS",     "Redis")
-Rel(svc_user,      redis, "session cache",              "Redis")
+Rel(s_persistence, db,    "SQL queries",              "SQLAlchemy / TLS")
+Rel(s_auth,        auth0, "fetches JWKS / validates", "HTTPS")
+Rel(s_auth,        redis, "caches sessions & JWKS",   "Redis")
+Rel(svc_user,      redis, "session cache",            "Redis")
 
 ' --- Domain-specific external integrations ---
-Rel(svc_pyme, langgraph,   "requests recommendations", "HTTPS")
-Rel(svc_user, document_ai, "validates documents (OCR)", "HTTPS")
-Rel(svc_user, storage,     "stores legal documents",   "HTTPS")
+Rel(svc_user, proxycurl,   "extracts LinkedIn profile",       "HTTPS")
+Rel(svc_user, document_ai, "validates cédula jurídica (OCR)", "HTTPS")
+Rel(svc_user, storage,     "stores legal documents",          "HTTPS")
+Rel(svc_ai,   document_ai, "processes use case PDFs (OCR)",   "HTTPS")
+Rel(svc_ai,   langgraph,   "orchestrates recommendations",    "HTTPS")
+Rel(r_ai,     db,          "vector similarity queries",       "pgvector / TLS")
 
 ' --- Observability ---
 Rel(s_cross, ops, "logs, metrics, traces", "OpenTelemetry")
