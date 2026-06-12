@@ -1597,7 +1597,7 @@ TanStack Query → ApiClient → Backend API / Auth0
 - API standard: OpenAPI 3.1
 - API gateway: Google Cloud API Gateway
 - Hosting: Google Cloud Run
-- Architecture: Monorepo with Domain-Driven Design (DDD) and Event Driven Design
+- Architecture: Monorepo with Domain-Driven Design (DDD) and Event Driven Design (EDD)
 - Coding language: Python 3.12
 - Web framework: FastAPI 0.115.4
 - Unit testing framework: Pytest 8.3.3
@@ -4016,219 +4016,444 @@ Cross-cutting. Every event published to the EventBus is intercepted and persiste
 #### SmeAccountCreated Event
 
 Payload: `sme_id`, `email`, `company_name`
-Published by: `Create SME Account` (User Domain)
-→ Pyme Domain
-→ Notification Domain
+
+This event is emitted whenever a new SME account is created so that the platform can bootstrap the company's profile space and welcome the user.
+
+Published by: `Create SME Account` use case (User Domain), once the account has been persisted.
+
+Consumed by:
+- Pyme Domain — provisions an empty PYME profile for `sme_id`, linking it to the company identified by `company_name`.
+- Notification Domain — sends a welcome notification to `email`.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### AdvisorAccountCreated Event
 
 Payload: `advisor_id`, `email`, `specialization`
-Published by: `Create Advisor Account` (User Domain)
-→ Advisor Domain
-→ Notification Domain
+
+This event is emitted whenever a new advisor account is created so that advisor-side aggregates and onboarding can begin.
+
+Published by: `Create Advisor Account` use case (User Domain), once the account has been persisted.
+
+Consumed by:
+- Advisor Domain — initializes the advisor aggregate for `advisor_id`, seeding it with the declared `specialization`.
+- Notification Domain — sends a welcome notification to `email`.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### SmeInformationUpdated Event
 
 Payload: `sme_id`
-Published by: `Update SME Profile` (User Domain)
-→ Notification Domain
+
+This event is emitted when an SME edits its profile, so dependent domains can react to the change.
+
+Published by: `Update SME Profile` use case (User Domain), once the profile changes have been persisted.
+
+Consumed by:
+- Notification Domain — notifies the SME that its profile information was updated.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### AdvisorInformationUpdated Event
 
 Payload: `advisor_id`
-Published by: `Update Advisor Profile` (User Domain)
-→ Matching Domain
-→ Notification Domain
+
+This event is emitted when an advisor edits its profile. Because profile data influences matching, the Matching Domain must be made aware.
+
+Published by: `Update Advisor Profile` use case (User Domain), once the profile changes have been persisted.
+
+Consumed by:
+- Matching Domain — invalidates/refreshes any cached match candidates that depend on the advisor's profile.
+- Notification Domain — notifies the advisor that its profile information was updated.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### AdvisorIndustryUpdated Event
 
 Payload: `advisor_id`, `industry_tags`
-Published by: `Update Advisor Industry` (Advisor Domain)
-→ Pyme Domain
-→ Matching Domain
+
+This event is emitted when an advisor's industry classification changes, which affects both PYME recommendations and matching.
+
+Published by: `Update Advisor Industry` use case (Advisor Domain), once the new `industry_tags` have been persisted.
+
+Consumed by:
+- Pyme Domain — re-evaluates which PYMEs the advisor is relevant to, given the updated `industry_tags`.
+- Matching Domain — refreshes match candidates affected by the advisor's new industry coverage.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### UseCaseUploaded Event
 
 Payload: `advisor_id`, `file_path`
-Published by: `Advisor Uploads Use Cases` (User Domain) via Pub/Sub
-→ AI Domain → triggers `Use Case PDF Processing`
+
+This event is emitted when an advisor uploads a use-case document, triggering asynchronous AI processing. It is delivered over Pub/Sub.
+
+Published by: `Advisor Uploads Use Cases` use case (User Domain) over Pub/Sub, once the file has been stored.
+
+Consumed by:
+- AI Domain — triggers the `Use Case PDF Processing` workflow against the document at `file_path`.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### PromiseTextUpdated Event
 
 Payload: `promise_id`, `promise_text`
-Published by: `Add / Edit Promise` (Pyme Domain) via Pub/Sub
-→ AI Domain → triggers `Promise Industry Classification`
+
+This event is emitted when a PYME adds or edits a promise, triggering AI classification. It is delivered over Pub/Sub.
+
+Published by: `Add / Edit Promise` use case (Pyme Domain) over Pub/Sub, once the promise has been persisted.
+
+Consumed by:
+- AI Domain — triggers the `Promise Industry Classification` workflow on `promise_text`.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### RecommendationUpdated Event
 
 Payload: `pyme_id`
-Published by: Pyme Domain (after AI Domain completes recommendation batch or on-demand run)
-→ Matching Domain
-→ Notification Domain
+
+This event is emitted after the AI Domain produces a new recommendation set for a PYME, so matching and the user can react.
+
+Published by: Pyme Domain, after the AI Domain completes a recommendation batch or an on-demand run.
+
+Consumed by:
+- Matching Domain — rebuilds the swipe/candidate queue for `pyme_id` from the updated recommendations.
+- Notification Domain — notifies the PYME that fresh recommendations are available.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### MatchCreated Event
 
 Payload: `match_id`, `pyme_id`, `advisor_id`
-Published by: `Create Match` (Matching Domain)
-→ Communication Domain
-→ Contract Domain
-→ Notification Domain
+
+This event is emitted when a PYME and advisor are matched, opening the channels needed for them to collaborate.
+
+Published by: `Create Match` use case (Matching Domain), once the match has been persisted.
+
+Consumed by:
+- Communication Domain — opens a messaging session between `pyme_id` and `advisor_id`.
+- Contract Domain — prepares a contract context for the new match.
+- Notification Domain — notifies both parties that a match was created.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### MatchSwiped Event
 
 Payload: `pyme_id`, `advisor_id`, `approved`
-Published by: `Advisor Swipe Decision` (Matching Domain) — only when `approved = true`
-→ Matching Domain (self) → triggers `Create Match`
+
+This event is emitted on each advisor swipe decision; a match is only formed when the advisor approves.
+
+Published by: `Advisor Swipe Decision` use case (Matching Domain), once the decision has been recorded.
+
+Consumed by:
+- Matching Domain (self) — only when `approved = true`, triggers the `Create Match` use case (which in turn publishes `MatchCreated`). When `approved = false`, no further action is taken.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### MatchCancelled Event
 
 Payload: `match_id`
-Published by: `Cancel Match` (Matching Domain)
-→ Communication Domain
-→ Contract Domain
-→ Notification Domain
+
+This event is emitted when a match is cancelled, so the collaboration channels opened for it can be torn down.
+
+Published by: `Cancel Match` use case (Matching Domain), once the match has been marked cancelled.
+
+Consumed by:
+- Communication Domain — closes the messaging session tied to `match_id`.
+- Contract Domain — voids any pending contract for that match.
+- Notification Domain — notifies both parties that the match was cancelled.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### MessageSent Event
 
 Payload: `message_id`, `session_id`, `sender_id`
-Published by: `Send Message` (Communication Domain)
-→ Notification Domain
+
+This event is emitted each time a message is sent, so the counterpart can be alerted.
+
+Published by: `Send Message` use case (Communication Domain), once the message has been persisted.
+
+Consumed by:
+- Notification Domain — notifies the recipient of the session that a new message arrived from `sender_id`.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### ContractProposed Event
 
 Payload: `contract_id`, `match_id`
-Published by: `Propose Contract` / `Counter Offer` (Contract Domain)
-→ Communication Domain
-→ Notification Domain
+
+This event is emitted whenever a contract is proposed or countered, so the conversation and the counterparty stay in sync.
+
+Published by: `Propose Contract` / `Counter Offer` use case (Contract Domain), once the proposal has been persisted.
+
+Consumed by:
+- Communication Domain — posts a contract-proposal marker into the session for `match_id`.
+- Notification Domain — notifies the counterparty that a contract was proposed.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### ContractRejected Event
 
 Payload: `contract_id`, `match_id`
-Published by: `Reject Contract` (Contract Domain)
-→ Notification Domain
+
+This event is emitted when a proposed contract is rejected.
+
+Published by: `Reject Contract` use case (Contract Domain), once the contract has been marked rejected.
+
+Consumed by:
+- Notification Domain — notifies the proposing party that the contract was rejected.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### ContractAccepted Event
 
 Payload: `contract_id`, `match_id`
-Published by: `Accept Contract` (Contract Domain)
-→ Project Domain → publishes `ProjectCreated`
-→ Notification Domain
+
+This event is emitted when a contract is accepted, which kicks off the creation of the actual project.
+
+Published by: `Accept Contract` use case (Contract Domain), once the contract has been marked accepted.
+
+Consumed by:
+- Project Domain — creates a project from `contract_id`, then publishes `ProjectCreated`.
+- Notification Domain — notifies both parties that the contract was accepted.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### ProjectCreated Event
 
 Payload: `project_id`, `contract_id`
-Published by: Project Domain (handler of `ContractAccepted`)
-→ Notification Domain
-→ Communication Domain
+
+This event is emitted by the Project Domain once a project exists, so collaboration tooling can attach to it.
+
+Published by: Project Domain (handler of `ContractAccepted`), once the new project has been persisted.
+
+Consumed by:
+- Notification Domain — notifies both parties that the project has started.
+- Communication Domain — binds the existing session to `project_id` so messaging continues within the project context.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### ProjectStatusChanged Event
 
 Payload: `project_id`, `new_status`
-Published by: `Project Health Monitoring` (Project Domain)
-→ Notification Domain
+
+This event is emitted when health monitoring detects a change in a project's status.
+
+Published by: `Project Health Monitoring` process (Project Domain), once a status transition is detected.
+
+Consumed by:
+- Notification Domain — notifies the participants of the project's `new_status`.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### MilestoneCompleted Event
 
 Payload: `milestone_id`, `project_id`
-Published by: `Project Milestone Validation` (Project Domain)
-→ Notification Domain
+
+This event is emitted when a single milestone is validated as complete.
+
+Published by: `Project Milestone Validation` process (Project Domain), once the milestone is confirmed.
+
+Consumed by:
+- Notification Domain — notifies the participants that `milestone_id` was completed.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### AllMilestonesMet Event
 
 Payload: `project_id`
-Published by: `Project Milestone Validation` (Project Domain)
-→ Project Domain (self) → triggers `Project Completion Validation`
-→ Notification Domain
+
+This event is emitted when every milestone of a project has been completed, signalling that completion can be evaluated.
+
+Published by: `Project Milestone Validation` process (Project Domain), once it detects that all milestones are met.
+
+Consumed by:
+- Project Domain (self) — triggers the `Project Completion Validation` workflow for `project_id`.
+- Notification Domain — notifies the participants that all milestones have been met.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### ProjectCompleted Event
 
 Payload: `project_id`
-Published by: `Project Completion Validation` (Project Domain)
-→ Review Domain
-→ Notification Domain
+
+This event is emitted once completion validation passes, enabling reviews to be left.
+
+Published by: `Project Completion Validation` process (Project Domain), once completion is confirmed.
+
+Consumed by:
+- Review Domain — unlocks the ability for both participants to leave a review for the project.
+- Notification Domain — notifies the participants that the project is complete and reviews can now be submitted.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### ReviewSubmitted Event
 
 Payload: `review_id`, `subject_id`, `rating`
-Published by: `Leave a Review` (Review Domain)
-→ Advisor Domain → publishes `AdvisorReputationUpdated` (if subject is advisor)
-→ Pyme Domain → publishes `PymeReputationUpdated` (if subject is PYME)
-→ Notification Domain
+
+This event is emitted when a review is submitted (see `Leave a Review`), and updates the reputation of whoever was reviewed.
+
+Published by: `Leave a Review` use case (Review Domain), once the review has been persisted.
+
+Consumed by:
+- Advisor Domain — if `subject_id` is an advisor, recomputes the advisor's reputation and publishes `AdvisorReputationUpdated`.
+- Pyme Domain — if `subject_id` is a PYME, recomputes the PYME's reputation and publishes `PymeReputationUpdated`.
+- Notification Domain — notifies the reviewed party that a review was submitted.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### AdvisorReputationUpdated Event
 
 Payload: `advisor_id`, `new_score`
-Published by: Advisor Domain (handler of `ReviewSubmitted`)
-→ Matching Domain
-→ Notification Domain
+
+This event is emitted when an advisor's reputation score changes, which feeds back into matching.
+
+Published by: Advisor Domain (handler of `ReviewSubmitted`), once the score has been recomputed.
+
+Consumed by:
+- Matching Domain — updates the advisor's ranking weight using `new_score`.
+- Notification Domain — notifies the advisor that their reputation score changed.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### PymeReputationUpdated Event
 
 Payload: `pyme_id`, `new_score`
-Published by: Pyme Domain (handler of `ReviewSubmitted`)
-→ Matching Domain
-→ Notification Domain
+
+This event is emitted when a PYME's reputation score changes, which feeds back into matching.
+
+Published by: Pyme Domain (handler of `ReviewSubmitted`), once the score has been recomputed.
+
+Consumed by:
+- Matching Domain — updates the PYME's ranking weight using `new_score`.
+- Notification Domain — notifies the PYME that its reputation score changed.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### SmeNeedsAssessmentUpdated Event
 
 Payload: `pyme_id`
-Published by: `Submit Needs Assessment` (Pyme Domain)
-→ Pyme Domain (self)
-→ AI Domain via `RecommendationRequested` (Pub/Sub)
+
+This event is emitted when a PYME submits its needs assessment, which drives a fresh recommendation run.
+
+Published by: `Submit Needs Assessment` use case (Pyme Domain), once the assessment has been persisted.
+
+Consumed by:
+- Pyme Domain (self) — updates the PYME's profile state for `pyme_id`.
+- AI Domain — invoked via `RecommendationRequested` (Pub/Sub) to generate updated recommendations from the new assessment.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
 #### AdvisorUseCaseProcessed Event
 
 Payload: `advisor_id`, `success`
-Published by: AI Domain (`Use Case PDF Processing`)
-→ Notification Domain
+
+This event is emitted when the AI Domain finishes processing an uploaded use-case document.
+
+Published by: AI Domain (`Use Case PDF Processing`), once processing finishes.
+
+Consumed by:
+- Notification Domain — notifies the advisor whether the use-case processing succeeded or failed.
+
+Workflow (Event Domain):
+1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
+2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
@@ -4248,9 +4473,152 @@ Published by: AI Domain (`Use Case PDF Processing`)
 
 ---
 
-## 2.13 Source Code
+## 2.13 Design Patterns
+
+---
+
+### Backend design patterns matrix
+
+| Class / Interface | Location | Responsibility | Pattern | Justification |
+|------------------|----------|----------------|---------|--------------|
+| EventBus | [backend/shared/events/event_bus.py](backend/shared/events/event_bus.py) | Publishes/subscribes domain events (`MatchCreated`, `ContractAccepted`, …) | Observer | Domains react to each other's state changes without direct imports; the alternative is hard cross-domain coupling. |
+| DatabaseConnectionPool | [backend/shared/database/connection.py](backend/shared/database/connection.py) | One shared SQLAlchemy connection pool **per Cloud Run instance/process** | Singleton (process-scoped) | Not a cluster-wide singleton — Cloud Run runs 5–50 instances (§2.9). The Singleton bounds the pool to one per process so that `instances × pool_size` stays under Cloud SQL's connection limit; without it each request would open its own pool and exhaust the database. |
+| EventRegistry | [backend/shared/events/event_registry.py](backend/shared/events/event_registry.py) | One registry of all event handlers, loaded once at startup | Singleton (process-scoped) | A second registry inside the same process would double-subscribe handlers and fire each event twice; one instance per process guarantees each handler is registered exactly once. |
+| DocumentAiClient | [backend/shared/clients/document_ai_client.py](backend/shared/clients/document_ai_client.py) | One shared, thread-safe Document AI (gRPC) client reused across requests **per process** | Singleton (process-scoped) | The OCR call is asynchronous, so a single thread-safe client serves many concurrent requests; expensive to create, it is instantiated once per process and shared by all. |
+| JwtValidator / PermissionChecker | [backend/shared/auth/jwt_validator.py](backend/shared/auth/jwt_validator.py) | Validates Auth0 JWT and checks role/ownership before the controller runs | Proxy | Centralized authorization at one boundary; every endpoint validates JWT + `accountType` + resource ownership (OWASP broken-auth). |
+| StructuredLoggingMiddleware | [backend/shared/logging/structured_logging.py](backend/shared/logging/structured_logging.py) | Injects `trace_id`, `request_id`, `user_id` into every log/request | Decorator | Cross-cutting observability added transparently without touching business code; required for traceable Cloud Logging. |
+| DomainExceptionHandlerRegistry | [backend/main.py](backend/main.py) | Maps each domain exception class to exactly one HTTP status at startup | Chain of Responsibility | One place converts `ValidationException→400`, `AuthException→401/403`, `NotFoundException→404`, etc.; a catch-all handles the rest. |
+| DocumentAiCircuitBreaker | [backend/domains/ai/services/document_ai_service.py](backend/domains/ai/services/document_ai_service.py) | Trips after 5 consecutive Document AI failures; half-open probe after 30s | Circuit Breaker | Fails fast instead of hammering a degraded OCR provider, protecting threads and latency during outages. |
+| SessionCacheService / JwksCache | [backend/domains/user/services/session_cache_service.py](backend/domains/user/services/session_cache_service.py) | Reads session/JWKS from Redis first, falls back to source and repopulates on miss | Cache-Aside | Keeps auth working and fast even if Auth0 is briefly down; avoids re-validating JWKS on every request. |
+| ContractBuilder | [backend/domains/contract/builders/contract_builder.py](backend/domains/contract/builders/contract_builder.py) | Assembles a contract step by step (tier, duration, commission, metrics, deliverables) | Builder | The contract has many tier-conditional parts; avoids telescoping constructors and keeps the object always valid. |
+| NotificationChannelFactory | [backend/domains/notification/factories/channel_factory.py](backend/domains/notification/factories/channel_factory.py) | Creates the right sender (email, push, in-app) per event | Abstract Factory | Decouples "what to notify" from "which channel"; adding a channel doesn't touch publishers. |
+| CachingRepositoryDecorator | [backend/shared/persistence/caching_repository.py](backend/shared/persistence/caching_repository.py) | Wraps a repository adding Redis read/write without touching the query | Decorator | Adds transparent cache-aside to any repository (reputation, catalogs) without duplicating logic. |
+| OnboardingFacade | [backend/domains/user/facades/onboarding_facade.py](backend/domains/user/facades/onboarding_facade.py) | Orchestrates Auth0 + cédula jurídica verification + PYME profile + welcome event | Facade | Onboarding spans several services; a facade gives a single entry point and hides the wiring. |
+| MilestoneComposite | [backend/domains/project/models/milestone_composite.py](backend/domains/project/models/milestone_composite.py) | Models phases with sub-tasks as a uniform tree (progress = aggregation of children) | Composite | Project progress is hierarchical; treating leaf and branch alike simplifies % calculation. |
+| NotificationBridge | [backend/domains/notification/bridge/notification_bridge.py](backend/domains/notification/bridge/notification_bridge.py) | Separates the "notification type" abstraction from the "transport" implementation | Bridge | Allows N types × M transports without class explosion; both axes evolve independently. |
+| LazyAdvisorProfileProxy | [backend/domains/matching/proxies/advisor_profile_proxy.py](backend/domains/matching/proxies/advisor_profile_proxy.py) | Stand-in that calls the Advisor domain (via ACL/REST) only when the data is accessed | Proxy (Virtual/Remote) | Avoids fetching the full profile if the matching flow doesn't need it; cheaper cross-domain queries. |
+| MessageModerationChain | [backend/domains/communication/moderation/moderation_chain.py](backend/domains/communication/moderation/moderation_chain.py) | Chain: keywords → email → phone → social links → spam | Chain of Responsibility | Blocking off-platform contact is a requirement; each rule is an addable/reorderable link. |
+| ContractState | [backend/domains/contract/state/contract_state.py](backend/domains/contract/state/contract_state.py) | States negotiation not started → negotiating → rejected / marry the prospect, with valid transitions | State | The negotiation flow has strict transitions; State makes illegal jumps impossible. |
+| MatchState | [backend/domains/matching/state/match_state.py](backend/domains/matching/state/match_state.py) | Match states pending → matched / not matched → cancelled | State | Matches resolve to matched or not, and can later be cancelled; centralizes transition guards. |
+| SwipeCommand | [backend/domains/matching/commands/swipe_command.py](backend/domains/matching/commands/swipe_command.py) | Encapsulates approve/reject as a discrete `execute()` action | Command | Swipe is the core interaction unit; enables logging, queuing, and undo. |
+| AdvisorEligibilitySpecification | [backend/domains/matching/specifications/eligibility_spec.py](backend/domains/matching/specifications/eligibility_spec.py) | Composable rules (reputation > X AND industry == Y AND available) with AND/OR/NOT | Specification | Eligibility rules combinable and testable separately; reusable in query and validation. |
+| ProjectMetricsVisitor | [backend/domains/project/visitors/metrics_visitor.py](backend/domains/project/visitors/metrics_visitor.py) | Walks heterogeneous phases/tasks computing before/after metrics | Visitor | Adds new calculations without touching phase/task classes; separates structure from operation. |
+| AdvisorCursorIterator | [backend/domains/matching/iterators/advisor_cursor.py](backend/domains/matching/iterators/advisor_cursor.py) | Iterates recommendations in batches of 10 and prefetches the next batch as the current one is nearly exhausted | Iterator | Avoids loading the whole recommendation set; fetches 10 at a time and pulls more when running low, keeping the swipe flow seamless. |
+
+---
+
+### Notes on scope and what I deliberately did *not* recommend
+
+- **No business logic in Models, Controllers, or Repositories** — these stay passive per §2.2; introducing patterns like Active Record would violate the layering.
+- **No second event mechanism inside a process** — the in-memory `EventBus` (Observer) covers intra-process domain events; Pub/Sub (Publisher-Subscriber) covers cross-process/durable delivery. They are complementary, not duplicated.
+
+---
+
+## 2.14 Architectural Patterns 
+
+The matrix above lists **object-level (GoF) patterns** that live *inside* a process. The patterns below are **architectural / distributed-system patterns** from the [Microsoft Azure Architecture Center — Cloud Design Patterns](https://learn.microsoft.com/azure/architecture/patterns/) catalog. They describe how the **services, the bus, the gateway and the data stores** relate to each other across process boundaries — a different concern from the GoF patterns, so they are kept in their own matrix.
+
+### Architectural patterns matrix
+
+| Class / Interface | Location | Responsibility | Pattern | Justification |
+|------------------|----------|----------------|---------|--------------|
+| ChoreographyEventRouter | [backend/shared/events/choreography_router.py](backend/shared/events/choreography_router.py) | Dispatches each domain event to the handlers that subscribed to it, with no central coordinator | [Choreography](https://learn.microsoft.com/azure/architecture/patterns/choreography) | Domains react on their own to events (`ContractAccepted → ProjectCreated → ReviewSubmitted`); avoids a brittle central orchestrator. |
+| RetryPolicy | [backend/shared/utils/retry_policy.py](backend/shared/utils/retry_policy.py) | Wraps calls with bounded exponential backoff retries | [Retry](https://learn.microsoft.com/azure/architecture/patterns/retry) | Three independent layers (cross-domain REST, database, Pub/Sub) absorb transient failures (§2.7). |
+| OutboundCallAmbassador | [backend/shared/clients/outbound_ambassador.py](backend/shared/clients/outbound_ambassador.py) | Single client-side proxy that all outbound cross-domain REST and third-party calls go through, adding retry, circuit breaking, timeouts and trace propagation | [Ambassador](https://learn.microsoft.com/azure/architecture/patterns/ambassador) | Centralizes outbound resilience/observability so each caller doesn't reimplement it. Partial — implemented in-process, not as the canonical sidecar. |
+| HealthCheckController | [backend/shared/health/health_controller.py](backend/shared/health/health_controller.py) | Exposes `/health/ready`, checking Cloud SQL, Redis and Pub/Sub | [Health Endpoint Monitoring](https://learn.microsoft.com/azure/architecture/patterns/health-endpoint-monitoring) | Cloud Run probes every 30s and removes/restarts unhealthy instances automatically. |
+| PubSubLoadLeveler | [backend/shared/messaging/load_leveler.py](backend/shared/messaging/load_leveler.py) | Buffers OCR/notification work in Pub/Sub between producers and consumers | [Queue-Based Load Leveling](https://learn.microsoft.com/azure/architecture/patterns/queue-based-load-leveling) | Smooths spikes so bursts don't overwhelm Cloud Run instances. |
+| PubSubSubscriberPool | [backend/shared/messaging/subscriber_pool.py](backend/shared/messaging/subscriber_pool.py) | Lets multiple instances pull from the same subscription in parallel | [Competing Consumers](https://learn.microsoft.com/azure/architecture/patterns/competing-consumers) | Increases throughput and balances load across Cloud Run instances naturally. |
+| SignedUploadUrlService | [backend/domains/ai/services/signed_url_service.py](backend/domains/ai/services/signed_url_service.py) | Issues scoped, time-limited signed Cloud Storage URLs | [Valet Key](https://learn.microsoft.com/azure/architecture/patterns/valet-key) | Clients upload use-case PDFs directly to storage without proxying bytes through the backend. |
+| AsyncActionAckController | [backend/shared/async_actions/async_action_controller.py](backend/shared/async_actions/async_action_controller.py) | For any long-running action, returns an immediate `202 Accepted` and delivers the outcome later via a completion event | [Asynchronous Request-Reply](https://learn.microsoft.com/azure/architecture/patterns/async-request-reply) | Applies to every async action — use-case PDF OCR (`AdvisorUseCaseProcessed`), promise classification, recommendation generation — so the client is never blocked while the AI/long work runs. |
+| AiCommandHandler | [backend/domains/ai/cqrs/ai_command_handler.py](backend/domains/ai/cqrs/ai_command_handler.py) | Write side — dispatches expensive AI/recommendation commands to asynchronous event-driven processing | [CQRS](https://learn.microsoft.com/azure/architecture/patterns/cqrs) | Expensive commands (AI recommendation/classification, slow events) run async, decoupled from reads; cheap interactions like a swipe stay synchronous and don't use this split. |
+| RecommendationReadModel | [backend/domains/ai/cqrs/recommendation_read_model.py](backend/domains/ai/cqrs/recommendation_read_model.py) | Read side — serves the precomputed recommendation results directly, without recomputing | [CQRS](https://learn.microsoft.com/azure/architecture/patterns/cqrs) | A read-optimized model keeps queries fast and independent from the slow write-side processing. |
+
+---
+
+## 2.15 Source Code
 
 ### Backend (Python/FastAPI - Domain-Driven Design)
+
+The backend is organized **by domain**, not by technical layer. Each domain under [backend/domains/](backend/domains/) is self-contained and follows the same internal layering — `controllers/` (one use case per file), `services/` (business logic), `models/` (persistence models), `repositories/` (data access), `schemas/` (request/response/DTOs) and `events/` (domain events it publishes). Cross-cutting concerns live in [backend/shared/](backend/shared/).
+
+**Entry Point & Configuration**
+- [Application Factory](backend/main.py) — FastAPI app creation (`create_app`)
+- [Settings](backend/config.py) — Environment-driven configuration (Auth0, GCP, Cloud SQL, Redis, Pub/Sub, KMS)
+- [API Router](backend/api/routes.py) — Root router aggregating every domain's controllers
+- [Dependencies](backend/requirements.txt) — Python dependencies
+
+**Shared Layer — Cross-Cutting Concerns**
+- [Auth](backend/shared/auth/) — [Auth0 service](backend/shared/auth/auth0_service.py), [JWT validator](backend/shared/auth/jwt_validator.py), [permission checker](backend/shared/auth/permission_checker.py)
+- [Events](backend/shared/events/) — In-process [EventBus](backend/shared/events/event_bus.py), [event handler](backend/shared/events/event_handler.py), [event registry](backend/shared/events/event_registry.py)
+- [Messaging](backend/shared/messaging/) — [Pub/Sub client](backend/shared/messaging/pubsub_client.py), [publisher](backend/shared/messaging/message_publisher.py), [subscriber](backend/shared/messaging/message_subscriber.py)
+- [Database](backend/shared/database/) — [Connection pool](backend/shared/database/connection.py), [session factory](backend/shared/database/session.py), [migrations](backend/shared/database/migrations/), [seeders](backend/shared/database/seeders/)
+- [Exceptions](backend/shared/exceptions/) — [Validation](backend/shared/exceptions/validation_exception.py), [auth](backend/shared/exceptions/auth_exception.py), [not-found](backend/shared/exceptions/not_found_exception.py), [domain](backend/shared/exceptions/domain_exception.py)
+- [Logging](backend/shared/logging/) — [Logger](backend/shared/logging/logger.py), [structured logging middleware](backend/shared/logging/structured_logging.py)
+- [Validators](backend/shared/validators/) — [Business](backend/shared/validators/business_validator.py), [email](backend/shared/validators/email_validator.py), [phone](backend/shared/validators/phone_validator.py)
+- [Utils](backend/shared/utils/) — [UUID generator](backend/shared/utils/uuid_generator.py), [datetime](backend/shared/utils/datetime_utils.py), [encryption](backend/shared/utils/encryption_utils.py)
+
+**User Domain** — [backend/domains/user/](backend/domains/user/) — accounts, authentication, sessions, profiles
+- Controllers: [Create SME account](backend/domains/user/controllers/create_sme_account_controller.py), [Create advisor account](backend/domains/user/controllers/create_advisor_account_controller.py), [Login](backend/domains/user/controllers/login_controller.py), [Update SME profile](backend/domains/user/controllers/update_sme_profile_controller.py), [Update advisor profile](backend/domains/user/controllers/update_advisor_profile_controller.py), [Update advisor industry](backend/domains/user/controllers/update_advisor_industry_controller.py)
+- Services: [Auth](backend/domains/user/services/auth_service.py), [User](backend/domains/user/services/user_service.py), [Session cache (Cache-Aside)](backend/domains/user/services/session_cache_service.py)
+- Models: [User](backend/domains/user/models/user_model.py), [Session](backend/domains/user/models/session_model.py) · Repositories: [user](backend/domains/user/repositories/user_repository.py), [session](backend/domains/user/repositories/session_repository.py)
+- Events: [SmeAccountCreated](backend/domains/user/events/sme_account_created_event.py), [AdvisorAccountCreated](backend/domains/user/events/advisor_account_created_event.py) · Schemas: [backend/domains/user/schemas/](backend/domains/user/schemas/)
+
+**Advisor Domain** — [backend/domains/advisor/](backend/domains/advisor/) — advisor profiles, specializations, reputation, base rate
+- Controllers: [Get profile](backend/domains/advisor/controllers/get_advisor_profile_controller.py), [Update base rate](backend/domains/advisor/controllers/update_base_rate_controller.py), [Calculate reputation](backend/domains/advisor/controllers/calculate_reputation_controller.py)
+- Services: [Advisor](backend/domains/advisor/services/advisor_service.py), [Reputation](backend/domains/advisor/services/reputation_service.py), [Base rate](backend/domains/advisor/services/base_rate_service.py)
+- Models: [Advisor](backend/domains/advisor/models/advisor_model.py), [Reputation](backend/domains/advisor/models/reputation_model.py), [Specialization](backend/domains/advisor/models/specialization_model.py) · Repositories: [backend/domains/advisor/repositories/](backend/domains/advisor/repositories/)
+- Events: [AdvisorReputationUpdated](backend/domains/advisor/events/advisor_reputation_updated_event.py), [AdvisorBaseRateUpdated](backend/domains/advisor/events/advisor_base_rate_updated_event.py)
+
+**Pyme Domain** — [backend/domains/pyme/](backend/domains/pyme/) — PYME profiles, industries, and serving recommendations/impact prediction (computed by the AI Domain)
+- Controllers: [Get profile](backend/domains/pyme/controllers/get_pyme_profile_controller.py), [Get advisor recommendations](backend/domains/pyme/controllers/get_advisor_recommendations_controller.py), [Get similar projects](backend/domains/pyme/controllers/get_similar_projects_controller.py)
+- Services: [Pyme](backend/domains/pyme/services/pyme_service.py), [Recommendation](backend/domains/pyme/services/recommendation_service.py), [Impact prediction](backend/domains/pyme/services/impact_prediction_service.py)
+- Models: [Pyme](backend/domains/pyme/models/pyme_model.py), [Industry](backend/domains/pyme/models/industry_model.py), [Optimization area](backend/domains/pyme/models/optimization_area_model.py)
+- Events: [AdvisorRecommended](backend/domains/pyme/events/advisor_recommended_event.py), [RecommendationRecalculated](backend/domains/pyme/events/recommendation_recalculated_event.py)
+
+**AI Domain** — [backend/domains/ai/](backend/domains/ai/) — Pub/Sub-driven PDF processing, embeddings, thematic classification, recommendation scoring (no REST controllers)
+- Services: [Use Case PDF Processing](backend/domains/ai/services/use_case_pdf_processing_service.py), [OCR](backend/domains/ai/services/ocr_service.py), [Embedding](backend/domains/ai/services/embedding_service.py), [Thematic classification](backend/domains/ai/services/thematic_classification_service.py), [Recommendation](backend/domains/ai/services/recommendation_service.py), [Recommendation batch](backend/domains/ai/services/recommendation_batch_service.py), [Recommendation on-demand](backend/domains/ai/services/recommendation_on_demand_service.py)
+- Handlers (Pub/Sub): [UseCaseUploaded](backend/domains/ai/handlers/use_case_uploaded_handler.py), [RecommendationRequested](backend/domains/ai/handlers/recommendation_requested_handler.py)
+- Models: [Use case](backend/domains/ai/models/use_case_model.py), [Document block](backend/domains/ai/models/document_block_model.py), [Recommendation result](backend/domains/ai/models/recommendation_result_model.py) · Repositories: [backend/domains/ai/repositories/](backend/domains/ai/repositories/)
+- Events: [AdvisorUseCaseProcessed](backend/domains/ai/events/advisor_use_case_processed_event.py), [RecommendationReady](backend/domains/ai/events/recommendation_ready_event.py)
+
+**Matching Domain** — [backend/domains/matching/](backend/domains/matching/) — discovery, swipes, matches, expiration
+- Controllers: [Create swipe decision](backend/domains/matching/controllers/create_swipe_decision_controller.py), [Create match](backend/domains/matching/controllers/create_match_controller.py), [Finalize match](backend/domains/matching/controllers/finalize_match_controller.py), [Cancel match](backend/domains/matching/controllers/cancel_match_controller.py), [Get advisor matches](backend/domains/matching/controllers/get_advisor_matches_controller.py)
+- Services: [Matching](backend/domains/matching/services/matching_service.py), [Discovery](backend/domains/matching/services/discovery_service.py), [Match expiration](backend/domains/matching/services/match_expiration_service.py)
+- Models: [Match](backend/domains/matching/models/match_model.py), [Swipe](backend/domains/matching/models/swipe_model.py) · Repositories: [match](backend/domains/matching/repositories/match_repository.py), [swipe](backend/domains/matching/repositories/swipe_repository.py), [discovery](backend/domains/matching/repositories/discovery_repository.py)
+- Events: [MatchCreated](backend/domains/matching/events/match_created_event.py), [MatchSwiped](backend/domains/matching/events/match_swiped_event.py), [MatchExpired](backend/domains/matching/events/match_expired_event.py)
+
+**Contract Domain** — [backend/domains/contract/](backend/domains/contract/) — proposals, counter-offers, negotiation, acceptance
+- Controllers: [Propose contract](backend/domains/contract/controllers/propose_contract_controller.py), [Counter offer](backend/domains/contract/controllers/counter_offer_controller.py), [Accept contract](backend/domains/contract/controllers/accept_contract_controller.py), [Reject contract](backend/domains/contract/controllers/reject_contract_controller.py)
+- Services: [Contract](backend/domains/contract/services/contract_service.py), [Negotiation](backend/domains/contract/services/negotiation_service.py), [Contract generator](backend/domains/contract/services/contract_generator_service.py)
+- Models: [Contract](backend/domains/contract/models/contract_model.py), [Negotiation](backend/domains/contract/models/negotiation_model.py)
+- Events: [ContractProposed](backend/domains/contract/events/contract_proposed_event.py), [ContractAccepted](backend/domains/contract/events/contract_accepted_event.py), [ContractRejected](backend/domains/contract/events/contract_rejected_event.py)
+
+**Project Domain** — [backend/domains/project/](backend/domains/project/) — projects, milestones, health monitoring, completion
+- Controllers: [Create project](backend/domains/project/controllers/create_project_controller.py), [Generate milestones](backend/domains/project/controllers/generate_milestones_controller.py), [Validate milestone](backend/domains/project/controllers/validate_milestone_controller.py), [Monitor health](backend/domains/project/controllers/monitor_health_controller.py), [Get project status](backend/domains/project/controllers/get_project_status_controller.py), [Close project](backend/domains/project/controllers/close_project_controller.py)
+- Services: [Project](backend/domains/project/services/project_service.py), [Milestone](backend/domains/project/services/milestone_service.py), [Health monitoring](backend/domains/project/services/health_monitoring_service.py), [Project completion](backend/domains/project/services/project_completion_service.py)
+- Models: [Project](backend/domains/project/models/project_model.py), [Milestone](backend/domains/project/models/milestone_model.py), [Project health](backend/domains/project/models/project_health_model.py)
+- Events: [ProjectCreated](backend/domains/project/events/project_created_event.py), [ProjectStatusChanged](backend/domains/project/events/project_status_changed_event.py), [MilestoneCompleted](backend/domains/project/events/milestone_completed_event.py), [ProjectCompleted](backend/domains/project/events/project_completed_event.py)
+
+**Communication Domain** — [backend/domains/communication/](backend/domains/communication/) — chat sessions, messaging, access control
+- Controllers: [Send message](backend/domains/communication/controllers/send_message_controller.py), [Get messages](backend/domains/communication/controllers/get_messages_controller.py), [Validate chat access](backend/domains/communication/controllers/validate_chat_access_controller.py)
+- Services: [Chat](backend/domains/communication/services/chat_service.py), [Message](backend/domains/communication/services/message_service.py)
+- Models: [Chat session](backend/domains/communication/models/chat_session_model.py), [Message](backend/domains/communication/models/message_model.py) · Events: [MessageSent](backend/domains/communication/events/message_sent_event.py)
+
+**Review Domain** — [backend/domains/review/](backend/domains/review/) — bidirectional reviews and ratings
+- Controllers: [Leave PYME review](backend/domains/review/controllers/leave_pyme_review_controller.py), [Leave advisor review](backend/domains/review/controllers/leave_advisor_review_controller.py), [Get reviews](backend/domains/review/controllers/get_reviews_controller.py)
+- Services: [Review](backend/domains/review/services/review_service.py) · Models: [Review](backend/domains/review/models/review_model.py) · Events: [ReviewSubmitted](backend/domains/review/events/review_submitted_event.py)
+
+**Notification Domain** — [backend/domains/notification/](backend/domains/notification/) — multi-channel notifications driven by events
+- Event handlers: [Match created](backend/domains/notification/handlers/match_created_handler.py), [Contract proposed](backend/domains/notification/handlers/contract_proposed_handler.py), [Advisor selected](backend/domains/notification/handlers/advisor_selected_handler.py), [Project status](backend/domains/notification/handlers/project_status_handler.py), [Advisor use case processed](backend/domains/notification/handlers/advisor_use_case_processed_handler.py)
+- Services: [Notification](backend/domains/notification/services/notification_service.py), [Email](backend/domains/notification/services/email_notification_service.py), [In-app](backend/domains/notification/services/in_app_notification_service.py)
+- Models: [Notification](backend/domains/notification/models/notification_model.py), [Notification preference](backend/domains/notification/models/notification_preference_model.py)
+
+**Event Domain** — [backend/domains/event/](backend/domains/event/) — event auditing and durable cross-process publishing
+- Services: [Event audit (persists every event to `domain_events`)](backend/domains/event/services/event_audit_service.py), [Event](backend/domains/event/services/event_service.py)
+- Publishers: [Event publisher](backend/domains/event/publishers/event_publisher.py), [Pub/Sub publisher](backend/domains/event/publishers/pubsub_publisher.py)
+- Models: [Domain event](backend/domains/event/models/domain_event_model.py) · Repository: [Event repository](backend/domains/event/repositories/event_repository.py)
+
+**Tests** — [backend/tests/](backend/tests/) — [unit](backend/tests/unit/) (per-domain) and [integration](backend/tests/integration/) suites
 
 ---
 
