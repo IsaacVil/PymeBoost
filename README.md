@@ -4639,7 +4639,7 @@ The backend is organized **by domain**, not by technical layer. Each domain unde
 # Data Design
 
 
-## Data Stack
+## 2.17 Data Stack
 
 | Component | Technology |
 |---|---|
@@ -4651,7 +4651,7 @@ The relational database used is PostgreSQL. Backend access is handled through SQ
 
 ---
 
-## Database Schema (DBML)
+## 2.18 Database Schema (DBML)
 
 ```dbml
 // ─── USER DOMAIN ───────────────────────────────────────────
@@ -4814,7 +4814,7 @@ Table domain_events {
 
 ---
 
-## Entity-Relationship Diagram
+## 2.19 Entity-Relationship Diagram
 
 ![ER Diagram](docs/images/backend/er-diagram.png)
 
@@ -5074,7 +5074,7 @@ INSERT INTO notification_preferences VALUES
 ---
 
 
-## Database Migrations
+## 2.20 Database Migrations
 
 PymeBoost uses Alembic for database schema versioning and migrations.
 
@@ -5121,7 +5121,7 @@ alembic downgrade <revision_id>
 
 ---
 
-## Data Security
+## 2.21 Data Security
 
 ### Encryption
 - Passwords are hashed using **bcrypt** before storing in the database
