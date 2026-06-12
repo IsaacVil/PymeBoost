@@ -4535,8 +4535,6 @@ The matrix above lists **object-level (GoF) patterns** that live *inside* a proc
 
 ## 2.15 AI / Agentic Patterns
 
-The matrices above cover **object-level (GoF)** and **architectural** patterns. The pattern below is an **AI-agent pattern** — neither GoF nor a Microsoft Cloud Design Pattern. It wraps an LLM/AI step so its output is self-reviewed before being persisted or served, so it lives in its own matrix.
-
 ### AI patterns matrix
 
 Both classes extend the shared generate → self-critique → refine loop in [ReflectionService](backend/domains/ai/services/reflection_service.py).
