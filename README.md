@@ -5147,6 +5147,609 @@ alembic downgrade <revision_id>
 - Alembic rollback strategy in place for failed migrations
 - Health checks monitor database availability
 
+## 2.22 Database Indexes
 
+PymeBoost indexing strategy optimizes for the most frequent queries and filters defined by the business logic in the Matching, Communication, and Project domains.
+
+### Index Specification by Domain
+
+#### User Domain
+
+```sql
+-- Fast email lookups for authentication (login every request)
+CREATE INDEX idx_users_email ON users(email);
+
+-- Fast session retrieval by user (JWT validation on every request)
+CREATE INDEX idx_sessions_user_id ON sessions(user_id);
+
+-- Clean up expired sessions (background job)
+CREATE INDEX idx_sessions_expires_at ON sessions(expires_at) 
+  WHERE expires_at > NOW();
+```
+
+#### Pyme Domain
+
+```sql
+-- Fast PYME lookup by user (one-to-one relationship)
+CREATE INDEX idx_pymes_user_id ON pymes(user_id);
+
+-- Fast industry filtering (used in discovery service)
+CREATE INDEX idx_pymes_industry ON pymes(industry);
+
+-- Retrieve optimization areas per PYME
+CREATE INDEX idx_optimization_areas_pyme_id ON optimization_areas(pyme_id);
+```
+
+#### Advisor Domain
+
+```sql
+-- Fast advisor lookup by user
+CREATE INDEX idx_advisors_user_id ON advisors(user_id);
+
+-- Fast reputation lookup (used in matching scoring)
+CREATE INDEX idx_reputations_advisor_id ON reputations(advisor_id);
+
+-- Fast specialization lookup for matching
+CREATE INDEX idx_specializations_advisor_id ON specializations(advisor_id);
+
+-- Filter advisors by industry (discovery service)
+CREATE INDEX idx_specializations_industry ON specializations(industry);
+```
+
+#### Matching Domain
+
+```sql
+-- Fast match retrieval for a PYME
+CREATE INDEX idx_matches_pyme_id ON matches(pyme_id);
+
+-- Fast match retrieval for an advisor
+CREATE INDEX idx_matches_advisor_id ON matches(advisor_id);
+
+-- Filter matches by status (active, finalized, cancelled)
+CREATE INDEX idx_matches_status ON matches(status);
+
+-- Prevent duplicate swipes
+CREATE UNIQUE INDEX idx_swipes_unique_pair ON swipes(pyme_id, advisor_id);
+```
+
+#### Communication Domain
+
+```sql
+-- Fast chat session lookup for a match
+CREATE INDEX idx_chat_sessions_match_id ON chat_sessions(match_id);
+
+-- Fast message retrieval by session (pagination)
+CREATE INDEX idx_messages_session_id ON messages(session_id, sent_at DESC);
+
+-- Count unread messages (notification badge)
+CREATE INDEX idx_messages_session_read_status ON messages(session_id, read) 
+  WHERE read = false;
+```
+
+#### Contract Domain
+
+```sql
+-- Fast contract lookup for a match
+CREATE INDEX idx_contracts_match_id ON contracts(match_id);
+
+-- Filter contracts by status (used in dashboards)
+CREATE INDEX idx_contracts_status ON contracts(status);
+
+-- Retrieve negotiations for a contract
+CREATE INDEX idx_negotiations_contract_id ON negotiations(contract_id);
+```
+
+#### Project Domain
+
+```sql
+-- Fast project lookup for a contract (one-to-one)
+CREATE UNIQUE INDEX idx_projects_contract_id ON projects(contract_id);
+
+-- Fast milestone retrieval by project (timeline views)
+CREATE INDEX idx_milestones_project_id ON milestones(project_id);
+
+-- Fast completion status check (health monitoring)
+CREATE INDEX idx_milestones_completed ON milestones(project_id, completed);
+
+-- Fast health lookup
+CREATE INDEX idx_project_health_project_id ON project_health(project_id);
+
+-- Sort milestones by due date
+CREATE INDEX idx_milestones_due_date ON milestones(project_id, due_date ASC);
+```
+
+#### Review Domain
+
+```sql
+-- Retrieve all reviews for an advisor (reputation calculation)
+CREATE INDEX idx_reviews_subject_id ON reviews(subject_id);
+
+-- Retrieve reviews left by a user
+CREATE INDEX idx_reviews_reviewer_id ON reviews(reviewer_id);
+```
+
+#### Notification Domain
+
+```sql
+-- Fast notification retrieval for a user (feed pagination)
+CREATE INDEX idx_notifications_user_id ON notifications(user_id, created_at DESC);
+
+-- Count unread notifications (badge)
+CREATE INDEX idx_notifications_read_status ON notifications(user_id, read) 
+  WHERE read = false;
+```
+
+### Index Maintenance
+
+Run monthly index review:
+
+```bash
+# Find unused indexes
+SELECT schemaname, tablename, indexname, idx_scan
+FROM pg_stat_user_indexes
+WHERE idx_scan = 0
+ORDER BY idx_used DESC;
+
+# Check index size
+SELECT indexname, pg_size_pretty(pg_relation_size(indexrelid)) AS size
+FROM pg_stat_user_indexes
+ORDER BY pg_relation_size(indexrelid) DESC;
+```
+
+---
+
+## 2.23 Database Design Validation Tools
+
+### SQLCheck for Schema Linting
+
+Install and run schema validation:
+
+```bash
+# Install
+brew install sqlcheck  # macOS
+
+# Validate schema
+sqlcheck -i < backend/shared/database/migrations/schema.sql
+```
+
+### Query Performance Analysis
+
+For critical queries, use EXPLAIN ANALYZE:
+
+```bash
+# Connect to database
+psql $DATABASE_URL
+
+# Analyze matching query (get_advisor_matches_controller.py)
+EXPLAIN ANALYZE
+SELECT m.id, m.pyme_id, m.advisor_id, m.status
+FROM matches m
+WHERE m.pyme_id = 'pyme-123' AND m.status IN ('ACTIVE', 'FINALIZED')
+ORDER BY m.created_at DESC;
+
+# Check for Index Scan (good) vs Seq Scan (bad)
+```
+
+### Data Quality Checks (Post-Migration)
+
+Run after every migration to ensure data integrity:
+
+```sql
+-- Check for orphaned foreign keys
+SELECT * FROM matches m
+WHERE NOT EXISTS (SELECT 1 FROM pymes p WHERE p.id = m.pyme_id);
+
+-- Check for duplicate swipes
+SELECT pyme_id, advisor_id, COUNT(*) as cnt
+FROM swipes
+GROUP BY pyme_id, advisor_id
+HAVING COUNT(*) > 1;
+
+-- Verify reputation scores are within bounds (1.0 - 5.0)
+SELECT advisor_id, score FROM reputations
+WHERE score < 1.0 OR score > 5.0;
+```
+
+### CI/CD Validation
+
+Add to `.github/workflows/backend-ci.yml`:
+
+```yaml
+- name: Validate Database Schema
+  run: |
+    sqlcheck -i < backend/shared/database/migrations/schema.sql > schema_report.txt
+    if grep -q "Error:" schema_report.txt; then
+      echo "Schema validation failed"
+      cat schema_report.txt
+      exit 1
+    fi
+```
+
+---
+
+## 2.24 Caching Strategy (Redis)
+
+Redis caches frequently accessed data to reduce database load. All cache data is ephemeral—if Redis is lost, the application continues with database queries.
+
+### Cache Key Patterns
+
+#### Session Cache (User Domain)
+
+**Key Pattern:** `session:{user_id}`
+
+**TTL:** 10800 seconds (3 hours)
+
+**Use Case:** JWT validation and user context on every request
+
+```json
+{
+  "user_id": "user-abc-123",
+  "email": "user@empresa.cr",
+  "account_type": "pyme",
+  "verified": true,
+  "created_at": "2026-06-01T10:00:00Z"
+}
+```
+
+**Invalidation:**
+- Manual on logout (session_cache_service.py)
+- Automatic after 3 hours
+
+#### JWKS Cache (Auth0 Public Keys)
+
+**Key Pattern:** `jwks:{auth0_domain}`
+
+**TTL:** 10800 seconds (3 hours)
+
+**Use Case:** JWT signature validation without hitting Auth0 every request
+
+```json
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "use": "sig",
+      "kid": "abc123",
+      "n": "...",
+      "e": "AQAB",
+      "alg": "RS256"
+    }
+  ],
+  "cached_at": "2026-06-12T11:30:00Z"
+}
+```
+
+**Invalidation:**
+- Automatic after 3 hours
+- Manual on Auth0 certificate rotation
+
+#### Advisor Profile Cache (Advisor Domain)
+
+**Key Pattern:** `advisor_profile:{advisor_id}`
+
+**TTL:** 86400 seconds (24 hours)
+
+**Use Case:** Frequently accessed during swipe operations (matching_card.tsx)
+
+```json
+{
+  "advisor_id": "adv-1",
+  "full_name": "Mariana Solís",
+  "base_rate": 150000,
+  "reputation_score": 4.8,
+  "industries": ["Marketing Digital", "E-commerce"],
+  "specializations": [...]
+}
+```
+
+**Invalidation:**
+- Manual when profile updated (update_advisor_profile_controller.py)
+- Manual when reputation changes (reputation_service.py)
+- Automatic after 24 hours
+
+#### Recommendation Cache (Pyme Domain)
+
+**Key Pattern:** `recommendations:{pyme_id}`
+
+**TTL:** 86400 seconds (24 hours)
+
+**Use Case:** Caches expensive AI-generated advisor recommendations
+
+```json
+{
+  "pyme_id": "pyme-123",
+  "recommendation_list": [
+    {
+      "advisor_id": "adv-1",
+      "name": "Mariana Solís",
+      "match_score": 0.92,
+      "base_rate": 150000
+    }
+  ],
+  "generated_at": "2026-06-12T08:00:00Z"
+}
+```
+
+**Invalidation:**
+- Manual when advisor industry changes
+- Manual when PYME optimization areas updated
+- Automatic after 24 hours
+
+### Cache-Aside Pattern
+
+All caches follow this pattern:
+
+1. Check Redis for key
+2. If hit: return immediately
+3. If miss: query database, cache result, return value
+4. On expiration: key deleted automatically
+
+**Python Implementation (session_cache_service.py):**
+
+```python
+async def get_session(self, user_id: str):
+    cache_key = f"session:{user_id}"
+    cached = await self.redis.get(cache_key)
+    
+    if cached:
+        return json.loads(cached)  # Cache hit
+    
+    # Cache miss — query database
+    session = await self.session_repository.get(user_id)
+    
+    if session:
+        await self.redis.setex(
+            cache_key,
+            10800,  # 3 hours
+            json.dumps(session.dict())
+        )
+    
+    return session
+```
+
+### Redis Configuration
+
+From `config.py`:
+
+```python
+REDIS_URL: str = ""  # redis://localhost:6379/0 (set in .env)
+```
+
+**Expected format:** `redis://[user:password]@localhost:6379/0`
+
+For production: Redis instance with HA should be used (Cloud Memorystore on GCP recommended).
+
+---
+
+## 2.25 Database Seeding
+
+### Seed Script Location
+
+**File:** `backend/shared/database/seeders/`
+
+All environments use the same seeding approach, with data size varying by environment:
+
+- **Development:** Full dataset (6 users, 3 PYMEs, 3 advisors, realistic matches)
+- **Staging:** Production-like subset (same structure, smaller scale)
+- **Testing:** Minimal data for test isolation
+
+### Usage
+
+```bash
+# Seed development database with test data
+python -m backend.shared.database.seeders.seed_all --env development
+
+# Seed staging database
+python -m backend.shared.database.seeders.seed_all --env staging
+
+# Seed test database (minimal)
+python -m backend.shared.database.seeders.seed_all --env test
+```
+
+### Seed Data Includes
+
+**Users:** 3 PYMEs + 3 Advisors with Auth0 integration  
+**Industries:** 8 industry categories  
+**PYME Profiles:** Company names, industries, optimization areas  
+**Advisor Profiles:** Full names, base rates, specializations, reputation scores  
+**Matches:** Multiple PYME-Advisor pairs with different statuses  
+**Swipes:** Approval decisions  
+**Communications:** Chat sessions with sample messages  
+**Notifications:** User notification preferences  
+
+### Idempotency
+
+All seed scripts are idempotent—safe to run multiple times. They:
+- Check for existing data before inserting
+- Use UUID generation for IDs
+- Skip if records already exist
+
+---
+
+## 2.26 Migration Strategy and Rollback
+
+### Alembic Configuration
+
+Located at: `backend/shared/database/migrations/`
+
+**Commands:**
+
+```bash
+cd backend
+
+# Generate new migration after model changes
+alembic revision --autogenerate -m "add_new_feature"
+
+# Apply all pending migrations
+alembic upgrade head
+
+# Rollback one migration
+alembic downgrade -1
+
+# View migration history
+alembic history
+
+# Check current revision
+alembic current
+```
+
+### Migration Workflow
+
+#### 1. Create Migration
+
+After changing a SQLAlchemy model:
+
+```bash
+alembic revision --autogenerate -m "descriptive_name"
+```
+
+Creates file: `migrations/versions/{timestamp}_{description}.py`
+
+#### 2. Review Migration
+
+Always review auto-generated migrations:
+
+```python
+# Check that:
+# CREATE/ALTER statements are correct
+# Indexes are added for new columns
+# Foreign keys are explicit
+# Downgrade function is the exact inverse
+```
+
+#### 3. Test Migration
+
+Test locally before pushing:
+
+```bash
+# Upgrade
+alembic upgrade +1
+
+# Verify schema change
+psql $DATABASE_URL -c "\d table_name"
+
+# Rollback
+alembic downgrade -1
+
+# Verify rollback worked
+psql $DATABASE_URL -c "\d table_name"
+```
+
+#### 4. Deploy
+
+CI/CD runs migrations automatically on deploy:
+
+```yaml
+# From .github/workflows/deploy-backend.yml
+- name: Run Database Migrations
+  run: |
+    alembic upgrade head
+```
+
+### Rollback Strategy
+
+#### Quick Rollback (< 5 minutes)
+
+If migration causes immediate issues:
+
+```bash
+# Identify current revision
+alembic current
+
+# Rollback one step
+alembic downgrade -1
+
+# Verify
+alembic current
+```
+
+#### Emergency Rollback (data-safe)
+
+If migration affected data:
+
+1. **Backup production database** (GCP Cloud SQL automated backups)
+2. **Downgrade schema:**
+   ```bash
+   alembic downgrade -1
+   ```
+3. **Restore data from backup** (point-in-time recovery via GCP)
+4. **Fix migration code** and reapply
+
+### Migration Naming Convention
+
+**Format:** `{revision_id}_{timestamp}_{description}.py`
+
+Examples:
+- `001_2026_06_12_create_user_domain.py`
+- `002_2026_06_12_create_advisor_domain.py`
+- `003_2026_06_13_add_advisor_promises.py`
+
+### Database Connection Details
+
+**From config.py:**
+
+```python
+DATABASE_URL: str = ""  # postgresql://user:password@host:5432/pymeboost
+DATABASE_POOL_SIZE: int = 5
+```
+
+**Connection pooling:**
+- Pool size: 5 (default, configurable)
+- Max overflow: 10
+- Pool timeout: 30 seconds
+- Pool recycle: 3600 seconds (1 hour)
+
+**Critical:** Keep `DATABASE_POOL_SIZE` low in development to catch connection leaks early.
+
+### Testing Strategy for Migrations
+
+Create test migrations before production deploy:
+
+```bash
+# Create test database from staging
+pg_dump production_db | psql test_db
+
+# Run migration on test database
+DATABASE_URL=postgresql://test:test@localhost/test_db alembic upgrade head
+
+# Run data validation checks
+bash backend/scripts/validate_database.sh
+
+# If passes, safe to deploy to production
+```
+
+### Performance Considerations
+
+Migrations that may cause downtime:
+
+- Adding `NOT NULL` column without default (use `DEFAULT` clause)
+- Renaming large tables (use change tracking instead)
+- Full table rewrites during ALTER TABLE
+- Adding nullable columns
+- Adding indexes with `CONCURRENTLY`
+- Dropping unused indexes
+
+**Example: Safe NOT NULL column addition**
+
+```python
+# Good: Add with default, then remove default later
+def upgrade():
+    op.add_column('users', sa.Column('phone', sa.String, nullable=False, server_default=''))
+    op.alter_column('users', 'phone', server_default=None)
+
+def downgrade():
+    op.drop_column('users', 'phone')
+```
+
+### Monitoring Post-Migration
+
+After production migration, monitor:
+
+- Database connection count (should remain stable)
+- Query latency (should not spike)
+- Error rate (should not increase)
+- Disk usage (should increase only by new data)
+
+Use Cloud SQL monitoring dashboard on GCP to verify.
 
 
