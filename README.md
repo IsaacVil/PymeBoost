@@ -4818,6 +4818,259 @@ Table domain_events {
 
 ![ER Diagram](docs/images/backend/er-diagram.png)
 
+---
+
+## Database Scripts
+
+### Schema Creation
+
+```sql
+-- ─── USER DOMAIN ───────────────────────────────────────────
+CREATE TABLE users (
+    id           VARCHAR PRIMARY KEY,
+    email        VARCHAR UNIQUE NOT NULL,
+    account_type VARCHAR NOT NULL,
+    created_at   TIMESTAMP NOT NULL
+);
+
+CREATE TABLE sessions (
+    id         VARCHAR PRIMARY KEY,
+    user_id    VARCHAR NOT NULL REFERENCES users(id),
+    expires_at TIMESTAMP NOT NULL
+);
+
+-- ─── PYME DOMAIN ───────────────────────────────────────────
+CREATE TABLE industries (
+    id   VARCHAR PRIMARY KEY,
+    name VARCHAR NOT NULL
+);
+
+CREATE TABLE pymes (
+    id           VARCHAR PRIMARY KEY,
+    user_id      VARCHAR NOT NULL REFERENCES users(id),
+    company_name VARCHAR NOT NULL,
+    industry     VARCHAR
+);
+
+CREATE TABLE optimization_areas (
+    id      VARCHAR PRIMARY KEY,
+    pyme_id VARCHAR NOT NULL REFERENCES pymes(id),
+    area    VARCHAR NOT NULL
+);
+
+-- ─── ADVISOR DOMAIN ────────────────────────────────────────
+CREATE TABLE advisors (
+    id        VARCHAR PRIMARY KEY,
+    user_id   VARCHAR NOT NULL REFERENCES users(id),
+    full_name VARCHAR NOT NULL,
+    base_rate FLOAT
+);
+
+CREATE TABLE reputations (
+    id         VARCHAR PRIMARY KEY,
+    advisor_id VARCHAR NOT NULL REFERENCES advisors(id),
+    score      FLOAT NOT NULL
+);
+
+CREATE TABLE specializations (
+    id         VARCHAR PRIMARY KEY,
+    advisor_id VARCHAR NOT NULL REFERENCES advisors(id),
+    industry   VARCHAR NOT NULL
+);
+
+-- ─── MATCHING DOMAIN ───────────────────────────────────────
+CREATE TABLE matches (
+    id         VARCHAR PRIMARY KEY,
+    pyme_id    VARCHAR NOT NULL REFERENCES pymes(id),
+    advisor_id VARCHAR NOT NULL REFERENCES advisors(id),
+    status     VARCHAR NOT NULL,
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE swipes (
+    id         VARCHAR PRIMARY KEY,
+    pyme_id    VARCHAR NOT NULL REFERENCES pymes(id),
+    advisor_id VARCHAR NOT NULL REFERENCES advisors(id),
+    approved   BOOLEAN NOT NULL
+);
+
+-- ─── COMMUNICATION DOMAIN ──────────────────────────────────
+CREATE TABLE chat_sessions (
+    id         VARCHAR PRIMARY KEY,
+    match_id   VARCHAR NOT NULL REFERENCES matches(id),
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE messages (
+    id         VARCHAR PRIMARY KEY,
+    session_id VARCHAR NOT NULL REFERENCES chat_sessions(id),
+    sender_id  VARCHAR NOT NULL REFERENCES users(id),
+    content    VARCHAR NOT NULL,
+    sent_at    TIMESTAMP NOT NULL
+);
+
+-- ─── CONTRACT DOMAIN ───────────────────────────────────────
+CREATE TABLE contracts (
+    id            VARCHAR PRIMARY KEY,
+    match_id      VARCHAR NOT NULL REFERENCES matches(id),
+    status        VARCHAR NOT NULL,
+    budget        FLOAT,
+    duration_days VARCHAR,
+    created_at    TIMESTAMP NOT NULL
+);
+
+CREATE TABLE negotiations (
+    id          VARCHAR PRIMARY KEY,
+    contract_id VARCHAR NOT NULL REFERENCES contracts(id),
+    proposed_by VARCHAR NOT NULL REFERENCES users(id),
+    created_at  TIMESTAMP NOT NULL
+);
+
+-- ─── PROJECT DOMAIN ────────────────────────────────────────
+CREATE TABLE projects (
+    id          VARCHAR PRIMARY KEY,
+    contract_id VARCHAR NOT NULL REFERENCES contracts(id),
+    status      VARCHAR NOT NULL,
+    created_at  TIMESTAMP NOT NULL
+);
+
+CREATE TABLE milestones (
+    id         VARCHAR PRIMARY KEY,
+    project_id VARCHAR NOT NULL REFERENCES projects(id),
+    title      VARCHAR NOT NULL,
+    completed  BOOLEAN DEFAULT FALSE,
+    due_date   TIMESTAMP
+);
+
+CREATE TABLE project_health (
+    id           VARCHAR PRIMARY KEY,
+    project_id   VARCHAR NOT NULL REFERENCES projects(id),
+    health_score FLOAT NOT NULL
+);
+
+-- ─── REVIEW DOMAIN ─────────────────────────────────────────
+CREATE TABLE reviews (
+    id          VARCHAR PRIMARY KEY,
+    reviewer_id VARCHAR NOT NULL REFERENCES users(id),
+    subject_id  VARCHAR NOT NULL REFERENCES users(id),
+    rating      FLOAT NOT NULL,
+    comment     VARCHAR,
+    created_at  TIMESTAMP NOT NULL
+);
+
+-- ─── NOTIFICATION DOMAIN ───────────────────────────────────
+CREATE TABLE notifications (
+    id         VARCHAR PRIMARY KEY,
+    user_id    VARCHAR NOT NULL REFERENCES users(id),
+    message    VARCHAR NOT NULL,
+    read       BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE notification_preferences (
+    id             VARCHAR PRIMARY KEY,
+    user_id        VARCHAR NOT NULL REFERENCES users(id),
+    email_enabled  BOOLEAN DEFAULT TRUE,
+    in_app_enabled BOOLEAN DEFAULT TRUE
+);
+
+-- ─── EVENT DOMAIN ──────────────────────────────────────────
+CREATE TABLE domain_events (
+    id          VARCHAR PRIMARY KEY,
+    event_type  VARCHAR NOT NULL,
+    payload     JSON NOT NULL,
+    occurred_at TIMESTAMP NOT NULL
+);
+```
+
+---
+
+### Seed Data
+
+```sql
+-- ─── USERS ─────────────────────────────────────────────────
+INSERT INTO users VALUES
+('user-1', 'hilo@empresa.cr', 'pyme', NOW()),
+('user-2', 'mariana@advisors.cr', 'advisor', NOW()),
+('user-3', 'sofia@advisors.cr', 'advisor', NOW());
+
+-- ─── INDUSTRIES ────────────────────────────────────────────
+INSERT INTO industries VALUES
+('ind-1', 'Retail'),
+('ind-2', 'E-commerce'),
+('ind-3', 'Moda'),
+('ind-4', 'Tecnología');
+
+-- ─── PYMES ─────────────────────────────────────────────────
+INSERT INTO pymes VALUES
+('pyme-1', 'user-1', 'Hilo & Aguja', 'Moda');
+
+INSERT INTO optimization_areas VALUES
+('area-1', 'pyme-1', 'Marketing Digital'),
+('area-2', 'pyme-1', 'Conversión de campañas');
+
+-- ─── ADVISORS ──────────────────────────────────────────────
+INSERT INTO advisors VALUES
+('adv-1', 'user-2', 'Mariana Solís', 150000),
+('adv-2', 'user-3', 'Sofía Ramírez', 135000);
+
+INSERT INTO reputations VALUES
+('rep-1', 'adv-1', 4.8),
+('rep-2', 'adv-2', 4.6);
+
+INSERT INTO specializations VALUES
+('spec-1', 'adv-1', 'Marketing Digital'),
+('spec-2', 'adv-2', 'Branding');
+
+-- ─── MATCHING ──────────────────────────────────────────────
+INSERT INTO swipes VALUES
+('swipe-1', 'pyme-1', 'adv-1', TRUE),
+('swipe-2', 'pyme-1', 'adv-2', TRUE);
+
+INSERT INTO matches VALUES
+('match-1', 'pyme-1', 'adv-1', 'active', NOW()),
+('match-2', 'pyme-1', 'adv-2', 'active', NOW());
+
+-- ─── CHAT ──────────────────────────────────────────────────
+INSERT INTO chat_sessions VALUES
+('chat-1', 'match-2', NOW());
+
+INSERT INTO messages VALUES
+('msg-1', 'chat-1', 'user-3', 'Hola, revisé el perfil de Hilo & Aguja.', NOW()),
+('msg-2', 'chat-1', 'user-1', 'Perfecto, me interesa ver los números.', NOW());
+
+-- ─── CONTRACTS ─────────────────────────────────────────────
+INSERT INTO contracts VALUES
+('contract-1', 'match-1', 'active', 900000, '3m', NOW());
+
+INSERT INTO negotiations VALUES
+('neg-1', 'contract-1', 'user-3', NOW());
+
+-- ─── PROJECTS ──────────────────────────────────────────────
+INSERT INTO projects VALUES
+('proj-1', 'contract-1', 'active', NOW());
+
+INSERT INTO milestones VALUES
+('ms-1', 'proj-1', 'Análisis Inicial', TRUE, NOW()),
+('ms-2', 'proj-1', 'Optimización de Campañas', TRUE, NOW()),
+('ms-3', 'proj-1', 'Optimización de Landing Pages', FALSE, NOW());
+
+INSERT INTO project_health VALUES
+('ph-1', 'proj-1', 67.0);
+
+-- ─── REVIEWS ───────────────────────────────────────────────
+INSERT INTO reviews VALUES
+('rev-1', 'user-1', 'user-2', 4.5, 'Excelente trabajo, muy profesional.', NOW());
+
+-- ─── NOTIFICATIONS ─────────────────────────────────────────
+INSERT INTO notifications VALUES
+('notif-1', 'user-1', 'Nuevo match con Mariana Solís', FALSE, NOW());
+
+INSERT INTO notification_preferences VALUES
+('pref-1', 'user-1', TRUE, TRUE),
+('pref-2', 'user-2', TRUE, TRUE);
+```
+
 
 
 
