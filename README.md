@@ -4637,3 +4637,17 @@ The backend is organized **by domain**, not by technical layer. Each domain unde
 ---
 
 # Data Design
+
+
+## Data Stack
+
+| Component | Technology |
+|---|---|
+| Database | PostgreSQL |
+| ORM | SQLAlchemy |
+| Migrations | Alembic |
+
+The relational database used is PostgreSQL. Backend access is handled through SQLAlchemy as the ORM, following the domain-driven architecture of the project. Schema migrations are managed with Alembic.
+
+
+
