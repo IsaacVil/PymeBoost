@@ -4469,8 +4469,6 @@ Workflow (Event Domain):
 ## 2.12 Design Considerations
 ### Algorithm Selection & Parameters
 
-#### [QUITAR LUEGO DE REALIZARLO] Reflection Pattern puede aprovechar con el recommendations verificar si tiene projectos similares con Advisor Similar Project Retrieval
-
 ---
 
 ## 2.13 Design Patterns
@@ -4535,7 +4533,24 @@ The matrix above lists **object-level (GoF) patterns** that live *inside* a proc
 
 ---
 
-## 2.15 Source Code
+## 2.15 AI / Agentic Patterns
+
+The matrices above cover **object-level (GoF)** and **architectural** patterns. The pattern below is an **AI-agent pattern** — neither GoF nor a Microsoft Cloud Design Pattern. It wraps an LLM/AI step so its output is self-reviewed before being persisted or served, so it lives in its own matrix.
+
+### AI patterns matrix
+
+Both classes extend the shared generate → self-critique → refine loop in [ReflectionService](backend/domains/ai/services/reflection_service.py).
+
+| Class / Interface | Location | Responsibility | Pattern | Justification |
+|------------------|----------|----------------|---------|--------------|
+| ReflectionServiceRecommendationValidation | [backend/domains/ai/services/reflection_recommendation_validation_service.py](backend/domains/ai/services/reflection_recommendation_validation_service.py) | After the AI Domain ranks advisors for a PYME, reflects on the draft list with the critique grounded on **Advisor Similar Project Retrieval**, dropping or re-ranking low-evidence candidates before the set is stored | Reflection | A ranking can be plausible but unsupported; a self-review against real comparable projects catches and corrects it before the user sees it, with no human in the loop. |
+| ReflectionServicePromiseClassification | [backend/domains/ai/services/reflection_promise_classification_service.py](backend/domains/ai/services/reflection_promise_classification_service.py) | After thematic classification assigns industry tags to a promise, re-checks the category against the promise text and industry catalog, correcting low-confidence or inconsistent tags before they are persisted | Reflection | Embedding-based classification can mis-tag edge cases; a reflection pass over the assigned tags reduces wrong industry labels before they reach matching. |
+
+**Reflection** — An agentic pattern where the model evaluates (critiques) its own generated output, optionally against external evidence, and iteratively revises it for a bounded number of steps. It trades extra inference cost for higher-quality, self-corrected results without requiring human review.
+
+---
+
+## 2.16 Source Code
 
 ### Backend (Python/FastAPI - Domain-Driven Design)
 
@@ -4577,6 +4592,7 @@ The backend is organized **by domain**, not by technical layer. Each domain unde
 
 **AI Domain** — [backend/domains/ai/](backend/domains/ai/) — Pub/Sub-driven PDF processing, embeddings, thematic classification, recommendation scoring (no REST controllers)
 - Services: [Use Case PDF Processing](backend/domains/ai/services/use_case_pdf_processing_service.py), [OCR](backend/domains/ai/services/ocr_service.py), [Embedding](backend/domains/ai/services/embedding_service.py), [Thematic classification](backend/domains/ai/services/thematic_classification_service.py), [Recommendation](backend/domains/ai/services/recommendation_service.py), [Recommendation batch](backend/domains/ai/services/recommendation_batch_service.py), [Recommendation on-demand](backend/domains/ai/services/recommendation_on_demand_service.py)
+- Reflection (AI self-review, see §2.15): [Base ReflectionService](backend/domains/ai/services/reflection_service.py), [Recommendation validation](backend/domains/ai/services/reflection_recommendation_validation_service.py), [Promise classification](backend/domains/ai/services/reflection_promise_classification_service.py)
 - Handlers (Pub/Sub): [UseCaseUploaded](backend/domains/ai/handlers/use_case_uploaded_handler.py), [RecommendationRequested](backend/domains/ai/handlers/recommendation_requested_handler.py)
 - Models: [Use case](backend/domains/ai/models/use_case_model.py), [Document block](backend/domains/ai/models/document_block_model.py), [Recommendation result](backend/domains/ai/models/recommendation_result_model.py) · Repositories: [backend/domains/ai/repositories/](backend/domains/ai/repositories/)
 - Events: [AdvisorUseCaseProcessed](backend/domains/ai/events/advisor_use_case_processed_event.py), [RecommendationReady](backend/domains/ai/events/recommendation_ready_event.py)
