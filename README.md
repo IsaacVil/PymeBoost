@@ -5071,7 +5071,81 @@ INSERT INTO notification_preferences VALUES
 ('pref-2', 'user-2', TRUE, TRUE);
 ```
 
+---
 
+
+## Database Migrations
+
+PymeBoost uses Alembic for database schema versioning and migrations.
+
+### Setup
+
+```bash
+pip install alembic
+alembic init migrations
+```
+
+### Configuration
+
+In `alembic.ini`, set the database URL:
+
+```ini
+sqlalchemy.url = postgresql://user:password@localhost/pymeboost
+```
+
+### Creating a Migration
+
+```bash
+alembic revision --autogenerate -m "description of change"
+```
+
+### Applying Migrations
+
+```bash
+# Apply all pending migrations
+alembic upgrade head
+
+# Rollback one migration
+alembic downgrade -1
+
+# Rollback to specific version
+alembic downgrade <revision_id>
+```
+
+### Versioning Strategy
+
+- Every schema change requires a new migration file
+- Migration files are versioned and tracked in `/migrations/versions/`
+- Never modify an existing migration — always create a new one
+- All migrations must be reviewed before merging to main
+
+---
+
+## Data Security
+
+### Encryption
+- Passwords are hashed using **bcrypt** before storing in the database
+- Sensitive fields (emails, personal data) are encrypted at the application layer using **AES-256**
+- All communication between client and server uses **HTTPS/TLS**
+
+### Secret Management
+- All secrets and credentials are stored in environment variables via `.env` file
+- `.env` is excluded from version control via `.gitignore`
+- Production secrets are managed through the cloud provider's secret manager
+
+### Audit & Traceability
+- All domain events are logged in the `domain_events` table with timestamp and payload
+- Every critical action (match, contract, payment) generates a domain event for full traceability
+
+### Backups
+- Daily automated backups of the PostgreSQL database
+- Backups retained for 30 days
+- Point-in-time recovery enabled for production environment
+
+### Failure Recovery
+- Database connections use connection pooling to handle failures gracefully
+- Alembic rollback strategy in place for failed migrations
+- Health checks monitor database availability
 
 
 
