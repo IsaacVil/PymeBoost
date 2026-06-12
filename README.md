@@ -4812,8 +4812,11 @@ Table domain_events {
 }
 ```
 
+---
 
-![ER Diagram](docs/images/er-diagram.png)
+## Entity-Relationship Diagram
+
+![ER Diagram](docs/images/backend/er-diagram.png)
 
 
 
