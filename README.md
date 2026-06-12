@@ -4692,7 +4692,7 @@ Table advisors {
   id        String [pk]
   user_id   String [not null, ref: > users.id]
   full_name String [not null]
-  base_rate Float
+  base_rate Decimal
 }
 
 Table reputations {
@@ -4735,6 +4735,7 @@ Table messages {
   session_id String [not null, ref: > chat_sessions.id]
   sender_id  String [not null, ref: > users.id]
   content    String [not null]
+  read       Boolean [default: false]
   sent_at    DateTime [not null]
 }
 
@@ -4743,8 +4744,8 @@ Table contracts {
   id            String [pk]
   match_id      String [not null, ref: > matches.id]
   status        String [not null, note: 'draft | active | completed | cancelled']
-  budget        Float
-  duration_days String
+  budget        Decimal
+  duration_days Integer
   created_at    DateTime [not null]
 }
 
@@ -4812,6 +4813,31 @@ Table domain_events {
 }
 ```
 
+### Foreign Key Delete Behaviors
+
+| Child Table | FK Column | References | ON DELETE | Rationale |
+|---|---|---|---|---|
+| `sessions` | `user_id` | `users.id` | CASCADE | Session belongs to user — deleted with it |
+| `pymes` | `user_id` | `users.id` | CASCADE | Profile belongs to user |
+| `optimization_areas` | `pyme_id` | `pymes.id` | CASCADE | Area belongs to PYME |
+| `advisors` | `user_id` | `users.id` | CASCADE | Profile belongs to user |
+| `reputations` | `advisor_id` | `advisors.id` | CASCADE | Reputation belongs to advisor |
+| `specializations` | `advisor_id` | `advisors.id` | CASCADE | Specialization belongs to advisor |
+| `swipes` | `pyme_id`, `advisor_id` | `pymes.id`, `advisors.id` | CASCADE | Swipe history follows the participant |
+| `matches` | `pyme_id`, `advisor_id` | `pymes.id`, `advisors.id` | RESTRICT | Cannot delete participant with active matches |
+| `chat_sessions` | `match_id` | `matches.id` | CASCADE | Chat belongs to match |
+| `messages` | `session_id` | `chat_sessions.id` | CASCADE | Message belongs to session |
+| `messages` | `sender_id` | `users.id` | RESTRICT | Cannot delete user who sent messages |
+| `contracts` | `match_id` | `matches.id` | RESTRICT | Cannot delete match with a contract |
+| `negotiations` | `contract_id` | `contracts.id` | CASCADE | Negotiation belongs to contract |
+| `negotiations` | `proposed_by` | `users.id` | RESTRICT | Cannot delete user who negotiated |
+| `projects` | `contract_id` | `contracts.id` | RESTRICT | Cannot delete contract with a project |
+| `milestones` | `project_id` | `projects.id` | CASCADE | Milestone belongs to project |
+| `project_health` | `project_id` | `projects.id` | CASCADE | Health record belongs to project |
+| `reviews` | `reviewer_id`, `subject_id` | `users.id` | RESTRICT | Cannot delete users with review history |
+| `notifications` | `user_id` | `users.id` | CASCADE | Notifications belong to user |
+| `notification_preferences` | `user_id` | `users.id` | CASCADE | Preferences belong to user |
+
 ---
 
 ## 2.19 Entity-Relationship Diagram
@@ -4829,13 +4855,13 @@ Table domain_events {
 CREATE TABLE users (
     id           VARCHAR PRIMARY KEY,
     email        VARCHAR UNIQUE NOT NULL,
-    account_type VARCHAR NOT NULL,
+    account_type VARCHAR NOT NULL CHECK (account_type IN ('pyme', 'advisor')),
     created_at   TIMESTAMP NOT NULL
 );
 
 CREATE TABLE sessions (
     id         VARCHAR PRIMARY KEY,
-    user_id    VARCHAR NOT NULL REFERENCES users(id),
+    user_id    VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     expires_at TIMESTAMP NOT NULL
 );
 
@@ -4847,96 +4873,97 @@ CREATE TABLE industries (
 
 CREATE TABLE pymes (
     id           VARCHAR PRIMARY KEY,
-    user_id      VARCHAR NOT NULL REFERENCES users(id),
+    user_id      VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     company_name VARCHAR NOT NULL,
     industry     VARCHAR
 );
 
 CREATE TABLE optimization_areas (
     id      VARCHAR PRIMARY KEY,
-    pyme_id VARCHAR NOT NULL REFERENCES pymes(id),
+    pyme_id VARCHAR NOT NULL REFERENCES pymes(id) ON DELETE CASCADE,
     area    VARCHAR NOT NULL
 );
 
 -- ─── ADVISOR DOMAIN ────────────────────────────────────────
 CREATE TABLE advisors (
     id        VARCHAR PRIMARY KEY,
-    user_id   VARCHAR NOT NULL REFERENCES users(id),
+    user_id   VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     full_name VARCHAR NOT NULL,
-    base_rate FLOAT
+    base_rate DECIMAL(12,2)
 );
 
 CREATE TABLE reputations (
     id         VARCHAR PRIMARY KEY,
-    advisor_id VARCHAR NOT NULL REFERENCES advisors(id),
-    score      FLOAT NOT NULL
+    advisor_id VARCHAR NOT NULL REFERENCES advisors(id) ON DELETE CASCADE,
+    score      FLOAT NOT NULL CHECK (score >= 0.0 AND score <= 5.0)
 );
 
 CREATE TABLE specializations (
     id         VARCHAR PRIMARY KEY,
-    advisor_id VARCHAR NOT NULL REFERENCES advisors(id),
+    advisor_id VARCHAR NOT NULL REFERENCES advisors(id) ON DELETE CASCADE,
     industry   VARCHAR NOT NULL
 );
 
 -- ─── MATCHING DOMAIN ───────────────────────────────────────
 CREATE TABLE matches (
     id         VARCHAR PRIMARY KEY,
-    pyme_id    VARCHAR NOT NULL REFERENCES pymes(id),
-    advisor_id VARCHAR NOT NULL REFERENCES advisors(id),
-    status     VARCHAR NOT NULL,
+    pyme_id    VARCHAR NOT NULL REFERENCES pymes(id) ON DELETE RESTRICT,
+    advisor_id VARCHAR NOT NULL REFERENCES advisors(id) ON DELETE RESTRICT,
+    status     VARCHAR NOT NULL CHECK (status IN ('pending', 'active', 'closed')),
     created_at TIMESTAMP NOT NULL
 );
 
 CREATE TABLE swipes (
     id         VARCHAR PRIMARY KEY,
-    pyme_id    VARCHAR NOT NULL REFERENCES pymes(id),
-    advisor_id VARCHAR NOT NULL REFERENCES advisors(id),
+    pyme_id    VARCHAR NOT NULL REFERENCES pymes(id) ON DELETE CASCADE,
+    advisor_id VARCHAR NOT NULL REFERENCES advisors(id) ON DELETE CASCADE,
     approved   BOOLEAN NOT NULL
 );
 
 -- ─── COMMUNICATION DOMAIN ──────────────────────────────────
 CREATE TABLE chat_sessions (
     id         VARCHAR PRIMARY KEY,
-    match_id   VARCHAR NOT NULL REFERENCES matches(id),
+    match_id   VARCHAR NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
     created_at TIMESTAMP NOT NULL
 );
 
 CREATE TABLE messages (
     id         VARCHAR PRIMARY KEY,
-    session_id VARCHAR NOT NULL REFERENCES chat_sessions(id),
-    sender_id  VARCHAR NOT NULL REFERENCES users(id),
+    session_id VARCHAR NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    sender_id  VARCHAR NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     content    VARCHAR NOT NULL,
+    read       BOOLEAN DEFAULT FALSE,
     sent_at    TIMESTAMP NOT NULL
 );
 
 -- ─── CONTRACT DOMAIN ───────────────────────────────────────
 CREATE TABLE contracts (
     id            VARCHAR PRIMARY KEY,
-    match_id      VARCHAR NOT NULL REFERENCES matches(id),
-    status        VARCHAR NOT NULL,
-    budget        FLOAT,
-    duration_days VARCHAR,
+    match_id      VARCHAR NOT NULL REFERENCES matches(id) ON DELETE RESTRICT,
+    status        VARCHAR NOT NULL CHECK (status IN ('draft', 'active', 'completed', 'cancelled')),
+    budget        DECIMAL(12,2),
+    duration_days INTEGER,
     created_at    TIMESTAMP NOT NULL
 );
 
 CREATE TABLE negotiations (
     id          VARCHAR PRIMARY KEY,
-    contract_id VARCHAR NOT NULL REFERENCES contracts(id),
-    proposed_by VARCHAR NOT NULL REFERENCES users(id),
+    contract_id VARCHAR NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+    proposed_by VARCHAR NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     created_at  TIMESTAMP NOT NULL
 );
 
 -- ─── PROJECT DOMAIN ────────────────────────────────────────
 CREATE TABLE projects (
     id          VARCHAR PRIMARY KEY,
-    contract_id VARCHAR NOT NULL REFERENCES contracts(id),
-    status      VARCHAR NOT NULL,
+    contract_id VARCHAR NOT NULL REFERENCES contracts(id) ON DELETE RESTRICT,
+    status      VARCHAR NOT NULL CHECK (status IN ('active', 'completed', 'cancelled')),
     created_at  TIMESTAMP NOT NULL
 );
 
 CREATE TABLE milestones (
     id         VARCHAR PRIMARY KEY,
-    project_id VARCHAR NOT NULL REFERENCES projects(id),
+    project_id VARCHAR NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     title      VARCHAR NOT NULL,
     completed  BOOLEAN DEFAULT FALSE,
     due_date   TIMESTAMP
@@ -4944,16 +4971,16 @@ CREATE TABLE milestones (
 
 CREATE TABLE project_health (
     id           VARCHAR PRIMARY KEY,
-    project_id   VARCHAR NOT NULL REFERENCES projects(id),
+    project_id   VARCHAR NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     health_score FLOAT NOT NULL
 );
 
 -- ─── REVIEW DOMAIN ─────────────────────────────────────────
 CREATE TABLE reviews (
     id          VARCHAR PRIMARY KEY,
-    reviewer_id VARCHAR NOT NULL REFERENCES users(id),
-    subject_id  VARCHAR NOT NULL REFERENCES users(id),
-    rating      FLOAT NOT NULL,
+    reviewer_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    subject_id  VARCHAR NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    rating      FLOAT NOT NULL CHECK (rating >= 1.0 AND rating <= 5.0),
     comment     VARCHAR,
     created_at  TIMESTAMP NOT NULL
 );
@@ -4961,7 +4988,7 @@ CREATE TABLE reviews (
 -- ─── NOTIFICATION DOMAIN ───────────────────────────────────
 CREATE TABLE notifications (
     id         VARCHAR PRIMARY KEY,
-    user_id    VARCHAR NOT NULL REFERENCES users(id),
+    user_id    VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     message    VARCHAR NOT NULL,
     read       BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL
@@ -4969,7 +4996,7 @@ CREATE TABLE notifications (
 
 CREATE TABLE notification_preferences (
     id             VARCHAR PRIMARY KEY,
-    user_id        VARCHAR NOT NULL REFERENCES users(id),
+    user_id        VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     email_enabled  BOOLEAN DEFAULT TRUE,
     in_app_enabled BOOLEAN DEFAULT TRUE
 );
