@@ -285,6 +285,40 @@ No corrections were required for this task.
 - Simplified the dashboard layout by grouping related information into collapsible sections to reduce visual overload.
 - Added contextual tooltips in key sections (contract negotiation, dashboard phases) to guide users through complex flows.
 
+---
+
+
+
+## Identified Usability Issues
+
+The following table consolidates all usability issues detected across the 4 testing sessions:
+
+| # | Issue | Task | Participants Affected | Severity |
+|---|---|---|---|---|
+| 1 | Information overload in the dashboard and some tabs makes the interface feel dense | Task 3, General | P3, P4 | Medium |
+| 2 | Lack of guidance tooltips for complex flows such as contract re-negotiation | General | P3 | Low |
+
+No issues were detected related to navigation, visual comprehension, accessibility, or visual consistency. The overall interface was rated as intuitive and easy to use by all 4 participants.
+
+---
+
+## Corrections Applied to the Prototype
+
+### Correction 1 — Dashboard Information Density
+**Problem detected:** 2 out of 4 participants mentioned the dashboard felt slightly overloaded with information, which contributed to the Task 3 average score of 4.25/5 instead of a perfect 5.
+
+**Correction applied:** Grouped related dashboard sections into collapsible panels (e.g. financial distribution, contract phases, deliverables compliance) so users can progressively disclose information based on their needs.
+
+**Design criterion:** Apply progressive disclosure to reduce visual noise without removing functionality. This follows the principle that users should see the most critical information first (contract status, progress percentage, time remaining) and access secondary details on demand.
+
+---
+
+### Correction 2 — Contextual Tooltips for Complex Flows
+**Problem detected:** Participant 3 noted that some sections lack guidance for complex interactions such as contract re-negotiation, suggesting that first-time users may not immediately understand the steps involved.
+
+**Correction applied:** Added contextual tooltips and a brief info modal on the contract negotiation screen explaining the re-negotiation flow step by step (Re-negotiate → Send proposal → Advisor accepts → Marry the Prospect).
+
+**Design criterion:** Provide just-in-time guidance at points of complexity without disrupting the flow for experienced users. Tooltips are non-intrusive and only appear on hover or first visit, preserving a clean interface for returning users.
 
 
 
