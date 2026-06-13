@@ -34,24 +34,28 @@ Vercel: https://pymeboost-v1.vercel.app/
 #### Heatmap Analysis
 
 **Participant 1:**
+---
 ![Heatmap P1 Task 1](docs/images/UX/heatmap-task1-p1.png)
 ![Heatmap P2 Task 1](docs/images/UX/heatmap-task1-p2.png)
 - Clicked directly on "Iniciar sesión" and navigated successfully to the advisor discovery screen.
 - Completed the task efficiently with no hesitation.
 ---
 **Participant 2:**
+---
 ![Heatmap P3 Task 1](docs/images/UX/heatmap-task1-p3.png)
 ![Heatmap P4 Task 1](docs/images/UX/heatmap-task1-p4.png)
 - Verified the PYME/Advisor toggle to confirm role selection before clicking "Iniciar sesión".
 - Completed the task successfully.
 ---
 **Participant 3:**
+---
 ![Heatmap P5 Task 1](docs/images/UX/heatmap-task1-p5.png)
 ![Heatmap P6 Task 1](docs/images/UX/heatmap-task1-p6.png)
 - Clicked directly on "Iniciar sesión" with no hesitation.
 - Completed the task efficiently with minimal interaction.
 ---
 **Participant 4:**
+---
 ![Heatmap P7 Task 1](docs/images/UX/heatmap-task1-p7.png)
 ![Heatmap P8 Task 1](docs/images/UX/heatmap-task1-p8.png)
 - Completed the full registration flow by filling in the form fields before logging in.
