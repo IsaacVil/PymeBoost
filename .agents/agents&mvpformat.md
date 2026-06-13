@@ -296,44 +296,159 @@ Agents are run via **Claude Code** (the CLI). Since we don't use VS Code Copilot
 ### How to run an agent in Claude Code
 
 1. Open Claude Code in your terminal or VS Code extension
-2. Paste the agent's full content into the conversation OR reference the agent file like this:
-   ```
-   Read .agents/solid-agent.md and apply it to the following code: [paste code here]
-   ```
-3. Claude Code will follow the RICO format (Role, Instructions, Context, Output) from the agent file
-4. Document the findings and corrections in README.md
+2. Use the command pattern below for the agent you want to run
+3. Claude Code reads the agent file and applies the RICO format (Role, Instructions, Context, Output)
+4. Document findings and corrections in README.md under the "Agent Validations" section
 
-### Example commands to use in Claude Code
+---
 
+### Agent Command Reference
+
+#### Design Principle Agents
+
+**SOLID Validator** — Detects violations of all 5 SOLID principles in FE or BE code
 ```
-Read .agents/solid-agent.md and analyze this code with SOLID principles: [paste code]
+Read .agents/solid-agent.md and analyze the following [component/hook/service/controller/repository] from the [feature/domain] feature for SOLID violations:
 
-Read .agents/dry-agent.md and check this code for duplication: [paste code]
-
-Read .agents/cohesion-agent.md and validate cohesion in this module: [paste code]
-
-Read .agents/coupling-agent.md and check coupling in this feature: [paste code]
-
-Read .agents/architecture-agent.md and validate this feature follows our documented architecture: [paste code]
-
-Read .agents/frontend-agent.md and review this React component: [paste code]
-
-Read .agents/backend-agent.md and review this API endpoint: [paste code]
-
-Read .agents/database-agent.md and validate this database schema: [paste code]
-
-Read .agents/testing-agent.md and generate tests for this function: [paste code]
+[paste code here]
 ```
+
+**DRY Validator** — Detects duplicated logic, structure, types, or UI patterns
+```
+Read .agents/dry-agent.md and check the following code for DRY violations. These files are from the [feature/domain] feature:
+
+File 1 — [filename]:
+[paste code]
+
+File 2 — [filename] (optional, for cross-file comparison):
+[paste code]
+```
+
+**Cohesion Validator** — Classifies and evaluates the cohesion level of a module
+```
+Read .agents/cohesion-agent.md and evaluate the cohesion of the following [component/hook/service/controller/repository] from the [feature/domain] feature:
+
+[paste code here]
+```
+
+---
+
+#### Architecture Agent
+
+**Architecture Validator** — Validates that code matches the documented architecture in README.md
+```
+Read .agents/architecture-agent.md and validate the following [component/hook/service/controller/repository] from the [feature/domain] feature against the documented architecture:
+
+[paste code here]
+```
+
+For full feature validation (multiple files):
+```
+Read .agents/architecture-agent.md and validate the full [feature/domain] feature. Here are all the files:
+
+Controller — [filename]:
+[paste code]
+
+Service — [filename]:
+[paste code]
+
+Repository — [filename]:
+[paste code]
+```
+
+---
+
+#### Technical Agents
+
+**Frontend Agent** — Generates or reviews React components, hooks, services, and stores
+```
+# Generate a new component/hook/service:
+Read .agents/frontend-agent.md and generate a [Primitive/Compound/Container/Hook/Service] for the [feature] feature. It should: [description of what it does]
+
+# Review existing code:
+Read .agents/frontend-agent.md and review the following [component/hook/service] from the [feature] feature:
+
+[paste code here]
+```
+
+**Backend Agent** — Generates or reviews FastAPI controllers, services, repositories, models, schemas, and events
+```
+# Generate new backend code:
+Read .agents/backend-agent.md and generate a [controller/service/repository/model/schema/event] for the [domain] domain. Use case: [description]
+
+# Review existing code:
+Read .agents/backend-agent.md and review the following [controller/service/repository] from the [domain] domain:
+
+[paste code here]
+```
+
+**Database Agent** — Validates SQLAlchemy models, Alembic migrations, indexes, and seed data
+```
+# Review a SQLAlchemy model:
+Read .agents/database-agent.md and review the following SQLAlchemy model from the [domain] domain:
+
+[paste code here]
+
+# Design a new table:
+Read .agents/database-agent.md and design the SQLAlchemy model and Alembic migration for a new table in the [domain] domain: [description of fields and relationships]
+
+# Review indexes:
+Read .agents/database-agent.md and validate that the following table has the correct indexes per section 2.22 of the README:
+
+[paste DDL or model code]
+```
+
+**Testing Agent** — Generates or reviews tests (Vitest, Playwright, Pytest)
+```
+# Generate frontend unit tests (Vitest):
+Read .agents/testing-agent.md and generate Vitest unit tests for the following [hook/validator/service] from the [feature] feature:
+
+[paste source code here]
+
+# Generate backend unit tests (Pytest):
+Read .agents/testing-agent.md and generate Pytest unit tests for the following [controller/service/repository] from the [domain] domain:
+
+[paste source code here]
+
+# Generate Playwright E2E tests:
+Read .agents/testing-agent.md and generate Playwright E2E tests for the [workflow name] workflow (e.g., matching flow, contract negotiation)
+
+# Review existing tests:
+Read .agents/testing-agent.md and review the following test file for the [feature/domain]. Source code is also provided:
+
+Test file:
+[paste test code]
+
+Source file:
+[paste source code]
+```
+
+---
+
+### Recommended Agent Combination per MVP Feature
+
+| Feature | Run these agents in order |
+|---------|--------------------------|
+| Auth (Login/Register) | `architecture-agent` → `solid-agent` → `frontend-agent` → `testing-agent` |
+| Matching (Advisor Cards) | `solid-agent` → `dry-agent` → `frontend-agent` → `backend-agent` → `testing-agent` |
+| Messaging (Chat) | `cohesion-agent` → `architecture-agent` → `frontend-agent` → `backend-agent` → `testing-agent` |
+| Contracts (Negotiation) | `solid-agent` → `architecture-agent` → `backend-agent` → `database-agent` → `testing-agent` |
+| Dashboard (Tracking) | `dry-agent` → `cohesion-agent` → `frontend-agent` → `testing-agent` |
+| Reports | `backend-agent` → `database-agent` → `testing-agent` |
 
 ### Workflow per feature (using Claude Code)
 
 ```
-1. Write the code (component, service, hook, etc.)
-2. In Claude Code: "Read .agents/solid-agent.md and analyze: [paste code]"
-3. Claude Code reports findings following the agent's Output format
-4. Apply suggested corrections
-5. Document findings + corrections in README.md under "Agent Validations"
-6. Commit validated code
+For each feature:
+  1. Write the initial code (component, service, hook, controller, etc.)
+  2. Run: architecture-agent → verify layer rules
+  3. Run: solid-agent → verify design principles
+  4. Run: dry-agent or cohesion-agent → verify quality
+  5. Run: frontend-agent or backend-agent → generate/review
+  6. Run: testing-agent → generate tests
+  7. Apply all suggested corrections
+  8. Document findings + corrections in README.md under "Agent Validations"
+  9. Commit validated code
 ```
 
 ---

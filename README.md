@@ -6138,4 +6138,99 @@ After production migration, monitor:
 
 Use Cloud SQL monitoring dashboard on GCP to verify.
 
+---
 
+# Agents
+
+PymeBoost uses specialized AI agents as quality validators during development. Every agent follows the **RICO format** (Role, Instructions, Context, Output) and is run via **Claude Code**. All agents are grounded in this README — evaluations reference the architecture, layer rules, and design patterns documented here.
+
+Agents are run before committing each feature. Findings and corrections are documented below under "Agent Validations".
+
+---
+
+## Agent Catalog
+
+| Agent | File | Purpose | Applies to |
+|-------|------|---------|------------|
+| **SOLID Validator** | [.agents/solid-agent.md](.agents/solid-agent.md) | Detects violations of all 5 SOLID principles | Frontend + Backend |
+| **DRY Validator** | [.agents/dry-agent.md](.agents/dry-agent.md) | Detects duplicated logic, structure, types, and UI patterns | Frontend + Backend |
+| **Cohesion Validator** | [.agents/cohesion-agent.md](.agents/cohesion-agent.md) | Classifies cohesion level and detects low-cohesion modules | Frontend + Backend |
+| **Architecture Validator** | [.agents/architecture-agent.md](.agents/architecture-agent.md) | Validates code matches the documented architecture in this README | Frontend + Backend |
+| **Frontend Agent** | [.agents/frontend-agent.md](.agents/frontend-agent.md) | Generates and reviews React components, hooks, services, and stores | Frontend only |
+| **Backend Agent** | [.agents/backend-agent.md](.agents/backend-agent.md) | Generates and reviews FastAPI controllers, services, repositories, and schemas | Backend only |
+| **Database Agent** | [.agents/database-agent.md](.agents/database-agent.md) | Validates SQLAlchemy models, Alembic migrations, indexes, and seed data | Backend only |
+| **Testing Agent** | [.agents/testing-agent.md](.agents/testing-agent.md) | Generates and reviews Vitest, Playwright, and Pytest tests | Frontend + Backend |
+
+---
+
+## How to Run an Agent
+
+All agents are run in Claude Code using this pattern:
+
+```
+Read .agents/[agent-name].md and [action] the following [code type] from the [feature/domain]:
+
+[paste code here]
+```
+
+For the full command reference per agent and use case, see [.agents/agents&mvpformat.md](.agents/agents&mvpformat.md).
+
+---
+
+## Agent Validations
+
+Every time an agent is used during MVP development, findings and corrections are documented here. This section is organized by feature.
+
+---
+
+### Feature: Auth (Login / Register)
+
+> _No validations recorded yet — will be added during MVP development._
+
+---
+
+### Feature: Matching (Advisor Cards)
+
+> _No validations recorded yet — will be added during MVP development._
+
+---
+
+### Feature: Messaging (Chat)
+
+> _No validations recorded yet — will be added during MVP development._
+
+---
+
+### Feature: Contracts (Negotiation)
+
+> _No validations recorded yet — will be added during MVP development._
+
+---
+
+### Feature: Dashboard (Tracking)
+
+> _No validations recorded yet — will be added during MVP development._
+
+---
+
+### Feature: Reports
+
+> _No validations recorded yet — will be added during MVP development._
+
+---
+
+### Validation Entry Format
+
+Each validation entry must follow this format:
+
+```markdown
+#### [Agent Name] Analysis
+- **File analyzed:** `[path/to/file]`
+- **Finding:** [Short description of what the agent found]
+- **Suggested Correction:** [What the agent recommended]
+- **Applied Correction:** ✅ [What was actually changed] — commit [hash]
+```
+
+---
+
+# MVP
