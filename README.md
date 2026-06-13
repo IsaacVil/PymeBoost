@@ -22,6 +22,306 @@ PymeBoost emerges as a solution specifically designed for SMEs, creating an ecos
 
 Vercel: https://pymeboost-v1.vercel.app/
 
+
+---
+
+## UX Testing Results
+
+### Task 1 — PYME Registration
+
+**Task:** Sign up and log in as a PYME on PymeBoost.
+
+#### Heatmap Analysis
+
+**Participant 1:**
+---
+![Heatmap P1 Task 1](docs/images/UX/heatmap-task1-p1.png)
+![Heatmap P2 Task 1](docs/images/UX/heatmap-task1-p2.png)
+---
+- Clicked directly on "Iniciar sesión" and navigated successfully to the advisor discovery screen.
+- Completed the task efficiently with no hesitation.
+---
+**Participant 2:**
+---
+![Heatmap P3 Task 1](docs/images/UX/heatmap-task1-p3.png)
+![Heatmap P4 Task 1](docs/images/UX/heatmap-task1-p4.png)
+---
+- Verified the PYME/Advisor toggle to confirm role selection before clicking "Iniciar sesión".
+- Completed the task successfully.
+---
+**Participant 3:**
+---
+![Heatmap P5 Task 1](docs/images/UX/heatmap-task1-p5.png)
+![Heatmap P6 Task 1](docs/images/UX/heatmap-task1-p6.png)
+---
+- Clicked directly on "Iniciar sesión" with no hesitation.
+- Completed the task efficiently with minimal interaction.
+---
+**Participant 4:**
+---
+![Heatmap P7 Task 1](docs/images/UX/heatmap-task1-p7.png)
+![Heatmap P8 Task 1](docs/images/UX/heatmap-task1-p8.png)
+---
+- Completed the full registration flow by filling in the form fields before logging in.
+- Chose the more complete registration path instead of the direct login shortcut.
+- Completed the task successfully.
+> **Note:** The heatmap for Participant 4 only shows the login screen since Maze only recorded clicks from that screen onwards. However, the participant did complete the full registration form before reaching this screen.
+>
+
+#### Key Observations
+
+- All 4 participants completed the task successfully.
+- 3 out of 4 participants used the direct login shortcut.
+- 1 participant completed the full registration form, demonstrating the prototype supports both flows.
+
+#### Detected Usability Issues
+
+No significant usability issues detected in this task.
+
+#### Corrections Applied
+
+No corrections were required for this task.
+
+---
+#### User Rating — "How easy was the registration process?"
+*Scale: 1 = Very difficult, 5 = Very easy*
+
+| Score | Responses | Percentage |
+|---|---|---|
+| 5 - Very easy | 5 | 100% |
+
+**Average score: 5/5** — All 4 participants rated the registration process as very easy.
+---
+![Registration Rating](docs/images/UX/rating-task1.png)
+---
+
+
+### Task 2 — Advisor Discovery & Decision
+
+**Task:** Navigate to "Descubrí tu advisor" and make a decision (approved or rejected) with at least one advisor.
+---
+
+#### Heatmap Analysis
+
+**Participant 1:**
+---
+![Heatmap P1 Task 2 - Login](docs/images/UX/heatmap-task2-p1.png)
+![Heatmap P1 Task 2 - Advisor](docs/images/UX/heatmap-task2-p2.png)
+---
+- Clicked directly on "Iniciar sesión" to enter the app.
+- On the advisor screen, interaction concentrated on the advisor name and compatibility section, indicating the participant read the advisor information before making a decision.
+
+**Participant 2:**
+---
+![Heatmap P2 Task 2 - Login](docs/images/UX/heatmap-task2-p3.png)
+![Heatmap P2 Task 2 - Advisor](docs/images/UX/heatmap-task2-p4.png)
+---
+- Clicked directly on "Iniciar sesión" to enter the app.
+- On the advisor screen, interaction focused on the pricing section (Retainer Advisor ₡150,000), suggesting the participant paid close attention to the financial details before deciding.
+
+**Participant 3:**
+---
+![Heatmap P3 Task 2 - Login](docs/images/UX/heatmap-task2-p5.png)
+![Heatmap P3 Task 2 - Advisor](docs/images/UX/heatmap-task2-p6.png)
+---
+- Clicked directly on "Iniciar sesión" to enter the app.
+- On the advisor screen, interaction concentrated on the PymeBoost commission section (₡36,000), indicating interest in the cost breakdown before making a decision.
+
+**Participant 4:**
+---
+![Heatmap P4 Task 2 - Login](docs/images/UX/heatmap-task2-p7.png)
+![Heatmap P4 Task 2 - Advisor](docs/images/UX/heatmap-task2-p8.png)
+---
+- Clicked directly on "Iniciar sesión" to enter the app.
+- On the advisor screen, interaction was distributed across the advisor name, compatibility section, and a click outside the card area — this is expected behavior as the swipe mechanic also supports drag interaction in addition to button clicks.
+
+> **Note:** Clicks registered outside the advisor card area are expected behavior, as the swipe mechanic supports both drag and click interactions.
+
+#### Key Observations
+
+- All 4 participants logged in without hesitation.
+- Participants naturally focused on different sections of the advisor card (name, compatibility, pricing) before making a decision, showing the card layout guides decision-making effectively.
+- The swipe mechanic was intuitive — no participants appeared confused about how to approve or reject.
+
+#### Detected Usability Issues
+
+No significant usability issues detected in this task.
+
+#### Corrections Applied
+
+No corrections were required for this task.
+---
+#### User Rating — "How clear was the advisor information for making a match decision?"
+*Scale: 1 = Very confusing, 5 = Very clear*
+
+| Score | Responses | Percentage |
+|---|---|---|
+| 5 - Very clear | 5 | 100% |
+
+**Average score: 5/5** — All participants rated the advisor information as very clear for making a decision.
+---
+![Advisor Rating](docs/images/UX/rating-task2.png)
+---
+
+### Task 3 — Contract Negotiation & Dashboard Review
+
+**Task:** Navigate to Messages, enter the chat with Sofía Ramírez, re-negotiate the contract proposal, and review the active contracts in the dashboard.
+
+#### Heatmap Analysis
+
+**Participant 1:**
+---
+![Heatmap P1 Task 3 - Login](docs/images/UX/heatmap-task3-p1.png)
+![Heatmap P1 Task 3 - Advisor](docs/images/UX/heatmap-task3-p2.png)
+![Heatmap P1 Task 3 - Messages](docs/images/UX/heatmap-task3-p3.png)
+![Heatmap P1 Task 3 - Dashboard](docs/images/UX/heatmap-task3-p4.png)
+---
+- Logged in directly via "Iniciar sesión".
+- On the advisor screen, briefly visited before navigating to Messages.
+- In the Messages screen, navigated through multiple chats and interacted extensively with the contract negotiation flow, reaching the "¡Married the Prospect!" confirmation.
+- Also visited the "Mi Contrato" dashboard to review active contract phases and financial distribution.
+
+**Participant 2:**
+---
+![Heatmap P2 Task 3 - Login](docs/images/UX/heatmap-task3-p5.png)
+![Heatmap P2 Task 3 - Advisor](docs/images/UX/heatmap-task3-p6.png)
+![Heatmap P2 Task 3 - Messages](docs/images/UX/heatmap-task3-p7.png)
+---
+- Logged in directly via "Iniciar sesión".
+- Briefly visited the advisor discovery screen before navigating to Messages.
+- Located Sofía Ramírez's chat and completed the contract negotiation flow reaching "¡Married the Prospect!".
+- Interaction concentrated on the chat list and the contract confirmation area.
+
+**Participant 3:**
+---
+![Heatmap P3 Task 3 - Login](docs/images/UX/heatmap-task3-p8.png)
+![Heatmap P3 Task 3 - Advisor](docs/images/UX/heatmap-task3-p9.png)
+![Heatmap P3 Task 3 - Messages](docs/images/UX/heatmap-task3-p10.png)
+---
+- Logged in directly via "Iniciar sesión".
+- Briefly visited the advisor discovery screen before navigating to Messages.
+- Located Sofía Ramírez's chat and completed the negotiation successfully.
+- Interaction in the chat was focused and direct with minimal exploration.
+
+**Participant 4:**
+---
+![Heatmap P4 Task 3 - Login](docs/images/UX/heatmap-task3-p11.png)
+![Heatmap P4 Task 3 - Advisor](docs/images/UX/heatmap-task3-p12.png)
+![Heatmap P4 Task 3 - Messages](docs/images/UX/heatmap-task3-p13.png)
+![Heatmap P4 Task 3 - Dashboard](docs/images/UX/heatmap-task3-p14.png)
+![Heatmap P4 Task 3 - Messages 2](docs/images/UX/heatmap-task3-p15.png)
+---
+- Logged in directly via "Iniciar sesión".
+- Explored the advisor discovery screen briefly before navigating.
+- In Messages, explored multiple chats (Diego Hernández, Valeria Castro, Sofía Ramírez) before completing the negotiation.
+- Also visited the "Mi Contrato" dashboard and explored the contract phases in detail.
+- High click density across multiple screens reflects deep exploration of the interface, including chat interactions and contract negotiation flows — this is expected behavior given the open-ended nature of this task.
+
+> **Note:** The high number of clicks across screens for all participants is expected, as this task involved free navigation through messaging, contract negotiation, and dashboard review. Multiple interactions within chats and contract flows naturally generate dense heatmaps.
+
+#### Key Observations
+
+- All 4 participants completed the task successfully.
+- All participants navigated intuitively from login → Descubrir → Mensajes → contract negotiation.
+- Participants who visited "Mi Contrato" dashboard explored it in detail, indicating the contract tracking information is engaging and clear.
+- The "¡Married the Prospect!" confirmation was reached by all participants, confirming the negotiation flow is understandable.
+
+#### Detected Usability Issues
+
+No significant usability issues detected in this task.
+
+#### Corrections Applied
+
+No corrections were required for this task.
+---
+#### User Rating — "How intuitive was the contract negotiation and dashboard visualization process?"
+*Scale: 1 = Very confusing, 5 = Very intuitive*
+
+| Score | Responses | Percentage |
+|---|---|---|
+| 4 - Intuitive | 3 | 75% |
+| 5 - Very intuitive | 1 | 25% |
+
+| Participant | Response |
+|---|---|
+| Participant 1 | 4 |
+| Participant 2 | 4 |
+| Participant 3 | 4 |
+| Participant 4 | 5 |
+
+**Average score: 4.25/5** — Participants found the contract negotiation and dashboard visualization intuitive overall. The score reflects that while the flow was clear, the volume of information and the number of steps involved in the negotiation process added complexity, preventing a perfect rating.
+---
+![Negotiation Rating](docs/images/UX/rating-task3.png)
+![Negotiation Rating Detail](docs/images/UX/rating-task3-detail.png)
+---
+
+
+### General Comments
+
+**Task:** Leave a general comment about the application — what you liked, what you didn't, and what you would improve.
+
+| Participant | Comment |
+|---|---|
+| Participant 1 | The app is quite intuitive, easy to follow and use. |
+| Participant 2 | Really liked the design and found it intuitive overall. |
+| Participant 3 | Very consistent overall. Some tabs have a lot of information — an info modal to guide the user in certain sections could help, for example to clarify doubts (how to re-negotiate, etc.). |
+| Participant 4 | The dashboard may feel slightly overloaded, but overall everything works quite well. |
+
+#### Key Observations
+
+- All participants highlighted the app as intuitive and easy to use.
+- 2 out of 4 participants mentioned information overload as a minor concern — specifically in the dashboard and some tabs.
+- Participant 3 suggested adding info modals or tooltips to guide users through complex flows like contract re-negotiation.
+
+#### Detected Usability Issues
+
+| Issue | Participants affected | Severity |
+|---|---|---|
+| Information overload in dashboard and some tabs | P3, P4 | Medium |
+| Lack of guidance tooltips for complex flows (e.g. re-negotiation) | P3 | Low |
+
+#### Corrections Applied
+
+- Simplified the dashboard layout by grouping related information into collapsible sections to reduce visual overload.
+- Added contextual tooltips in key sections (contract negotiation, dashboard phases) to guide users through complex flows.
+
+---
+
+
+
+## Identified Usability Issues
+
+The following table consolidates all usability issues detected across the 4 testing sessions:
+
+| # | Issue | Task | Participants Affected | Severity |
+|---|---|---|---|---|
+| 1 | Information overload in the dashboard and some tabs makes the interface feel dense | Task 3, General | P3, P4 | Medium |
+| 2 | Lack of guidance tooltips for complex flows such as contract re-negotiation | General | P3 | Low |
+
+No issues were detected related to navigation, visual comprehension, accessibility, or visual consistency. The overall interface was rated as intuitive and easy to use by all 4 participants.
+
+---
+
+## Corrections Applied to the Prototype
+
+### Correction 1 — Dashboard Information Density
+**Problem detected:** 2 out of 4 participants mentioned the dashboard felt slightly overloaded with information, which contributed to the Task 3 average score of 4.25/5 instead of a perfect 5.
+
+**Correction applied:** Grouped related dashboard sections into collapsible panels (e.g. financial distribution, contract phases, deliverables compliance) so users can progressively disclose information based on their needs.
+
+**Design criterion:** Apply progressive disclosure to reduce visual noise without removing functionality. This follows the principle that users should see the most critical information first (contract status, progress percentage, time remaining) and access secondary details on demand.
+
+---
+
+### Correction 2 — Contextual Tooltips for Complex Flows
+**Problem detected:** Participant 3 noted that some sections lack guidance for complex interactions such as contract re-negotiation, suggesting that first-time users may not immediately understand the steps involved.
+
+**Correction applied:** Added contextual tooltips and a brief info modal on the contract negotiation screen explaining the re-negotiation flow step by step (Re-negotiate → Send proposal → Advisor accepts → Marry the Prospect).
+
+**Design criterion:** Provide just-in-time guidance at points of complexity without disrupting the flow for experienced users. Tooltips are non-intrusive and only appear on hover or first visit, preserving a clean interface for returning users.
+
+
+
 ---
 
 # Frontend
@@ -4577,8 +4877,6 @@ The matrix above lists **object-level (GoF) patterns** that live *inside* a proc
 
 ## 2.15 AI / Agentic Patterns
 
-The matrices above cover **object-level (GoF)** and **architectural** patterns. The pattern below is an **AI-agent pattern** — neither GoF nor a Microsoft Cloud Design Pattern. It wraps an LLM/AI step so its output is self-reviewed before being persisted or served, so it lives in its own matrix.
-
 ### AI patterns matrix
 
 Both classes extend the shared generate → self-critique → refine loop in [ReflectionService](backend/domains/ai/services/reflection_service.py).
@@ -4681,3 +4979,1146 @@ The backend is organized **by domain**, not by technical layer. Each domain unde
 ---
 
 # Data Design
+
+
+## 2.17 Data Stack
+
+| Component | Technology |
+|---|---|
+| Database | PostgreSQL |
+| ORM | SQLAlchemy |
+| Migrations | Alembic |
+
+The relational database used is PostgreSQL. Backend access is handled through SQLAlchemy as the ORM, following the domain-driven architecture of the project. Schema migrations are managed with Alembic.
+
+---
+
+## 2.18 Database Schema (DBML)
+
+```dbml
+// ─── USER DOMAIN ───────────────────────────────────────────
+Table users {
+  id          String [pk]
+  email       String [unique, not null]
+  account_type String [not null, note: 'pyme | advisor']
+  created_at  DateTime [not null]
+}
+
+Table sessions {
+  id         String [pk]
+  user_id    String [not null, ref: > users.id]
+  expires_at DateTime [not null]
+}
+
+// ─── PYME DOMAIN ───────────────────────────────────────────
+Table pymes {
+  id           String [pk]
+  user_id      String [not null, ref: > users.id]
+  company_name String [not null]
+  industry     String
+}
+
+Table industries {
+  id   String [pk]
+  name String [not null]
+}
+
+Table optimization_areas {
+  id      String [pk]
+  pyme_id String [not null, ref: > pymes.id]
+  area    String [not null]
+}
+
+// ─── ADVISOR DOMAIN ────────────────────────────────────────
+Table advisors {
+  id        String [pk]
+  user_id   String [not null, ref: > users.id]
+  full_name String [not null]
+  base_rate Decimal
+}
+
+Table reputations {
+  id         String [pk]
+  advisor_id String [not null, ref: > advisors.id]
+  score      Float [not null]
+}
+
+Table specializations {
+  id         String [pk]
+  advisor_id String [not null, ref: > advisors.id]
+  industry   String [not null]
+}
+
+// ─── MATCHING DOMAIN ───────────────────────────────────────
+Table swipes {
+  id         String [pk]
+  pyme_id    String [not null, ref: > pymes.id]
+  advisor_id String [not null, ref: > advisors.id]
+  approved   Boolean [not null]
+}
+
+Table matches {
+  id         String [pk]
+  pyme_id    String [not null, ref: > pymes.id]
+  advisor_id String [not null, ref: > advisors.id]
+  status     String [not null, note: 'pending | active | closed']
+  created_at DateTime [not null]
+}
+
+// ─── COMMUNICATION DOMAIN ──────────────────────────────────
+Table chat_sessions {
+  id         String [pk]
+  match_id   String [not null, ref: > matches.id]
+  created_at DateTime [not null]
+}
+
+Table messages {
+  id         String [pk]
+  session_id String [not null, ref: > chat_sessions.id]
+  sender_id  String [not null, ref: > users.id]
+  content    String [not null]
+  read       Boolean [default: false]
+  sent_at    DateTime [not null]
+}
+
+// ─── CONTRACT DOMAIN ───────────────────────────────────────
+Table contracts {
+  id            String [pk]
+  match_id      String [not null, ref: > matches.id]
+  status        String [not null, note: 'draft | active | completed | cancelled']
+  budget        Decimal
+  duration_days Integer
+  created_at    DateTime [not null]
+}
+
+Table negotiations {
+  id          String [pk]
+  contract_id String [not null, ref: > contracts.id]
+  proposed_by String [not null, ref: > users.id]
+  created_at  DateTime [not null]
+}
+
+// ─── PROJECT DOMAIN ────────────────────────────────────────
+Table projects {
+  id          String [pk]
+  contract_id String [not null, ref: > contracts.id]
+  status      String [not null]
+  created_at  DateTime [not null]
+}
+
+Table milestones {
+  id         String [pk]
+  project_id String [not null, ref: > projects.id]
+  title      String [not null]
+  completed  Boolean [default: false]
+  due_date   DateTime
+}
+
+Table project_health {
+  id           String [pk]
+  project_id   String [not null, ref: > projects.id]
+  health_score Float [not null]
+}
+
+// ─── REVIEW DOMAIN ─────────────────────────────────────────
+Table reviews {
+  id          String [pk]
+  reviewer_id String [not null, ref: > users.id]
+  subject_id  String [not null, ref: > users.id]
+  rating      Float [not null]
+  comment     String
+  created_at  DateTime [not null]
+}
+
+// ─── NOTIFICATION DOMAIN ───────────────────────────────────
+Table notifications {
+  id         String [pk]
+  user_id    String [not null, ref: > users.id]
+  message    String [not null]
+  read       Boolean [default: false]
+  created_at DateTime [not null]
+}
+
+Table notification_preferences {
+  id             String [pk]
+  user_id        String [not null, ref: > users.id]
+  email_enabled  Boolean [default: true]
+  in_app_enabled Boolean [default: true]
+}
+
+// ─── EVENT DOMAIN ──────────────────────────────────────────
+Table domain_events {
+  id          String [pk]
+  event_type  String [not null]
+  payload     JSON [not null]
+  occurred_at DateTime [not null]
+}
+```
+
+### Foreign Key Delete Behaviors
+
+| Child Table | FK Column | References | ON DELETE | Rationale |
+|---|---|---|---|---|
+| `sessions` | `user_id` | `users.id` | CASCADE | Session belongs to user — deleted with it |
+| `pymes` | `user_id` | `users.id` | CASCADE | Profile belongs to user |
+| `optimization_areas` | `pyme_id` | `pymes.id` | CASCADE | Area belongs to PYME |
+| `advisors` | `user_id` | `users.id` | CASCADE | Profile belongs to user |
+| `reputations` | `advisor_id` | `advisors.id` | CASCADE | Reputation belongs to advisor |
+| `specializations` | `advisor_id` | `advisors.id` | CASCADE | Specialization belongs to advisor |
+| `swipes` | `pyme_id`, `advisor_id` | `pymes.id`, `advisors.id` | CASCADE | Swipe history follows the participant |
+| `matches` | `pyme_id`, `advisor_id` | `pymes.id`, `advisors.id` | RESTRICT | Cannot delete participant with active matches |
+| `chat_sessions` | `match_id` | `matches.id` | CASCADE | Chat belongs to match |
+| `messages` | `session_id` | `chat_sessions.id` | CASCADE | Message belongs to session |
+| `messages` | `sender_id` | `users.id` | RESTRICT | Cannot delete user who sent messages |
+| `contracts` | `match_id` | `matches.id` | RESTRICT | Cannot delete match with a contract |
+| `negotiations` | `contract_id` | `contracts.id` | CASCADE | Negotiation belongs to contract |
+| `negotiations` | `proposed_by` | `users.id` | RESTRICT | Cannot delete user who negotiated |
+| `projects` | `contract_id` | `contracts.id` | RESTRICT | Cannot delete contract with a project |
+| `milestones` | `project_id` | `projects.id` | CASCADE | Milestone belongs to project |
+| `project_health` | `project_id` | `projects.id` | CASCADE | Health record belongs to project |
+| `reviews` | `reviewer_id`, `subject_id` | `users.id` | RESTRICT | Cannot delete users with review history |
+| `notifications` | `user_id` | `users.id` | CASCADE | Notifications belong to user |
+| `notification_preferences` | `user_id` | `users.id` | CASCADE | Preferences belong to user |
+
+---
+
+## 2.19 Entity-Relationship Diagram
+
+![ER Diagram](docs/images/backend/er-diagram.png)
+
+---
+
+## Database Scripts
+
+### Schema Creation
+
+```sql
+-- ─── USER DOMAIN ───────────────────────────────────────────
+CREATE TABLE users (
+    id           VARCHAR PRIMARY KEY,
+    email        VARCHAR UNIQUE NOT NULL,
+    account_type VARCHAR NOT NULL CHECK (account_type IN ('pyme', 'advisor')),
+    created_at   TIMESTAMP NOT NULL
+);
+
+CREATE TABLE sessions (
+    id         VARCHAR PRIMARY KEY,
+    user_id    VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMP NOT NULL
+);
+
+-- ─── PYME DOMAIN ───────────────────────────────────────────
+CREATE TABLE industries (
+    id   VARCHAR PRIMARY KEY,
+    name VARCHAR NOT NULL
+);
+
+CREATE TABLE pymes (
+    id           VARCHAR PRIMARY KEY,
+    user_id      VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    company_name VARCHAR NOT NULL,
+    industry     VARCHAR
+);
+
+CREATE TABLE optimization_areas (
+    id      VARCHAR PRIMARY KEY,
+    pyme_id VARCHAR NOT NULL REFERENCES pymes(id) ON DELETE CASCADE,
+    area    VARCHAR NOT NULL
+);
+
+-- ─── ADVISOR DOMAIN ────────────────────────────────────────
+CREATE TABLE advisors (
+    id        VARCHAR PRIMARY KEY,
+    user_id   VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    full_name VARCHAR NOT NULL,
+    base_rate DECIMAL(12,2)
+);
+
+CREATE TABLE reputations (
+    id         VARCHAR PRIMARY KEY,
+    advisor_id VARCHAR NOT NULL REFERENCES advisors(id) ON DELETE CASCADE,
+    score      FLOAT NOT NULL CHECK (score >= 0.0 AND score <= 5.0)
+);
+
+CREATE TABLE specializations (
+    id         VARCHAR PRIMARY KEY,
+    advisor_id VARCHAR NOT NULL REFERENCES advisors(id) ON DELETE CASCADE,
+    industry   VARCHAR NOT NULL
+);
+
+-- ─── MATCHING DOMAIN ───────────────────────────────────────
+CREATE TABLE matches (
+    id         VARCHAR PRIMARY KEY,
+    pyme_id    VARCHAR NOT NULL REFERENCES pymes(id) ON DELETE RESTRICT,
+    advisor_id VARCHAR NOT NULL REFERENCES advisors(id) ON DELETE RESTRICT,
+    status     VARCHAR NOT NULL CHECK (status IN ('pending', 'active', 'closed')),
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE swipes (
+    id         VARCHAR PRIMARY KEY,
+    pyme_id    VARCHAR NOT NULL REFERENCES pymes(id) ON DELETE CASCADE,
+    advisor_id VARCHAR NOT NULL REFERENCES advisors(id) ON DELETE CASCADE,
+    approved   BOOLEAN NOT NULL
+);
+
+-- ─── COMMUNICATION DOMAIN ──────────────────────────────────
+CREATE TABLE chat_sessions (
+    id         VARCHAR PRIMARY KEY,
+    match_id   VARCHAR NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE messages (
+    id         VARCHAR PRIMARY KEY,
+    session_id VARCHAR NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    sender_id  VARCHAR NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    content    VARCHAR NOT NULL,
+    read       BOOLEAN DEFAULT FALSE,
+    sent_at    TIMESTAMP NOT NULL
+);
+
+-- ─── CONTRACT DOMAIN ───────────────────────────────────────
+CREATE TABLE contracts (
+    id            VARCHAR PRIMARY KEY,
+    match_id      VARCHAR NOT NULL REFERENCES matches(id) ON DELETE RESTRICT,
+    status        VARCHAR NOT NULL CHECK (status IN ('draft', 'active', 'completed', 'cancelled')),
+    budget        DECIMAL(12,2),
+    duration_days INTEGER,
+    created_at    TIMESTAMP NOT NULL
+);
+
+CREATE TABLE negotiations (
+    id          VARCHAR PRIMARY KEY,
+    contract_id VARCHAR NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+    proposed_by VARCHAR NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    created_at  TIMESTAMP NOT NULL
+);
+
+-- ─── PROJECT DOMAIN ────────────────────────────────────────
+CREATE TABLE projects (
+    id          VARCHAR PRIMARY KEY,
+    contract_id VARCHAR NOT NULL REFERENCES contracts(id) ON DELETE RESTRICT,
+    status      VARCHAR NOT NULL CHECK (status IN ('active', 'completed', 'cancelled')),
+    created_at  TIMESTAMP NOT NULL
+);
+
+CREATE TABLE milestones (
+    id         VARCHAR PRIMARY KEY,
+    project_id VARCHAR NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    title      VARCHAR NOT NULL,
+    completed  BOOLEAN DEFAULT FALSE,
+    due_date   TIMESTAMP
+);
+
+CREATE TABLE project_health (
+    id           VARCHAR PRIMARY KEY,
+    project_id   VARCHAR NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    health_score FLOAT NOT NULL
+);
+
+-- ─── REVIEW DOMAIN ─────────────────────────────────────────
+CREATE TABLE reviews (
+    id          VARCHAR PRIMARY KEY,
+    reviewer_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    subject_id  VARCHAR NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    rating      FLOAT NOT NULL CHECK (rating >= 1.0 AND rating <= 5.0),
+    comment     VARCHAR,
+    created_at  TIMESTAMP NOT NULL
+);
+
+-- ─── NOTIFICATION DOMAIN ───────────────────────────────────
+CREATE TABLE notifications (
+    id         VARCHAR PRIMARY KEY,
+    user_id    VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    message    VARCHAR NOT NULL,
+    read       BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE notification_preferences (
+    id             VARCHAR PRIMARY KEY,
+    user_id        VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email_enabled  BOOLEAN DEFAULT TRUE,
+    in_app_enabled BOOLEAN DEFAULT TRUE
+);
+
+-- ─── EVENT DOMAIN ──────────────────────────────────────────
+CREATE TABLE domain_events (
+    id          VARCHAR PRIMARY KEY,
+    event_type  VARCHAR NOT NULL,
+    payload     JSON NOT NULL,
+    occurred_at TIMESTAMP NOT NULL
+);
+```
+
+---
+
+### Seed Data
+
+```sql
+-- ─── USERS ─────────────────────────────────────────────────
+INSERT INTO users VALUES
+('user-1', 'hilo@empresa.cr', 'pyme', NOW()),
+('user-2', 'mariana@advisors.cr', 'advisor', NOW()),
+('user-3', 'sofia@advisors.cr', 'advisor', NOW());
+
+-- ─── INDUSTRIES ────────────────────────────────────────────
+INSERT INTO industries VALUES
+('ind-1', 'Retail'),
+('ind-2', 'E-commerce'),
+('ind-3', 'Moda'),
+('ind-4', 'Tecnología');
+
+-- ─── PYMES ─────────────────────────────────────────────────
+INSERT INTO pymes VALUES
+('pyme-1', 'user-1', 'Hilo & Aguja', 'Moda');
+
+INSERT INTO optimization_areas VALUES
+('area-1', 'pyme-1', 'Marketing Digital'),
+('area-2', 'pyme-1', 'Conversión de campañas');
+
+-- ─── ADVISORS ──────────────────────────────────────────────
+INSERT INTO advisors VALUES
+('adv-1', 'user-2', 'Mariana Solís', 150000),
+('adv-2', 'user-3', 'Sofía Ramírez', 135000);
+
+INSERT INTO reputations VALUES
+('rep-1', 'adv-1', 4.8),
+('rep-2', 'adv-2', 4.6);
+
+INSERT INTO specializations VALUES
+('spec-1', 'adv-1', 'Marketing Digital'),
+('spec-2', 'adv-2', 'Branding');
+
+-- ─── MATCHING ──────────────────────────────────────────────
+INSERT INTO swipes VALUES
+('swipe-1', 'pyme-1', 'adv-1', TRUE),
+('swipe-2', 'pyme-1', 'adv-2', TRUE);
+
+INSERT INTO matches VALUES
+('match-1', 'pyme-1', 'adv-1', 'active', NOW()),
+('match-2', 'pyme-1', 'adv-2', 'active', NOW());
+
+-- ─── CHAT ──────────────────────────────────────────────────
+INSERT INTO chat_sessions VALUES
+('chat-1', 'match-2', NOW());
+
+INSERT INTO messages VALUES
+('msg-1', 'chat-1', 'user-3', 'Hola, revisé el perfil de Hilo & Aguja.', NOW()),
+('msg-2', 'chat-1', 'user-1', 'Perfecto, me interesa ver los números.', NOW());
+
+-- ─── CONTRACTS ─────────────────────────────────────────────
+INSERT INTO contracts VALUES
+('contract-1', 'match-1', 'active', 900000, '3m', NOW());
+
+INSERT INTO negotiations VALUES
+('neg-1', 'contract-1', 'user-3', NOW());
+
+-- ─── PROJECTS ──────────────────────────────────────────────
+INSERT INTO projects VALUES
+('proj-1', 'contract-1', 'active', NOW());
+
+INSERT INTO milestones VALUES
+('ms-1', 'proj-1', 'Análisis Inicial', TRUE, NOW()),
+('ms-2', 'proj-1', 'Optimización de Campañas', TRUE, NOW()),
+('ms-3', 'proj-1', 'Optimización de Landing Pages', FALSE, NOW());
+
+INSERT INTO project_health VALUES
+('ph-1', 'proj-1', 67.0);
+
+-- ─── REVIEWS ───────────────────────────────────────────────
+INSERT INTO reviews VALUES
+('rev-1', 'user-1', 'user-2', 4.5, 'Excelente trabajo, muy profesional.', NOW());
+
+-- ─── NOTIFICATIONS ─────────────────────────────────────────
+INSERT INTO notifications VALUES
+('notif-1', 'user-1', 'Nuevo match con Mariana Solís', FALSE, NOW());
+
+INSERT INTO notification_preferences VALUES
+('pref-1', 'user-1', TRUE, TRUE),
+('pref-2', 'user-2', TRUE, TRUE);
+```
+
+---
+
+
+## 2.20 Database Migrations
+
+PymeBoost uses Alembic for database schema versioning and migrations.
+
+### Setup
+
+```bash
+pip install alembic
+alembic init migrations
+```
+
+### Configuration
+
+In `alembic.ini`, set the database URL:
+
+```ini
+sqlalchemy.url = postgresql://user:password@localhost/pymeboost
+```
+
+### Creating a Migration
+
+```bash
+alembic revision --autogenerate -m "description of change"
+```
+
+### Applying Migrations
+
+```bash
+# Apply all pending migrations
+alembic upgrade head
+
+# Rollback one migration
+alembic downgrade -1
+
+# Rollback to specific version
+alembic downgrade <revision_id>
+```
+
+### Versioning Strategy
+
+- Every schema change requires a new migration file
+- Migration files are versioned and tracked in `/migrations/versions/`
+- Never modify an existing migration — always create a new one
+- All migrations must be reviewed before merging to main
+
+---
+
+## 2.21 Data Security
+
+### Encryption
+- Passwords are hashed using **bcrypt** before storing in the database
+- Sensitive fields (emails, personal data) are encrypted at the application layer using **AES-256**
+- All communication between client and server uses **HTTPS/TLS**
+
+### Secret Management
+- All secrets and credentials are stored in environment variables via `.env` file
+- `.env` is excluded from version control via `.gitignore`
+- Production secrets are managed through the cloud provider's secret manager
+
+### Audit & Traceability
+- All domain events are logged in the `domain_events` table with timestamp and payload
+- Every critical action (match, contract, payment) generates a domain event for full traceability
+
+### Backups
+- Daily automated backups of the PostgreSQL database
+- Backups retained for 30 days
+- Point-in-time recovery enabled for production environment
+
+### Failure Recovery
+- Database connections use connection pooling to handle failures gracefully
+- Alembic rollback strategy in place for failed migrations
+- Health checks monitor database availability
+
+## 2.22 Database Indexes
+
+PymeBoost indexing strategy optimizes for the most frequent queries and filters defined by the business logic in the Matching, Communication, and Project domains.
+
+### Index Specification by Domain
+
+#### User Domain
+
+```sql
+-- Fast email lookups for authentication (login every request)
+CREATE INDEX idx_users_email ON users(email);
+
+-- Fast session retrieval by user (JWT validation on every request)
+CREATE INDEX idx_sessions_user_id ON sessions(user_id);
+
+-- Clean up expired sessions (background job)
+CREATE INDEX idx_sessions_expires_at ON sessions(expires_at) 
+  WHERE expires_at > NOW();
+```
+
+#### Pyme Domain
+
+```sql
+-- Fast PYME lookup by user (one-to-one relationship)
+CREATE INDEX idx_pymes_user_id ON pymes(user_id);
+
+-- Fast industry filtering (used in discovery service)
+CREATE INDEX idx_pymes_industry ON pymes(industry);
+
+-- Retrieve optimization areas per PYME
+CREATE INDEX idx_optimization_areas_pyme_id ON optimization_areas(pyme_id);
+```
+
+#### Advisor Domain
+
+```sql
+-- Fast advisor lookup by user
+CREATE INDEX idx_advisors_user_id ON advisors(user_id);
+
+-- Fast reputation lookup (used in matching scoring)
+CREATE INDEX idx_reputations_advisor_id ON reputations(advisor_id);
+
+-- Fast specialization lookup for matching
+CREATE INDEX idx_specializations_advisor_id ON specializations(advisor_id);
+
+-- Filter advisors by industry (discovery service)
+CREATE INDEX idx_specializations_industry ON specializations(industry);
+```
+
+#### Matching Domain
+
+```sql
+-- Fast match retrieval for a PYME
+CREATE INDEX idx_matches_pyme_id ON matches(pyme_id);
+
+-- Fast match retrieval for an advisor
+CREATE INDEX idx_matches_advisor_id ON matches(advisor_id);
+
+-- Filter matches by status (active, finalized, cancelled)
+CREATE INDEX idx_matches_status ON matches(status);
+
+-- Prevent duplicate swipes
+CREATE UNIQUE INDEX idx_swipes_unique_pair ON swipes(pyme_id, advisor_id);
+```
+
+#### Communication Domain
+
+```sql
+-- Fast chat session lookup for a match
+CREATE INDEX idx_chat_sessions_match_id ON chat_sessions(match_id);
+
+-- Fast message retrieval by session (pagination)
+CREATE INDEX idx_messages_session_id ON messages(session_id, sent_at DESC);
+
+-- Count unread messages (notification badge)
+CREATE INDEX idx_messages_session_read_status ON messages(session_id, read) 
+  WHERE read = false;
+```
+
+#### Contract Domain
+
+```sql
+-- Fast contract lookup for a match
+CREATE INDEX idx_contracts_match_id ON contracts(match_id);
+
+-- Filter contracts by status (used in dashboards)
+CREATE INDEX idx_contracts_status ON contracts(status);
+
+-- Retrieve negotiations for a contract
+CREATE INDEX idx_negotiations_contract_id ON negotiations(contract_id);
+```
+
+#### Project Domain
+
+```sql
+-- Fast project lookup for a contract (one-to-one)
+CREATE UNIQUE INDEX idx_projects_contract_id ON projects(contract_id);
+
+-- Fast milestone retrieval by project (timeline views)
+CREATE INDEX idx_milestones_project_id ON milestones(project_id);
+
+-- Fast completion status check (health monitoring)
+CREATE INDEX idx_milestones_completed ON milestones(project_id, completed);
+
+-- Fast health lookup
+CREATE INDEX idx_project_health_project_id ON project_health(project_id);
+
+-- Sort milestones by due date
+CREATE INDEX idx_milestones_due_date ON milestones(project_id, due_date ASC);
+```
+
+#### Review Domain
+
+```sql
+-- Retrieve all reviews for an advisor (reputation calculation)
+CREATE INDEX idx_reviews_subject_id ON reviews(subject_id);
+
+-- Retrieve reviews left by a user
+CREATE INDEX idx_reviews_reviewer_id ON reviews(reviewer_id);
+```
+
+#### Notification Domain
+
+```sql
+-- Fast notification retrieval for a user (feed pagination)
+CREATE INDEX idx_notifications_user_id ON notifications(user_id, created_at DESC);
+
+-- Count unread notifications (badge)
+CREATE INDEX idx_notifications_read_status ON notifications(user_id, read) 
+  WHERE read = false;
+```
+
+### Index Maintenance
+
+Run monthly index review:
+
+```bash
+# Find unused indexes
+SELECT schemaname, tablename, indexname, idx_scan
+FROM pg_stat_user_indexes
+WHERE idx_scan = 0
+ORDER BY idx_used DESC;
+
+# Check index size
+SELECT indexname, pg_size_pretty(pg_relation_size(indexrelid)) AS size
+FROM pg_stat_user_indexes
+ORDER BY pg_relation_size(indexrelid) DESC;
+```
+
+---
+
+## 2.23 Database Design Validation Tools
+
+### SQLCheck for Schema Linting
+
+Install and run schema validation:
+
+```bash
+# Install
+brew install sqlcheck  # macOS
+
+# Validate schema
+sqlcheck -i < backend/shared/database/migrations/schema.sql
+```
+
+### Query Performance Analysis
+
+For critical queries, use EXPLAIN ANALYZE:
+
+```bash
+# Connect to database
+psql $DATABASE_URL
+
+# Analyze matching query (get_advisor_matches_controller.py)
+EXPLAIN ANALYZE
+SELECT m.id, m.pyme_id, m.advisor_id, m.status
+FROM matches m
+WHERE m.pyme_id = 'pyme-123' AND m.status IN ('ACTIVE', 'FINALIZED')
+ORDER BY m.created_at DESC;
+
+# Check for Index Scan (good) vs Seq Scan (bad)
+```
+
+### Data Quality Checks (Post-Migration)
+
+Run after every migration to ensure data integrity:
+
+```sql
+-- Check for orphaned foreign keys
+SELECT * FROM matches m
+WHERE NOT EXISTS (SELECT 1 FROM pymes p WHERE p.id = m.pyme_id);
+
+-- Check for duplicate swipes
+SELECT pyme_id, advisor_id, COUNT(*) as cnt
+FROM swipes
+GROUP BY pyme_id, advisor_id
+HAVING COUNT(*) > 1;
+
+-- Verify reputation scores are within bounds (1.0 - 5.0)
+SELECT advisor_id, score FROM reputations
+WHERE score < 1.0 OR score > 5.0;
+```
+
+### CI/CD Validation
+
+Add to `.github/workflows/backend-ci.yml`:
+
+```yaml
+- name: Validate Database Schema
+  run: |
+    sqlcheck -i < backend/shared/database/migrations/schema.sql > schema_report.txt
+    if grep -q "Error:" schema_report.txt; then
+      echo "Schema validation failed"
+      cat schema_report.txt
+      exit 1
+    fi
+```
+
+---
+
+## 2.24 Caching Strategy (Redis)
+
+Redis caches frequently accessed data to reduce database load. All cache data is ephemeral—if Redis is lost, the application continues with database queries.
+
+### Cache Key Patterns
+
+#### Session Cache (User Domain)
+
+**Key Pattern:** `session:{user_id}`
+
+**TTL:** 10800 seconds (3 hours)
+
+**Use Case:** JWT validation and user context on every request
+
+```json
+{
+  "user_id": "user-abc-123",
+  "email": "user@empresa.cr",
+  "account_type": "pyme",
+  "verified": true,
+  "created_at": "2026-06-01T10:00:00Z"
+}
+```
+
+**Invalidation:**
+- Manual on logout (session_cache_service.py)
+- Automatic after 3 hours
+
+#### JWKS Cache (Auth0 Public Keys)
+
+**Key Pattern:** `jwks:{auth0_domain}`
+
+**TTL:** 10800 seconds (3 hours)
+
+**Use Case:** JWT signature validation without hitting Auth0 every request
+
+```json
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "use": "sig",
+      "kid": "abc123",
+      "n": "...",
+      "e": "AQAB",
+      "alg": "RS256"
+    }
+  ],
+  "cached_at": "2026-06-12T11:30:00Z"
+}
+```
+
+**Invalidation:**
+- Automatic after 3 hours
+- Manual on Auth0 certificate rotation
+
+#### Advisor Profile Cache (Advisor Domain)
+
+**Key Pattern:** `advisor_profile:{advisor_id}`
+
+**TTL:** 86400 seconds (24 hours)
+
+**Use Case:** Frequently accessed during swipe operations (matching_card.tsx)
+
+```json
+{
+  "advisor_id": "adv-1",
+  "full_name": "Mariana Solís",
+  "base_rate": 150000,
+  "reputation_score": 4.8,
+  "industries": ["Marketing Digital", "E-commerce"],
+  "specializations": [...]
+}
+```
+
+**Invalidation:**
+- Manual when profile updated (update_advisor_profile_controller.py)
+- Manual when reputation changes (reputation_service.py)
+- Automatic after 24 hours
+
+#### Recommendation Cache (Pyme Domain)
+
+**Key Pattern:** `recommendations:{pyme_id}`
+
+**TTL:** 86400 seconds (24 hours)
+
+**Use Case:** Caches expensive AI-generated advisor recommendations
+
+```json
+{
+  "pyme_id": "pyme-123",
+  "recommendation_list": [
+    {
+      "advisor_id": "adv-1",
+      "name": "Mariana Solís",
+      "match_score": 0.92,
+      "base_rate": 150000
+    }
+  ],
+  "generated_at": "2026-06-12T08:00:00Z"
+}
+```
+
+**Invalidation:**
+- Manual when advisor industry changes
+- Manual when PYME optimization areas updated
+- Automatic after 24 hours
+
+### Cache-Aside Pattern
+
+All caches follow this pattern:
+
+1. Check Redis for key
+2. If hit: return immediately
+3. If miss: query database, cache result, return value
+4. On expiration: key deleted automatically
+
+**Python Implementation (session_cache_service.py):**
+
+```python
+async def get_session(self, user_id: str):
+    cache_key = f"session:{user_id}"
+    cached = await self.redis.get(cache_key)
+    
+    if cached:
+        return json.loads(cached)  # Cache hit
+    
+    # Cache miss — query database
+    session = await self.session_repository.get(user_id)
+    
+    if session:
+        await self.redis.setex(
+            cache_key,
+            10800,  # 3 hours
+            json.dumps(session.dict())
+        )
+    
+    return session
+```
+
+### Redis Configuration
+
+From `config.py`:
+
+```python
+REDIS_URL: str = ""  # redis://localhost:6379/0 (set in .env)
+```
+
+**Expected format:** `redis://[user:password]@localhost:6379/0`
+
+For production: Redis instance with HA should be used (Cloud Memorystore on GCP recommended).
+
+---
+
+## 2.25 Database Seeding
+
+### Seed Script Location
+
+**File:** `backend/shared/database/seeders/`
+
+All environments use the same seeding approach, with data size varying by environment:
+
+- **Development:** Full dataset (6 users, 3 PYMEs, 3 advisors, realistic matches)
+- **Staging:** Production-like subset (same structure, smaller scale)
+- **Testing:** Minimal data for test isolation
+
+### Usage
+
+```bash
+# Seed development database with test data
+python -m backend.shared.database.seeders.seed_all --env development
+
+# Seed staging database
+python -m backend.shared.database.seeders.seed_all --env staging
+
+# Seed test database (minimal)
+python -m backend.shared.database.seeders.seed_all --env test
+```
+
+### Seed Data Includes
+
+**Users:** 3 PYMEs + 3 Advisors with Auth0 integration  
+**Industries:** 8 industry categories  
+**PYME Profiles:** Company names, industries, optimization areas  
+**Advisor Profiles:** Full names, base rates, specializations, reputation scores  
+**Matches:** Multiple PYME-Advisor pairs with different statuses  
+**Swipes:** Approval decisions  
+**Communications:** Chat sessions with sample messages  
+**Notifications:** User notification preferences  
+
+### Idempotency
+
+All seed scripts are idempotent—safe to run multiple times. They:
+- Check for existing data before inserting
+- Use UUID generation for IDs
+- Skip if records already exist
+
+---
+
+## 2.26 Migration Strategy and Rollback
+
+### Alembic Configuration
+
+Located at: `backend/shared/database/migrations/`
+
+**Commands:**
+
+```bash
+cd backend
+
+# Generate new migration after model changes
+alembic revision --autogenerate -m "add_new_feature"
+
+# Apply all pending migrations
+alembic upgrade head
+
+# Rollback one migration
+alembic downgrade -1
+
+# View migration history
+alembic history
+
+# Check current revision
+alembic current
+```
+
+### Migration Workflow
+
+#### 1. Create Migration
+
+After changing a SQLAlchemy model:
+
+```bash
+alembic revision --autogenerate -m "descriptive_name"
+```
+
+Creates file: `migrations/versions/{timestamp}_{description}.py`
+
+#### 2. Review Migration
+
+Always review auto-generated migrations:
+
+```python
+# Check that:
+# CREATE/ALTER statements are correct
+# Indexes are added for new columns
+# Foreign keys are explicit
+# Downgrade function is the exact inverse
+```
+
+#### 3. Test Migration
+
+Test locally before pushing:
+
+```bash
+# Upgrade
+alembic upgrade +1
+
+# Verify schema change
+psql $DATABASE_URL -c "\d table_name"
+
+# Rollback
+alembic downgrade -1
+
+# Verify rollback worked
+psql $DATABASE_URL -c "\d table_name"
+```
+
+#### 4. Deploy
+
+CI/CD runs migrations automatically on deploy:
+
+```yaml
+# From .github/workflows/deploy-backend.yml
+- name: Run Database Migrations
+  run: |
+    alembic upgrade head
+```
+
+### Rollback Strategy
+
+#### Quick Rollback (< 5 minutes)
+
+If migration causes immediate issues:
+
+```bash
+# Identify current revision
+alembic current
+
+# Rollback one step
+alembic downgrade -1
+
+# Verify
+alembic current
+```
+
+#### Emergency Rollback (data-safe)
+
+If migration affected data:
+
+1. **Backup production database** (GCP Cloud SQL automated backups)
+2. **Downgrade schema:**
+   ```bash
+   alembic downgrade -1
+   ```
+3. **Restore data from backup** (point-in-time recovery via GCP)
+4. **Fix migration code** and reapply
+
+### Migration Naming Convention
+
+**Format:** `{revision_id}_{timestamp}_{description}.py`
+
+Examples:
+- `001_2026_06_12_create_user_domain.py`
+- `002_2026_06_12_create_advisor_domain.py`
+- `003_2026_06_13_add_advisor_promises.py`
+
+### Database Connection Details
+
+**From config.py:**
+
+```python
+DATABASE_URL: str = ""  # postgresql://user:password@host:5432/pymeboost
+DATABASE_POOL_SIZE: int = 5
+```
+
+**Connection pooling:**
+- Pool size: 5 (default, configurable)
+- Max overflow: 10
+- Pool timeout: 30 seconds
+- Pool recycle: 3600 seconds (1 hour)
+
+**Critical:** Keep `DATABASE_POOL_SIZE` low in development to catch connection leaks early.
+
+### Testing Strategy for Migrations
+
+Create test migrations before production deploy:
+
+```bash
+# Create test database from staging
+pg_dump production_db | psql test_db
+
+# Run migration on test database
+DATABASE_URL=postgresql://test:test@localhost/test_db alembic upgrade head
+
+# Run data validation checks
+bash backend/scripts/validate_database.sh
+
+# If passes, safe to deploy to production
+```
+
+### Performance Considerations
+
+Migrations that may cause downtime:
+
+- Adding `NOT NULL` column without default (use `DEFAULT` clause)
+- Renaming large tables (use change tracking instead)
+- Full table rewrites during ALTER TABLE
+- Adding nullable columns
+- Adding indexes with `CONCURRENTLY`
+- Dropping unused indexes
+
+**Example: Safe NOT NULL column addition**
+
+```python
+# Good: Add with default, then remove default later
+def upgrade():
+    op.add_column('users', sa.Column('phone', sa.String, nullable=False, server_default=''))
+    op.alter_column('users', 'phone', server_default=None)
+
+def downgrade():
+    op.drop_column('users', 'phone')
+```
+
+### Monitoring Post-Migration
+
+After production migration, monitor:
+
+- Database connection count (should remain stable)
+- Query latency (should not spike)
+- Error rate (should not increase)
+- Disk usage (should increase only by new data)
+
+Use Cloud SQL monitoring dashboard on GCP to verify.
+
+
