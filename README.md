@@ -251,6 +251,7 @@ No corrections were required for this task.
 
 **Average score: 4.25/5** — Participants found the contract negotiation and dashboard visualization intuitive overall. The score reflects that while the flow was clear, the volume of information and the number of steps involved in the negotiation process added complexity, preventing a perfect rating.
 ---
+![Negotiation Rating](docs/images/UX/rating-task3.png)
 ![Negotiation Rating Detail](docs/images/UX/rating-task3-detail.png)
 ---
 
