@@ -78,8 +78,86 @@ No significant usability issues detected in this task.
 
 No corrections were required for this task.
 
+---
+#### User Rating — "How easy was the registration process?"
+*Scale: 1 = Very difficult, 5 = Very easy*
+
+| Score | Responses | Percentage |
+|---|---|---|
+| 5 - Very easy | 5 | 100% |
+
+**Average score: 5/5** — All 4 participants rated the registration process as very easy.
+---
+![Registration Rating](docs/images/UX/rating-task1.png)
+---
 
 
+### Task 2 — Advisor Discovery & Decision
+
+**Task:** Navigate to "Descubrí tu advisor" and make a decision (approved or rejected) with at least one advisor.
+---
+
+#### Heatmap Analysis
+
+**Participant 1:**
+---
+![Heatmap P1 Task 2 - Login](docs/images/UX/heatmap-task2-p1.png)
+![Heatmap P1 Task 2 - Advisor](docs/images/UX/heatmap-task2-p2.png)
+---
+- Clicked directly on "Iniciar sesión" to enter the app.
+- On the advisor screen, interaction concentrated on the advisor name and compatibility section, indicating the participant read the advisor information before making a decision.
+
+**Participant 2:**
+---
+![Heatmap P2 Task 2 - Login](docs/images/UX/heatmap-task2-p3.png)
+![Heatmap P2 Task 2 - Advisor](docs/images/UX/heatmap-task2-p4.png)
+---
+- Clicked directly on "Iniciar sesión" to enter the app.
+- On the advisor screen, interaction focused on the pricing section (Retainer Advisor ₡150,000), suggesting the participant paid close attention to the financial details before deciding.
+
+**Participant 3:**
+---
+![Heatmap P3 Task 2 - Login](docs/images/UX/heatmap-task2-p5.png)
+![Heatmap P3 Task 2 - Advisor](docs/images/UX/heatmap-task2-p6.png)
+---
+- Clicked directly on "Iniciar sesión" to enter the app.
+- On the advisor screen, interaction concentrated on the PymeBoost commission section (₡36,000), indicating interest in the cost breakdown before making a decision.
+
+**Participant 4:**
+---
+![Heatmap P4 Task 2 - Login](docs/images/UX/heatmap-task2-p7.png)
+![Heatmap P4 Task 2 - Advisor](docs/images/UX/heatmap-task2-p8.png)
+---
+- Clicked directly on "Iniciar sesión" to enter the app.
+- On the advisor screen, interaction was distributed across the advisor name, compatibility section, and a click outside the card area — this is expected behavior as the swipe mechanic also supports drag interaction in addition to button clicks.
+
+> **Note:** Clicks registered outside the advisor card area are expected behavior, as the swipe mechanic supports both drag and click interactions.
+
+#### Key Observations
+
+- All 4 participants logged in without hesitation.
+- Participants naturally focused on different sections of the advisor card (name, compatibility, pricing) before making a decision, showing the card layout guides decision-making effectively.
+- The swipe mechanic was intuitive — no participants appeared confused about how to approve or reject.
+
+#### Detected Usability Issues
+
+No significant usability issues detected in this task.
+
+#### Corrections Applied
+
+No corrections were required for this task.
+---
+#### User Rating — "How clear was the advisor information for making a match decision?"
+*Scale: 1 = Very confusing, 5 = Very clear*
+
+| Score | Responses | Percentage |
+|---|---|---|
+| 5 - Very clear | 5 | 100% |
+
+**Average score: 5/5** — All participants rated the advisor information as very clear for making a decision.
+---
+![Advisor Rating](docs/images/UX/rating-task2.png)
+---
 
 
 
