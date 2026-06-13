@@ -103,43 +103,47 @@ No corrections were required for this task.
 
 ---
 
-
-### Task 2 — Advisor Discovery & Decision
+## Task 2 — Advisor Discovery & Decision
 
 **Task:** Navigate to "Descubrí tu advisor" and make a decision (approved or rejected) with at least one advisor.
----
 
 #### Heatmap Analysis
 
 **Participant 1:**
----
+
 ![Heatmap P1 Task 2 - Login](docs/images/UX/heatmap-task2-p1.png)
 ![Heatmap P1 Task 2 - Advisor](docs/images/UX/heatmap-task2-p2.png)
----
+
 - Clicked directly on "Iniciar sesión" to enter the app.
 - On the advisor screen, interaction concentrated on the advisor name and compatibility section, indicating the participant read the advisor information before making a decision.
 
-**Participant 2:**
 ---
+
+**Participant 2:**
+
 ![Heatmap P2 Task 2 - Login](docs/images/UX/heatmap-task2-p3.png)
 ![Heatmap P2 Task 2 - Advisor](docs/images/UX/heatmap-task2-p4.png)
----
+
 - Clicked directly on "Iniciar sesión" to enter the app.
 - On the advisor screen, interaction focused on the pricing section (Retainer Advisor ₡150,000), suggesting the participant paid close attention to the financial details before deciding.
 
-**Participant 3:**
 ---
+
+**Participant 3:**
+
 ![Heatmap P3 Task 2 - Login](docs/images/UX/heatmap-task2-p5.png)
 ![Heatmap P3 Task 2 - Advisor](docs/images/UX/heatmap-task2-p6.png)
----
+
 - Clicked directly on "Iniciar sesión" to enter the app.
 - On the advisor screen, interaction concentrated on the PymeBoost commission section (₡36,000), indicating interest in the cost breakdown before making a decision.
 
-**Participant 4:**
 ---
+
+**Participant 4:**
+
 ![Heatmap P4 Task 2 - Login](docs/images/UX/heatmap-task2-p7.png)
 ![Heatmap P4 Task 2 - Advisor](docs/images/UX/heatmap-task2-p8.png)
----
+
 - Clicked directly on "Iniciar sesión" to enter the app.
 - On the advisor screen, interaction was distributed across the advisor name, compatibility section, and a click outside the card area — this is expected behavior as the swipe mechanic also supports drag interaction in addition to button clicks.
 
@@ -147,7 +151,7 @@ No corrections were required for this task.
 
 #### Key Observations
 
-- All 4 participants logged in without hesitation.
+- All 4 participants logged in successfully.
 - Participants naturally focused on different sections of the advisor card (name, compatibility, pricing) before making a decision, showing the card layout guides decision-making effectively.
 - The swipe mechanic was intuitive — no participants appeared confused about how to approve or reject.
 
@@ -158,7 +162,8 @@ No significant usability issues detected in this task.
 #### Corrections Applied
 
 No corrections were required for this task.
----
+
+
 #### User Rating — "How clear was the advisor information for making a match decision?"
 *Scale: 1 = Very confusing, 5 = Very clear*
 
@@ -167,58 +172,65 @@ No corrections were required for this task.
 | 5 - Very clear | 5 | 100% |
 
 **Average score: 5/5** — All participants rated the advisor information as very clear for making a decision.
----
+
 ![Advisor Rating](docs/images/UX/rating-task2.png)
+
 ---
 
-### Task 3 — Contract Negotiation & Dashboard Review
+## Task 3 — Contract Negotiation & Dashboard Review
 
 **Task:** Navigate to Messages, enter the chat with Sofía Ramírez, re-negotiate the contract proposal, and review the active contracts in the dashboard.
 
 #### Heatmap Analysis
 
 **Participant 1:**
----
+
 ![Heatmap P1 Task 3 - Login](docs/images/UX/heatmap-task3-p1.png)
 ![Heatmap P1 Task 3 - Advisor](docs/images/UX/heatmap-task3-p2.png)
 ![Heatmap P1 Task 3 - Messages](docs/images/UX/heatmap-task3-p3.png)
 ![Heatmap P1 Task 3 - Dashboard](docs/images/UX/heatmap-task3-p4.png)
----
+
 - Logged in directly via "Iniciar sesión".
 - On the advisor screen, briefly visited before navigating to Messages.
 - In the Messages screen, navigated through multiple chats and interacted extensively with the contract negotiation flow, reaching the "¡Married the Prospect!" confirmation.
 - Also visited the "Mi Contrato" dashboard to review active contract phases and financial distribution.
 
-**Participant 2:**
 ---
+
+**Participant 2:**
+
 ![Heatmap P2 Task 3 - Login](docs/images/UX/heatmap-task3-p5.png)
 ![Heatmap P2 Task 3 - Advisor](docs/images/UX/heatmap-task3-p6.png)
 ![Heatmap P2 Task 3 - Messages](docs/images/UX/heatmap-task3-p7.png)
----
+
 - Logged in directly via "Iniciar sesión".
 - Briefly visited the advisor discovery screen before navigating to Messages.
 - Located Sofía Ramírez's chat and completed the contract negotiation flow reaching "¡Married the Prospect!".
 - Interaction concentrated on the chat list and the contract confirmation area.
 
-**Participant 3:**
 ---
+
+**Participant 3:**
+
 ![Heatmap P3 Task 3 - Login](docs/images/UX/heatmap-task3-p8.png)
 ![Heatmap P3 Task 3 - Advisor](docs/images/UX/heatmap-task3-p9.png)
 ![Heatmap P3 Task 3 - Messages](docs/images/UX/heatmap-task3-p10.png)
----
+
 - Logged in directly via "Iniciar sesión".
 - Briefly visited the advisor discovery screen before navigating to Messages.
 - Located Sofía Ramírez's chat and completed the negotiation successfully.
 - Interaction in the chat was focused and direct with minimal exploration.
 
-**Participant 4:**
 ---
+
+**Participant 4:**
+
 ![Heatmap P4 Task 3 - Login](docs/images/UX/heatmap-task3-p11.png)
 ![Heatmap P4 Task 3 - Advisor](docs/images/UX/heatmap-task3-p12.png)
 ![Heatmap P4 Task 3 - Messages](docs/images/UX/heatmap-task3-p13.png)
 ![Heatmap P4 Task 3 - Dashboard](docs/images/UX/heatmap-task3-p14.png)
 ![Heatmap P4 Task 3 - Messages 2](docs/images/UX/heatmap-task3-p15.png)
----
+
 - Logged in directly via "Iniciar sesión".
 - Explored the advisor discovery screen briefly before navigating.
 - In Messages, explored multiple chats (Diego Hernández, Valeria Castro, Sofía Ramírez) before completing the negotiation.
@@ -241,7 +253,7 @@ No significant usability issues detected in this task.
 #### Corrections Applied
 
 No corrections were required for this task.
----
+
 #### User Rating — "How intuitive was the contract negotiation and dashboard visualization process?"
 *Scale: 1 = Very confusing, 5 = Very intuitive*
 
@@ -258,13 +270,13 @@ No corrections were required for this task.
 | Participant 4 | 5 |
 
 **Average score: 4.25/5** — Participants found the contract negotiation and dashboard visualization intuitive overall. The score reflects that while the flow was clear, the volume of information and the number of steps involved in the negotiation process added complexity, preventing a perfect rating.
----
+
 ![Negotiation Rating](docs/images/UX/rating-task3.png)
 ![Negotiation Rating Detail](docs/images/UX/rating-task3-detail.png)
+
 ---
 
-
-### General Comments
+## General Comments
 
 **Task:** Leave a general comment about the application — what you liked, what you didn't, and what you would improve.
 
@@ -295,8 +307,6 @@ No corrections were required for this task.
 
 ---
 
-
-
 ## Identified Usability Issues
 
 The following table consolidates all usability issues detected across the 4 testing sessions:
@@ -319,15 +329,14 @@ No issues were detected related to navigation, visual comprehension, accessibili
 
 **Design criterion:** Apply progressive disclosure to reduce visual noise without removing functionality. This follows the principle that users should see the most critical information first (contract status, progress percentage, time remaining) and access secondary details on demand.
 
----
 
 ### Correction 2 — Contextual Tooltips for Complex Flows
+
 **Problem detected:** Participant 3 noted that some sections lack guidance for complex interactions such as contract re-negotiation, suggesting that first-time users may not immediately understand the steps involved.
 
 **Correction applied:** Added contextual tooltips and a brief info modal on the contract negotiation screen explaining the re-negotiation flow step by step (Re-negotiate → Send proposal → Advisor accepts → Marry the Prospect).
 
 **Design criterion:** Provide just-in-time guidance at points of complexity without disrupting the flow for experienced users. Tooltips are non-intrusive and only appear on hover or first visit, preserving a clean interface for returning users.
-
 
 
 ---
