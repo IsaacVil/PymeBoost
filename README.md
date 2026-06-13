@@ -159,17 +159,127 @@ No corrections were required for this task.
 ![Advisor Rating](docs/images/UX/rating-task2.png)
 ---
 
+### Task 3 — Contract Negotiation & Dashboard Review
+
+**Task:** Navigate to Messages, enter the chat with Sofía Ramírez, re-negotiate the contract proposal, and review the active contracts in the dashboard.
+
+#### Heatmap Analysis
+
+**Participant 1:**
+---
+![Heatmap P1 Task 3 - Login](docs/images/UX/heatmap-task3-p1.png)
+![Heatmap P1 Task 3 - Advisor](docs/images/UX/heatmap-task3-p2.png)
+![Heatmap P1 Task 3 - Messages](docs/images/UX/heatmap-task3-p3.png)
+![Heatmap P1 Task 3 - Dashboard](docs/images/UX/heatmap-task3-p4.png)
+---
+- Logged in directly via "Iniciar sesión".
+- On the advisor screen, briefly visited before navigating to Messages.
+- In the Messages screen, navigated through multiple chats and interacted extensively with the contract negotiation flow, reaching the "¡Married the Prospect!" confirmation.
+- Also visited the "Mi Contrato" dashboard to review active contract phases and financial distribution.
+
+**Participant 2:**
+---
+![Heatmap P2 Task 3 - Login](docs/images/UX/heatmap-task3-p5.png)
+![Heatmap P2 Task 3 - Advisor](docs/images/UX/heatmap-task3-p6.png)
+![Heatmap P2 Task 3 - Messages](docs/images/UX/heatmap-task3-p7.png)
+---
+- Logged in directly via "Iniciar sesión".
+- Briefly visited the advisor discovery screen before navigating to Messages.
+- Located Sofía Ramírez's chat and completed the contract negotiation flow reaching "¡Married the Prospect!".
+- Interaction concentrated on the chat list and the contract confirmation area.
+
+**Participant 3:**
+---
+![Heatmap P3 Task 3 - Login](docs/images/UX/heatmap-task3-p8.png)
+![Heatmap P3 Task 3 - Advisor](docs/images/UX/heatmap-task3-p9.png)
+![Heatmap P3 Task 3 - Messages](docs/images/UX/heatmap-task3-p10.png)
+---
+- Logged in directly via "Iniciar sesión".
+- Briefly visited the advisor discovery screen before navigating to Messages.
+- Located Sofía Ramírez's chat and completed the negotiation successfully.
+- Interaction in the chat was focused and direct with minimal exploration.
+
+**Participant 4:**
+---
+![Heatmap P4 Task 3 - Login](docs/images/UX/heatmap-task3-p11.png)
+![Heatmap P4 Task 3 - Advisor](docs/images/UX/heatmap-task3-p12.png)
+![Heatmap P4 Task 3 - Messages](docs/images/UX/heatmap-task3-p13.png)
+![Heatmap P4 Task 3 - Dashboard](docs/images/UX/heatmap-task3-p14.png)
+![Heatmap P4 Task 3 - Messages 2](docs/images/UX/heatmap-task3-p15.png)
+---
+- Logged in directly via "Iniciar sesión".
+- Explored the advisor discovery screen briefly before navigating.
+- In Messages, explored multiple chats (Diego Hernández, Valeria Castro, Sofía Ramírez) before completing the negotiation.
+- Also visited the "Mi Contrato" dashboard and explored the contract phases in detail.
+- High click density across multiple screens reflects deep exploration of the interface, including chat interactions and contract negotiation flows — this is expected behavior given the open-ended nature of this task.
+
+> **Note:** The high number of clicks across screens for all participants is expected, as this task involved free navigation through messaging, contract negotiation, and dashboard review. Multiple interactions within chats and contract flows naturally generate dense heatmaps.
+
+#### Key Observations
+
+- All 4 participants completed the task successfully.
+- All participants navigated intuitively from login → Descubrir → Mensajes → contract negotiation.
+- Participants who visited "Mi Contrato" dashboard explored it in detail, indicating the contract tracking information is engaging and clear.
+- The "¡Married the Prospect!" confirmation was reached by all participants, confirming the negotiation flow is understandable.
+
+#### Detected Usability Issues
+
+No significant usability issues detected in this task.
+
+#### Corrections Applied
+
+No corrections were required for this task.
+---
+#### User Rating — "How intuitive was the contract negotiation and dashboard visualization process?"
+*Scale: 1 = Very confusing, 5 = Very intuitive*
+
+| Score | Responses | Percentage |
+|---|---|---|
+| 4 - Intuitive | 3 | 75% |
+| 5 - Very intuitive | 1 | 25% |
+
+| Participant | Response |
+|---|---|
+| Participant 1 | 4 |
+| Participant 2 | 4 |
+| Participant 3 | 4 |
+| Participant 4 | 5 |
+
+**Average score: 4.25/5** — Participants found the contract negotiation and dashboard visualization intuitive overall. The score reflects that while the flow was clear, the volume of information and the number of steps involved in the negotiation process added complexity, preventing a perfect rating.
+---
+![Negotiation Rating](docs/images/UX/rating-task3.png)
+![Negotiation Rating Detail](docs/images/UX/rating-task3-detail.png)
+---
 
 
+### General Comments
 
+**Task:** Leave a general comment about the application — what you liked, what you didn't, and what you would improve.
 
+| Participant | Comment |
+|---|---|
+| Participant 1 | The app is quite intuitive, easy to follow and use. |
+| Participant 2 | Really liked the design and found it intuitive overall. |
+| Participant 3 | Very consistent overall. Some tabs have a lot of information — an info modal to guide the user in certain sections could help, for example to clarify doubts (how to re-negotiate, etc.). |
+| Participant 4 | The dashboard may feel slightly overloaded, but overall everything works quite well. |
 
+#### Key Observations
 
+- All participants highlighted the app as intuitive and easy to use.
+- 2 out of 4 participants mentioned information overload as a minor concern — specifically in the dashboard and some tabs.
+- Participant 3 suggested adding info modals or tooltips to guide users through complex flows like contract re-negotiation.
 
+#### Detected Usability Issues
 
+| Issue | Participants affected | Severity |
+|---|---|---|
+| Information overload in dashboard and some tabs | P3, P4 | Medium |
+| Lack of guidance tooltips for complex flows (e.g. re-negotiation) | P3 | Low |
 
+#### Corrections Applied
 
-
+- Simplified the dashboard layout by grouping related information into collapsible sections to reduce visual overload.
+- Added contextual tooltips in key sections (contract negotiation, dashboard phases) to guide users through complex flows.
 
 
 
