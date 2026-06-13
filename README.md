@@ -22,6 +22,66 @@ PymeBoost emerges as a solution specifically designed for SMEs, creating an ecos
 
 Vercel: https://pymeboost-v1.vercel.app/
 
+
+---
+
+## UX Testing Results
+
+### Task 1 — PYME Registration
+
+**Task:** Sign up and log in as a PYME on PymeBoost.
+
+#### Heatmap Analysis
+
+**Participant 1:**
+- Clicked directly on "Iniciar sesión" and navigated successfully to the advisor discovery screen.
+- Completed the task efficiently with no hesitation.
+
+**Participant 2:**
+- Verified the PYME/Advisor toggle to confirm role selection before clicking "Iniciar sesión".
+- Completed the task successfully.
+
+**Participant 3:**
+- Clicked directly on "Iniciar sesión" with no hesitation.
+- Completed the task efficiently with minimal interaction.
+
+**Participant 4:**
+- Completed the full registration flow by filling in the form fields before logging in.
+- Chose the more complete registration path instead of the direct login shortcut.
+- Completed the task successfully.
+
+#### Key Observations
+
+- All 4 participants completed the task successfully.
+- 3 out of 4 participants used the direct login shortcut.
+- 1 participant completed the full registration form, demonstrating the prototype supports both flows.
+
+#### Detected Usability Issues
+
+No significant usability issues detected in this task.
+
+#### Corrections Applied
+
+No corrections were required for this task.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ---
 
 # Frontend
