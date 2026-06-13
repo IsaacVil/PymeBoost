@@ -4469,11 +4469,53 @@ Workflow (Event Domain):
 ## 2.12 Design Considerations
 ### Algorithm Selection & Parameters
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ---
 
 ## 2.13 Design Patterns
-
----
 
 ### Backend design patterns matrix
 
