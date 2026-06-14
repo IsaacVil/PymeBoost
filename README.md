@@ -1,4 +1,4 @@
-# PymeBoost
+﻿# PymeBoost
 
 Problem Statement: Provide a results-driven connection between SMEs and high-performance advisors.
 
@@ -4787,51 +4787,45 @@ Workflow (Event Domain):
 ---
 
 ## 2.12 Design Considerations
-### Algorithm Selection & Parameters
 
+This section documents cross-cutting engineering decisions that are not tied to a single workflow and were not addressed in previous sections. Each one is a deliberate trade-off in how the FastAPI / Domain-Driven backend is built and deployed.
 
+### Async vs Sync Endpoint Execution
+- **Decision**: I/O-bound endpoints are declared `async def`; CPU-bound handlers are declared plain `def`.
+- **Rationale**: FastAPI runs `async def` directly on the event loop and dispatches `def` endpoints to an external threadpool. A blocking call (Cloud SQL, Redis, Pub/Sub, an outbound cross-domain REST call) placed inside an `async def` would stall the event loop and freeze every concurrent request running on that Cloud Run instance.
+- **Rules applied**:
+  - All database, Redis, Pub/Sub and cross-domain REST calls use async drivers (`asyncpg`, async SQLAlchemy session, async Pub/Sub client) inside `async def`.
+  - Pure CPU work (synchronous validation, hashing) stays in `def` so FastAPI offloads it to the threadpool instead of blocking the loop.
+  - A synchronous blocking client is never called from an `async def` without `run_in_threadpool`.
 
+### Idempotent Event Handling
+- **Decision**: Every Pub/Sub subscriber and cross-domain event handler is idempotent.
+- **Rationale**: Google Cloud Pub/Sub guarantees *at-least-once* delivery, so any handler can receive the same message more than once (ack timeout redelivery, retries, competing consumers from §2.14). Without idempotency, the choreography `ContractAccepted → ProjectCreated → ReviewSubmitted` could create duplicate projects or fire duplicate notifications.
+- **Rules applied**:
+  - Each event carries a unique `event_id`; handlers record processed ids and skip duplicates (dedup table / Redis set).
+  - State transitions are guarded by the `State` pattern (§2.13), so a repeated `ContractAccepted` on an already-accepted contract is a no-op rather than an error.
+  - Side effects (notifications, project creation) are keyed by the originating `event_id` so a replay cannot duplicate them.
 
+### ORM Loading Strategy (N+1 Prevention)
+- **Decision**: Relationships are loaded explicitly per query (`selectinload` / `joinedload`) instead of relying on default lazy loading.
+- **Rationale**: Lazy loading inside a loop emits one extra query per row (the N+1 problem). Rendering advisor recommendations — each advisor with its specializations and reputation — would otherwise issue dozens of round-trips to Cloud SQL per request.
+- **Rules applied**:
+  - Collections iterated in a response (advisor → specializations, pyme → optimization areas) use `selectinload`.
+  - One-to-one relationships read on the hot path use `joinedload`.
+  - Lazy loading is allowed only for relationships rarely accessed, to avoid loading data the endpoint never returns.
 
+### Identifier Strategy (UUIDs)
+- **Decision**: Public entity identifiers are UUIDs (v4), not sequential integers.
+- **Rationale**: Sequential ids leak record counts and allow enumeration of advisors, contracts and messages (IDOR / broken object-level authorization, OWASP API1). UUIDs also let an id be generated before the row is persisted, which simplifies event payloads and cross-domain references.
+- **Trade-off accepted**: UUIDs are wider and not monotonic, so they are stored as native `UUID` columns (never text) and are not used as the clustering key for high-volume, time-ordered tables.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+### Schema Separation (Request / Response / Persistence)
+- **Decision**: Each domain keeps Pydantic request schemas, Pydantic response schemas and SQLAlchemy models as three distinct types — they are never the same class.
+- **Rationale**: The persistence model carries internal fields (`auth0_id`, `password_hash`, soft-delete flags, internal timestamps) that must never reach the client. A separate response schema makes over-exposure impossible by construction rather than by remembering to strip fields.
+- **Rules applied**:
+  - Request schemas validate only what the client may send; server-controlled fields (ids, status, timestamps) are rejected if supplied.
+  - Response schemas are built from ORM objects via `from_attributes=True` and expose an explicit allow-list of fields.
+  - Internal-only attributes never appear in any schema returned by a controller.
 
 ---
 
@@ -4995,12 +4989,41 @@ The backend is organized **by domain**, not by technical layer. Each domain unde
 
 **Tests** — [backend/tests/](backend/tests/) — [unit](backend/tests/unit/) (per-domain) and [integration](backend/tests/integration/) suites
 
+## 2.17 Bundles
+
+The deployment artifact is the Docker image that runs on Cloud Run, so "bundle size" here means **image size and import cost** — both of which directly drive cold-start latency and the Artifact Registry footprint. The goal is that an endpoint only pays for the code it actually uses, applying the same principle as a Lambda that avoids loading libraries it never calls.
+
+### Runtime vs Development Dependencies
+- `requirements.txt` holds only what production runs (FastAPI, SQLAlchemy, Pydantic, the GCP client libraries).
+- `requirements-dev.txt` holds the toolchain (Pytest, Ruff, Mypy, Locust).
+- The production image installs **only** `requirements.txt`, so test and lint tooling never ships to Cloud Run. Keeping the two trees separate is what stops the artifact from carrying dependencies that production never imports.
+
+### Multi-Stage Docker Build
+- A builder stage compiles wheels and C extensions; the final stage copies only the resulting virtual environment and the application source.
+- The runtime image contains no compiler, headers or pip cache, keeping the artifact small and the cold start fast.
+
+### Lazy, Function-Level Imports for Heavy Libraries
+- The AI SDKs (LangGraph, LangChain, Vertex AI) are imported *inside* the functions that use them in the AI domain, not at module top level.
+- A cold start on `/login` or a swipe never pays the import cost of an AI stack it never touches — the direct equivalent of an endpoint not importing eight libraries when it only needs two.
+
+### Heavy Dependencies Isolated by Domain
+- The AI SDKs are imported only under [backend/domains/ai/](backend/domains/ai/).
+- The DDD boundaries (§2.2) keep them out of every other domain, and the rule is enforced with an import-boundary check (import-linter) in CI so a stray import in another domain fails the build.
+
+### Slim Base Image and Build Context
+- The image is built on `python:3.12-slim` instead of the full Debian image.
+- A `.dockerignore` excludes tests, docs, `.git` and `__pycache__` from the build context so they never enter the image.
+
+### Pinned, Minimal Dependency Tree
+- Dependencies are compiled and locked with pip-tools to a minimal transitive set.
+- This avoids unused transitive packages and large wheels that would bloat the image and slow every cold start.
+
 ---
 
 # Data Design
 
 
-## 2.17 Data Stack
+## 3.1 Data Stack
 
 | Component | Technology |
 |---|---|
@@ -5012,10 +5035,10 @@ The relational database used is PostgreSQL. Backend access is handled through SQ
 
 ---
 
-## 2.18 Database Schema (DBML)
+## 3.2 Database Schema (DBML)
 
 
-## 2.20 Database Migrations
+## 3.3 Database Migrations
 
 PymeBoost uses Alembic for database schema versioning and migrations.
 
@@ -5062,7 +5085,7 @@ alembic downgrade <revision_id>
 
 ---
 
-## 2.21 Data Security
+## 3.4 Data Security
 
 ### Encryption
 - Passwords are hashed using **bcrypt** before storing in the database
@@ -5088,7 +5111,7 @@ alembic downgrade <revision_id>
 - Alembic rollback strategy in place for failed migrations
 - Health checks monitor database availability
 
-## 2.22 Database Indexes
+## 3.5 Database Indexes
 
 PymeBoost indexing strategy optimizes for the most frequent queries and filters defined by the business logic in the Matching, Communication, and Project domains.
 
@@ -5239,7 +5262,7 @@ ORDER BY pg_relation_size(indexrelid) DESC;
 
 ---
 
-## 2.23 Database Design Validation Tools
+## 3.6 Database Design Validation Tools
 
 ### SQLCheck for Schema Linting
 
@@ -5308,7 +5331,7 @@ Add to `.github/workflows/backend-ci.yml`:
 
 ---
 
-## 2.24 Caching Strategy (Redis)
+## 3.7 Caching Strategy (Redis)
 
 Redis caches frequently accessed data to reduce database load. All cache data is ephemeral—if Redis is lost, the application continues with database queries.
 
@@ -5462,7 +5485,7 @@ For production: Redis instance with HA should be used (Cloud Memorystore on GCP 
 
 ---
 
-## 2.25 Database Seeding
+## 3.8 Database Seeding
 
 ### Seed Script Location
 
@@ -5507,7 +5530,7 @@ All seed scripts are idempotent—safe to run multiple times. They:
 
 ---
 
-## 2.26 Migration Strategy and Rollback
+## 3.9 Migration Strategy and Rollback
 
 ### Alembic Configuration
 
@@ -5702,7 +5725,7 @@ PymeBoost uses specialized AI agents as quality validators during development. E
 Agents are run before committing each feature. Findings and corrections are documented below under "Agent Validations".
 
 
-## Agent Catalog
+## 4.1 Agent Catalog
 
 | Agent | File | Purpose | Applies to |
 |-------|------|---------|------------|
@@ -5717,7 +5740,7 @@ Agents are run before committing each feature. Findings and corrections are docu
 
 ---
 
-## How to Run an Agent
+## 4.2 How to Run an Agent
 
 All agents are run in Claude Code using this pattern:
 
@@ -5731,7 +5754,38 @@ For the full command reference per agent and use case, see [.agents/agents&mvpfo
 
 ---
 
-## Agent Validations
+## 4.3 Skills
+
+Skills are specialized capabilities of Claude Code that complement the agents. Unlike agents, skills operate automatically over the current branch diff or the running app.
+
+### Installation
+
+The `frontend-design` skill must be installed once:
+
+```bash
+npx skills add https://github.com/anthropics/skills --skill frontend-design
+```
+
+All other skills are built into Claude Code — no installation needed.
+
+### Skill Catalog
+
+| Skill | Command | Purpose | When to use |
+|-------|---------|---------|-------------|
+| **Code Review** | `/code-review` | Scans the full branch diff for bugs and quality issues | After applying agent corrections |
+| **Code Review (fix)** | `/code-review --fix` | Same as above, applies fixes directly | When findings are clear and safe to auto-apply |
+| **Code Review (ultra)** | `/code-review ultra` | Deep multi-agent cloud review | Final review before demo |
+| **Simplify** | `/simplify` | Finds and applies reuse/simplification opportunities | After DRY agent detects duplication |
+| **Verify** | `/verify` | Runs the app and confirms a change works visually | After applying agent corrections |
+| **Run** | `/run` | Launches the project locally (Next.js + FastAPI) | Before demo, after backend changes |
+| **Security Review** | `/security-review` | Deep security scan of the diff | Before any PR touching auth, JWT, or contracts |
+| **Frontend Design** | `frontend-design` (external) | Reviews UI components for design quality and accessibility | After frontend-agent generates a component |
+
+For the full skill reference and recommended combinations per feature, see [.agents/agents&mvpformat.md](.agents/agents&mvpformat.md).
+
+---
+
+## 4.4 Agent Validations
 
 Every time an agent is used during MVP development, findings and corrections are documented here. This section is organized by feature.
 
@@ -5782,7 +5836,7 @@ Each validation entry must follow this format:
 - **File analyzed:** `[path/to/file]`
 - **Finding:** [Short description of what the agent found]
 - **Suggested Correction:** [What the agent recommended]
-- **Applied Correction:** ✅ [What was actually changed] — commit [hash]
+- **Applied Correction:** [What was actually changed] — commit [hash]
 ```
 
 ---

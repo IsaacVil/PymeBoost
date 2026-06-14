@@ -453,6 +453,102 @@ For each feature:
 
 ---
 
+## Skills
+
+Skills are specialized built-in capabilities of Claude Code invoked with `/skill-name`, plus installable external skills from GitHub. Unlike agents (which you run manually by passing code), skills operate automatically over the current branch diff or the running app — no copy-pasting needed.
+
+Skills and agents are complementary: **agents validate design principles with README context**, **skills catch bugs, enforce quality, and verify behavior automatically**.
+
+### Installation
+
+The external frontend-design skill must be installed once before use:
+
+```bash
+npx skills add https://github.com/anthropics/skills --skill frontend-design
+```
+
+Built-in skills (`/code-review`, `/simplify`, `/verify`, `/run`, `/security-review`) are available in Claude Code with no installation required.
+
+---
+
+### Skill Reference
+
+#### `/code-review` — Automatic diff review for bugs and quality
+Scans everything changed in the current branch. Does not need code pasted — reads the diff automatically.
+
+| Variant | Command | When to use |
+|---------|---------|-------------|
+| Standard | `/code-review` | After applying agent corrections — catch bugs agents don't look for |
+| Fix mode | `/code-review --fix` | Apply the findings directly to the working tree |
+| PR comments | `/code-review --comment` | Post findings as inline comments on the GitHub PR |
+| Deep (cloud) | `/code-review ultra` | Final review before demo — multi-agent, most thorough |
+
+---
+
+#### `/simplify` — Code simplification and cleanup
+Looks for reuse, simplification, and efficiency in changed code and applies the fixes. Quality only — does not hunt for bugs.
+
+| When to use |
+|-------------|
+| After `dry-agent` finds duplication — `/simplify` applies the consolidation |
+| After any refactoring pass to remove leftover complexity |
+
+---
+
+#### `/verify` — Confirm a change works in the real app
+Runs the app and observes actual behavior to validate that a feature works end-to-end.
+
+| When to use |
+|-------------|
+| After applying agent corrections — confirm nothing broke visually |
+| After `testing-agent` generates tests — verify the flow in the running app too |
+
+---
+
+#### `/run` — Launch the project locally
+Detects the project type (Next.js frontend, FastAPI backend) and starts it locally.
+
+| When to use |
+|-------------|
+| Before the demo — confirm MVP runs cleanly |
+| After a backend or DB change — verify the server starts without errors |
+
+---
+
+#### `/security-review` — Security-focused diff review
+Deep analysis of the diff for security vulnerabilities. Complements the `backend-agent`'s OWASP rules with a broader automated scan.
+
+| When to use |
+|-------------|
+| Before any PR that touches auth, JWT, contracts, or messaging |
+| After backend agent flags a security concern — get a second pass |
+
+---
+
+#### `frontend-design` (external skill) — UI and design system review
+Installed via `npx skills add https://github.com/anthropics/skills --skill frontend-design`. Reviews frontend components for design quality, accessibility, and visual consistency.
+
+| When to use |
+|-------------|
+| After `frontend-agent` generates a component — validate it against design system |
+| Before demo — review all screens for visual consistency |
+
+---
+
+### Recommended Skill + Agent Combination per MVP Feature
+
+| Feature | Agents (design & architecture) | Skills (quality & verification) |
+|---------|-------------------------------|--------------------------------|
+| Auth | `architecture-agent` → `solid-agent` → `frontend-agent` | `/code-review` → `/security-review` → `/verify` |
+| Matching | `solid-agent` → `dry-agent` → `frontend-agent` | `/simplify` → `frontend-design` → `/verify` |
+| Messaging | `cohesion-agent` → `architecture-agent` → `backend-agent` | `/code-review` → `/security-review` → `/verify` |
+| Contracts | `solid-agent` → `backend-agent` → `database-agent` | `/code-review --fix` → `/security-review` → `/verify` |
+| Dashboard | `dry-agent` → `frontend-agent` | `/simplify` → `frontend-design` → `/verify` |
+| Reports | `backend-agent` → `database-agent` → `testing-agent` | `/code-review` → `/verify` |
+| Final demo | — | `/code-review ultra` → `/run` |
+
+---
+
 ## Recommended Timeline
 
 | Week | Phase | Deliverables |
