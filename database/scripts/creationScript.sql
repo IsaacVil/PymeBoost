@@ -788,30 +788,22 @@ CREATE INDEX "idx_kpi_project" ON "PB_ProjectKpiValidations"("projectId");
 -- ============================================================================
 -- 10. DOMINIO REVIEW — resenas (1 por proyecto por parte)
 -- ============================================================================
+-- pymeId y advisorId son ambos NOT NULL: un proyecto siempre tiene exactamente
+-- un pyme y un advisor. reviewerAccountTypeId ('pyme'|'advisor') indica quien
+-- escribe la resena; el subject se deduce como la otra parte.
 CREATE TABLE "PB_Reviews" (
-    "id"                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "projectId"             UUID        NOT NULL REFERENCES "PB_Projects"("id") ON DELETE CASCADE,
-    "reviewerAccountTypeId" UUID        NOT NULL REFERENCES "PB_AccountTypes"("id"),
-    "reviewerPymeId"        UUID        REFERENCES "PB_Pymes"("id"),
-    "reviewerAdvisorId"     UUID        REFERENCES "PB_Advisors"("id"),
-    "subjectAccountTypeId"  UUID        NOT NULL REFERENCES "PB_AccountTypes"("id"),
-    "subjectPymeId"         UUID        REFERENCES "PB_Pymes"("id"),
-    "subjectAdvisorId"      UUID        REFERENCES "PB_Advisors"("id"),
-    "rating"                NUMERIC(3,1) NOT NULL CHECK ("rating" BETWEEN 1 AND 5 AND "rating" * 2 = FLOOR("rating" * 2)),  -- multiplos de 0.5
+    "id"                    UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    "projectId"             UUID          NOT NULL REFERENCES "PB_Projects"("id") ON DELETE CASCADE,
+    "pymeId"                UUID          NOT NULL REFERENCES "PB_Pymes"("id"),
+    "advisorId"             UUID          NOT NULL REFERENCES "PB_Advisors"("id"),
+    "reviewerAccountTypeId" UUID          NOT NULL REFERENCES "PB_AccountTypes"("id"),
+    "rating"                NUMERIC(3,1)  NOT NULL CHECK ("rating" BETWEEN 1 AND 5 AND "rating" * 2 = FLOOR("rating" * 2)),
     "comment"               TEXT,
-    "createdAt"             TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chk_review_reviewer CHECK (
-        ("reviewerPymeId" IS NOT NULL AND "reviewerAdvisorId" IS NULL)
-     OR ("reviewerPymeId" IS NULL     AND "reviewerAdvisorId" IS NOT NULL)
-    ),
-    CONSTRAINT chk_review_subject CHECK (
-        ("subjectPymeId" IS NOT NULL AND "subjectAdvisorId" IS NULL)
-     OR ("subjectPymeId" IS NULL     AND "subjectAdvisorId" IS NOT NULL)
-    ),
+    "createdAt"             TIMESTAMPTZ   NOT NULL DEFAULT now(),
     UNIQUE ("projectId","reviewerAccountTypeId")   -- una resena por parte por proyecto
 );
-CREATE INDEX "idx_reviews_subjectAdvisor" ON "PB_Reviews"("subjectAdvisorId");
-CREATE INDEX "idx_reviews_subjectPyme"    ON "PB_Reviews"("subjectPymeId");
+CREATE INDEX "idx_reviews_pyme"    ON "PB_Reviews"("pymeId");
+CREATE INDEX "idx_reviews_advisor" ON "PB_Reviews"("advisorId");
 
 
 -- ============================================================================
