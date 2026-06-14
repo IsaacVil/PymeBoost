@@ -1,0 +1,156 @@
+// ─── USER DOMAIN ───────────────────────────────────────────
+Table users {
+  id          String [pk]
+  email       String [unique, not null]
+  account_type String [not null, note: 'pyme | advisor']
+  created_at  DateTime [not null]
+}
+
+Table sessions {
+  id         String [pk]
+  user_id    String [not null, ref: > users.id]
+  expires_at DateTime [not null]
+}
+
+// ─── PYME DOMAIN ───────────────────────────────────────────
+Table pymes {
+  id           String [pk]
+  user_id      String [not null, ref: > users.id]
+  company_name String [not null]
+  industry     String
+}
+
+Table industries {
+  id   String [pk]
+  name String [not null]
+}
+
+Table optimization_areas {
+  id      String [pk]
+  pyme_id String [not null, ref: > pymes.id]
+  area    String [not null]
+}
+
+// ─── ADVISOR DOMAIN ────────────────────────────────────────
+Table advisors {
+  id        String [pk]
+  user_id   String [not null, ref: > users.id]
+  full_name String [not null]
+  base_rate Float
+}
+
+Table reputations {
+  id         String [pk]
+  advisor_id String [not null, ref: > advisors.id]
+  score      Float [not null]
+}
+
+Table specializations {
+  id         String [pk]
+  advisor_id String [not null, ref: > advisors.id]
+  industry   String [not null]
+}
+
+// ─── MATCHING DOMAIN ───────────────────────────────────────
+Table swipes {
+  id         String [pk]
+  pyme_id    String [not null, ref: > pymes.id]
+  advisor_id String [not null, ref: > advisors.id]
+  approved   Boolean [not null]
+}
+
+Table matches {
+  id         String [pk]
+  pyme_id    String [not null, ref: > pymes.id]
+  advisor_id String [not null, ref: > advisors.id]
+  status     String [not null, note: 'pending | active | closed']
+  created_at DateTime [not null]
+}
+
+// ─── COMMUNICATION DOMAIN ──────────────────────────────────
+Table chat_sessions {
+  id         String [pk]
+  match_id   String [not null, ref: > matches.id]
+  created_at DateTime [not null]
+}
+
+Table messages {
+  id         String [pk]
+  session_id String [not null, ref: > chat_sessions.id]
+  sender_id  String [not null, ref: > users.id]
+  content    String [not null]
+  sent_at    DateTime [not null]
+}
+
+// ─── CONTRACT DOMAIN ───────────────────────────────────────
+Table contracts {
+  id            String [pk]
+  match_id      String [not null, ref: > matches.id]
+  status        String [not null, note: 'draft | active | completed | cancelled']
+  budget        Float
+  duration_days String
+  created_at    DateTime [not null]
+}
+
+Table negotiations {
+  id          String [pk]
+  contract_id String [not null, ref: > contracts.id]
+  proposed_by String [not null, ref: > users.id]
+  created_at  DateTime [not null]
+}
+
+// ─── PROJECT DOMAIN ────────────────────────────────────────
+Table projects {
+  id          String [pk]
+  contract_id String [not null, ref: > contracts.id]
+  status      String [not null]
+  created_at  DateTime [not null]
+}
+
+Table milestones {
+  id         String [pk]
+  project_id String [not null, ref: > projects.id]
+  title      String [not null]
+  completed  Boolean [default: false]
+  due_date   DateTime
+}
+
+Table project_health {
+  id           String [pk]
+  project_id   String [not null, ref: > projects.id]
+  health_score Float [not null]
+}
+
+// ─── REVIEW DOMAIN ─────────────────────────────────────────
+Table reviews {
+  id          String [pk]
+  reviewer_id String [not null, ref: > users.id]
+  subject_id  String [not null, ref: > users.id]
+  rating      Float [not null]
+  comment     String
+  created_at  DateTime [not null]
+}
+
+// ─── NOTIFICATION DOMAIN ───────────────────────────────────
+Table notifications {
+  id         String [pk]
+  user_id    String [not null, ref: > users.id]
+  message    String [not null]
+  read       Boolean [default: false]
+  created_at DateTime [not null]
+}
+
+Table notification_preferences {
+  id             String [pk]
+  user_id        String [not null, ref: > users.id]
+  email_enabled  Boolean [default: true]
+  in_app_enabled Boolean [default: true]
+}
+
+// ─── EVENT DOMAIN ──────────────────────────────────────────
+Table domain_events {
+  id          String [pk]
+  event_type  String [not null]
+  payload     JSON [not null]
+  occurred_at DateTime [not null]
+}
