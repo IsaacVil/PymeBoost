@@ -5804,7 +5804,9 @@ AI domain tables (`use_cases`, `document_blocks`, `recommendation_results`, `adv
 
 ## 3.9 Entity-Relationship Diagram
 
-![ER Diagram](docs/images/backend/er-diagram.png)
+The entity-relationship diagram was generated from [`database/diagram/er-diagram.dbml`](database/diagram/er-diagram.dbml) using [dbdiagram.io](https://dbdiagram.io).
+
+📄 [View ER Diagram (PDF)](database/diagram/er-diagram.pdf)
 
 ---
 
