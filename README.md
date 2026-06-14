@@ -5024,9 +5024,9 @@ The deployment artifact is the Docker image that runs on Cloud Run, so "bundle s
 
 The full database schema is defined in DBML format. You can find the source file at:
 
-📄 [`database/diagram/pymeBoost.dbml`](database/diagram/pymeBoost.dbml)
+📄 [`database/diagram/er-diagram.dbml`](database/diagram/er-diagram.dbml)
 
-To visualize the entity-relationship diagram, import the file into [dbdiagram.io](https://dbdiagram.io).
+
 ---
 
 # Data Design
