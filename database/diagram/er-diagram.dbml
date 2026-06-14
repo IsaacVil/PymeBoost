@@ -1,156 +1,761 @@
-// ─── USER DOMAIN ───────────────────────────────────────────
-Table users {
-  id          String [pk]
-  email       String [unique, not null]
-  account_type String [not null, note: 'pyme | advisor']
-  created_at  DateTime [not null]
+// ============================================================================
+//  PymeBoost — ER Diagram (DBML)
+//  Refleja exactamente el creationScript.sql
+//  Organizado por dominio de negocio
+// ============================================================================
+
+// ── CATALOGOS ────────────────────────────────────────────────────────────────
+
+Table PB_AccountTypes {
+  id          uuid [pk, default: `gen_random_uuid()`]
+  code        varchar(50)  [not null, unique, note: 'pyme | advisor | system']
+  name        varchar(100) [not null]
+  description varchar(255)
 }
 
-Table sessions {
-  id         String [pk]
-  user_id    String [not null, ref: > users.id]
-  expires_at DateTime [not null]
+Table PB_CompanySizes {
+  id          uuid [pk, default: `gen_random_uuid()`]
+  code        varchar(50)  [not null, unique, note: 'small | medium | large']
+  name        varchar(100) [not null]
+  description varchar(255)
 }
 
-// ─── PYME DOMAIN ───────────────────────────────────────────
-Table pymes {
-  id           String [pk]
-  user_id      String [not null, ref: > users.id]
-  company_name String [not null]
-  industry     String
+Table PB_PymeStatus {
+  id          uuid [pk, default: `gen_random_uuid()`]
+  code        varchar(50)  [not null, unique, note: 'pending | active | suspended | deactivated']
+  name        varchar(100) [not null]
+  description varchar(255)
 }
 
-Table industries {
-  id   String [pk]
-  name String [not null]
+Table PB_AdvisorStatus {
+  id          uuid [pk, default: `gen_random_uuid()`]
+  code        varchar(50)  [not null, unique, note: 'pending | active | suspended | deactivated']
+  name        varchar(100) [not null]
+  description varchar(255)
 }
 
-Table optimization_areas {
-  id      String [pk]
-  pyme_id String [not null, ref: > pymes.id]
-  area    String [not null]
+Table PB_SessionStatus {
+  id          uuid [pk, default: `gen_random_uuid()`]
+  code        varchar(50)  [not null, unique, note: 'active | expired | revoked']
+  name        varchar(100) [not null]
+  description varchar(255)
 }
 
-// ─── ADVISOR DOMAIN ────────────────────────────────────────
-Table advisors {
-  id        String [pk]
-  user_id   String [not null, ref: > users.id]
-  full_name String [not null]
-  base_rate Float
+Table PB_Industries {
+  id                      uuid        [pk, default: `gen_random_uuid()`]
+  code                    varchar(50) [not null, unique]
+  name                    varchar(100)[not null]
+  description             varchar(255)
+  representativeEmbedding varchar     [note: 'vector(768) — pgvector']
+  isActive                boolean     [not null, default: true]
+  createdAt               timestamptz [not null, default: `now()`]
 }
 
-Table reputations {
-  id         String [pk]
-  advisor_id String [not null, ref: > advisors.id]
-  score      Float [not null]
+Table PB_SubIndustries {
+  id                      uuid        [pk, default: `gen_random_uuid()`]
+  industryId              uuid        [not null, ref: > PB_Industries.id]
+  code                    varchar(50) [not null, unique]
+  name                    varchar(100)[not null]
+  description             varchar(255)
+  representativeEmbedding varchar     [note: 'vector(768) — pgvector']
+  vectorIndex             smallint    [not null, unique, note: 'posicion fija en el vector de necesidades/expertise']
+  isActive                boolean     [not null, default: true]
+  createdAt               timestamptz [not null, default: `now()`]
 }
 
-Table specializations {
-  id         String [pk]
-  advisor_id String [not null, ref: > advisors.id]
-  industry   String [not null]
+Table PB_ThematicCategories {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'company_information | company_context | initial_situation | actions_performed | metrics_before | metrics_after']
+  name        varchar(100)[not null]
+  description varchar(255)
+  isRequired  boolean     [not null, default: true]
 }
 
-// ─── MATCHING DOMAIN ───────────────────────────────────────
-Table swipes {
-  id         String [pk]
-  pyme_id    String [not null, ref: > pymes.id]
-  advisor_id String [not null, ref: > advisors.id]
-  approved   Boolean [not null]
+Table PB_DocumentStatus {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'pending | processing | processed | failed']
+  name        varchar(100)[not null]
+  description varchar(255)
 }
 
-Table matches {
-  id         String [pk]
-  pyme_id    String [not null, ref: > pymes.id]
-  advisor_id String [not null, ref: > advisors.id]
-  status     String [not null, note: 'pending | active | closed']
-  created_at DateTime [not null]
+Table PB_DocumentTypes {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'use_case | baseline | completion']
+  name        varchar(100)[not null]
+  description varchar(255)
 }
 
-// ─── COMMUNICATION DOMAIN ──────────────────────────────────
-Table chat_sessions {
-  id         String [pk]
-  match_id   String [not null, ref: > matches.id]
-  created_at DateTime [not null]
+Table PB_UseCaseStatus {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'pending | processing | processed | failed']
+  name        varchar(100)[not null]
+  description varchar(255)
 }
 
-Table messages {
-  id         String [pk]
-  session_id String [not null, ref: > chat_sessions.id]
-  sender_id  String [not null, ref: > users.id]
-  content    String [not null]
-  sent_at    DateTime [not null]
+Table PB_MatchStatus {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'waiting_swipe | match | not_swiped | unmatch | finalized']
+  name        varchar(100)[not null]
+  description varchar(255)
 }
 
-// ─── CONTRACT DOMAIN ───────────────────────────────────────
-Table contracts {
-  id            String [pk]
-  match_id      String [not null, ref: > matches.id]
-  status        String [not null, note: 'draft | active | completed | cancelled']
-  budget        Float
-  duration_days String
-  created_at    DateTime [not null]
+Table PB_ContractStatus {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'negotiating | accepted | rejected | voided']
+  name        varchar(100)[not null]
+  description varchar(255)
 }
 
-Table negotiations {
-  id          String [pk]
-  contract_id String [not null, ref: > contracts.id]
-  proposed_by String [not null, ref: > users.id]
-  created_at  DateTime [not null]
+Table PB_ContractVersionStatus {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'pending_proposal | accepted | rejected | superseded']
+  name        varchar(100)[not null]
+  description varchar(255)
 }
 
-// ─── PROJECT DOMAIN ────────────────────────────────────────
-Table projects {
-  id          String [pk]
-  contract_id String [not null, ref: > contracts.id]
-  status      String [not null]
-  created_at  DateTime [not null]
+Table PB_MetricValueTypes {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'number | percentage']
+  name        varchar(100)[not null]
+  description varchar(255)
 }
 
-Table milestones {
-  id         String [pk]
-  project_id String [not null, ref: > projects.id]
-  title      String [not null]
-  completed  Boolean [default: false]
-  due_date   DateTime
+Table PB_ProjectStatus {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'active | awaiting_completion_document | completed | cancelled']
+  name        varchar(100)[not null]
+  description varchar(255)
 }
 
-Table project_health {
-  id           String [pk]
-  project_id   String [not null, ref: > projects.id]
-  health_score Float [not null]
+Table PB_ProjectHealthStatus {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'on_track | at_risk | off_track']
+  name        varchar(100)[not null]
+  description varchar(255)
 }
 
-// ─── REVIEW DOMAIN ─────────────────────────────────────────
-Table reviews {
-  id          String [pk]
-  reviewer_id String [not null, ref: > users.id]
-  subject_id  String [not null, ref: > users.id]
-  rating      Float [not null]
-  comment     String
-  created_at  DateTime [not null]
+Table PB_MessageTypes {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'user | system']
+  name        varchar(100)[not null]
+  description varchar(255)
 }
 
-// ─── NOTIFICATION DOMAIN ───────────────────────────────────
-Table notifications {
-  id         String [pk]
-  user_id    String [not null, ref: > users.id]
-  message    String [not null]
-  read       Boolean [default: false]
-  created_at DateTime [not null]
+Table PB_MessageStatus {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'sent | delivered | read']
+  name        varchar(100)[not null]
+  description varchar(255)
 }
 
-Table notification_preferences {
-  id             String [pk]
-  user_id        String [not null, ref: > users.id]
-  email_enabled  Boolean [default: true]
-  in_app_enabled Boolean [default: true]
+Table PB_BlockedContentCategories {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'email | phone | social_media']
+  name        varchar(100)[not null]
+  description varchar(255)
 }
 
-// ─── EVENT DOMAIN ──────────────────────────────────────────
-Table domain_events {
-  id          String [pk]
-  event_type  String [not null]
-  payload     JSON [not null]
-  occurred_at DateTime [not null]
+Table PB_NotificationTypes {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique]
+  name        varchar(100)[not null]
+  description varchar(255)
+  isActive    boolean     [not null, default: true]
+}
+
+Table PB_NotificationChannels {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'in_app | email | push']
+  name        varchar(100)[not null]
+  description varchar(255)
+}
+
+Table PB_NotificationDeliveryStatus {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'pending | sent | delivered | read | failed']
+  name        varchar(100)[not null]
+  description varchar(255)
+}
+
+Table PB_EventTypes {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique]
+  name        varchar(100)[not null]
+  description varchar(255)
+}
+
+// ── DOMINIO USER ─────────────────────────────────────────────────────────────
+
+Table PB_Pymes {
+  id              uuid         [pk, default: `gen_random_uuid()`]
+  auth0Id         varchar(64)  [not null, unique]
+  ownerName       varchar(100) [not null]
+  businessEmail   varchar(150) [not null, unique]
+  phone           varchar(20)  [not null, unique]
+  cedulaJuridica  varchar(20)  [not null, unique]
+  companyName     varchar(100) [not null]
+  companySizeId   uuid         [not null, ref: > PB_CompanySizes.id]
+  industryId      uuid         [ref: > PB_Industries.id]
+  description     text
+  pymeStatusId    uuid         [not null, ref: > PB_PymeStatus.id]
+  reputationScore decimal(12,8)[not null, default: 0]
+  ratingCount     integer      [not null, default: 0]
+  createdAt       timestamptz  [not null, default: `now()`]
+  updatedAt       timestamptz  [not null, default: `now()`]
+}
+
+Table PB_Advisors {
+  id              uuid         [pk, default: `gen_random_uuid()`]
+  auth0Id         varchar(64)  [not null, unique]
+  fullName        varchar(100) [not null]
+  displayName     varchar(100)
+  personalEmail   varchar(150) [not null, unique]
+  phone           varchar(20)  [not null, unique]
+  linkedinUrl     varchar(500) [not null]
+  description     text
+  baseRate        decimal(14,2)
+  isAvailable     boolean      [not null, default: true]
+  advisorStatusId uuid         [not null, ref: > PB_AdvisorStatus.id]
+  reputationScore decimal(12,8)[not null, default: 0]
+  ratingCount     integer      [not null, default: 0]
+  createdAt       timestamptz  [not null, default: `now()`]
+  updatedAt       timestamptz  [not null, default: `now()`]
+}
+
+Table PB_AdvisorExperiences {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  advisorId   uuid        [not null, ref: > PB_Advisors.id]
+  roleTitle   varchar(100)[not null]
+  company     varchar(100)
+  startDate   date
+  endDate     date        [note: 'NULL = posición actual']
+  description text
+  createdAt   timestamptz [not null, default: `now()`]
+}
+
+Table PB_AdvisorCertifications {
+  id        uuid        [pk, default: `gen_random_uuid()`]
+  advisorId uuid        [not null, ref: > PB_Advisors.id]
+  name      varchar(100)[not null]
+  issuer    varchar(100)
+  issuedAt  date
+  createdAt timestamptz [not null, default: `now()`]
+}
+
+Table PB_AdvisorIndustries {
+  advisorId  uuid        [not null, ref: > PB_Advisors.id]
+  industryId uuid        [not null, ref: > PB_Industries.id]
+  createdAt  timestamptz [not null, default: `now()`]
+
+  indexes {
+    (advisorId, industryId) [pk]
+  }
+}
+
+Table PB_AdvisorSubIndustryScores {
+  advisorId     uuid         [not null, ref: > PB_Advisors.id]
+  subIndustryId uuid         [not null, ref: > PB_SubIndustries.id]
+  score         decimal(6,5) [not null, note: 'promedio normalizado de bloques clasificados en esta subindustria']
+  updatedAt     timestamptz  [not null, default: `now()`]
+
+  indexes {
+    (advisorId, subIndustryId) [pk]
+  }
+}
+
+Table PB_Sessions {
+  id              uuid        [pk, default: `gen_random_uuid()`]
+  auth0Id         varchar(64) [not null]
+  accountTypeId   uuid        [not null, ref: > PB_AccountTypes.id]
+  pymeId          uuid        [ref: > PB_Pymes.id]
+  advisorId       uuid        [ref: > PB_Advisors.id]
+  roles           json        [not null, default: `'[]'`]
+  permissions     json        [not null, default: `'[]'`]
+  sessionStatusId uuid        [not null, ref: > PB_SessionStatus.id]
+  ipAddress       varchar(45)
+  userAgent       varchar(255)
+  issuedAt        timestamptz [not null, default: `now()`]
+  lastActivityAt  timestamptz [not null, default: `now()`]
+  expiresAt       timestamptz [not null, note: 'TTL 3h — max JWT + grace']
+  createdAt       timestamptz [not null, default: `now()`]
+
+  note: 'CHECK: exactamente uno de pymeId/advisorId es NOT NULL'
+}
+
+// ── DOMINIO ADVISOR ──────────────────────────────────────────────────────────
+
+Table PB_Promises {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  advisorId   uuid        [not null, ref: > PB_Advisors.id]
+  promiseText text        [not null]
+  isActive    boolean     [not null, default: true]
+  createdAt   timestamptz [not null, default: `now()`]
+  updatedAt   timestamptz [not null, default: `now()`]
+
+  note: 'Max 3 promesas activas por advisor — regla en servicio'
+}
+
+Table PB_PromiseIndustryScores {
+  id         uuid        [pk, default: `gen_random_uuid()`]
+  promiseId  uuid        [not null, ref: > PB_Promises.id]
+  industryId uuid        [not null, ref: > PB_Industries.id]
+  score      decimal(7,4)[not null]
+  createdAt  timestamptz [not null, default: `now()`]
+
+  indexes {
+    (promiseId, industryId) [unique]
+  }
+}
+
+// ── DOMINIO PYME ─────────────────────────────────────────────────────────────
+
+Table PB_QuestionCatalog {
+  id           uuid        [pk, default: `gen_random_uuid()`]
+  questionText text        [not null]
+  displayOrder smallint    [not null, default: 0]
+  isActive     boolean     [not null, default: true]
+  createdAt    timestamptz [not null, default: `now()`]
+}
+
+Table PB_QuestionSubIndustries {
+  questionId    uuid [not null, ref: > PB_QuestionCatalog.id]
+  subIndustryId uuid [not null, ref: > PB_SubIndustries.id]
+
+  indexes {
+    (questionId, subIndustryId) [pk]
+  }
+}
+
+Table PB_NeedsAssessments {
+  id            uuid        [pk, default: `gen_random_uuid()`]
+  pymeId        uuid        [not null, ref: > PB_Pymes.id]
+  versionNumber integer     [not null]
+  isActive      boolean     [not null, default: true]
+  needsVector   varchar     [note: 'vector(12) — pgvector; una dimensión por subindustria activa']
+  createdAt     timestamptz [not null, default: `now()`]
+
+  indexes {
+    (pymeId, versionNumber) [unique]
+    (pymeId) [unique, note: 'WHERE isActive — solo un assessment activo por PYME']
+  }
+}
+
+Table PB_NeedsAssessmentAnswers {
+  id                uuid     [pk, default: `gen_random_uuid()`]
+  needsAssessmentId uuid     [not null, ref: > PB_NeedsAssessments.id]
+  questionId        uuid     [not null, ref: > PB_QuestionCatalog.id]
+  rating            smallint [not null, note: 'CHECK: 1–5']
+
+  indexes {
+    (needsAssessmentId, questionId) [unique]
+  }
+}
+
+Table PB_NeedsAssessmentSubIndustries {
+  id                uuid         [pk, default: `gen_random_uuid()`]
+  needsAssessmentId uuid         [not null, ref: > PB_NeedsAssessments.id]
+  subIndustryId     uuid         [not null, ref: > PB_SubIndustries.id]
+  avgRating         decimal(5,4) [not null]
+  normalizedScore   decimal(6,5) [not null]
+
+  indexes {
+    (needsAssessmentId, subIndustryId) [unique]
+  }
+}
+
+// ── DOMINIO AI ───────────────────────────────────────────────────────────────
+
+Table PB_Documents {
+  id                      uuid         [pk, default: `gen_random_uuid()`]
+  gcsBucket               varchar(100) [not null]
+  gcsObjectPath           varchar(500) [not null]
+  originalFilename        varchar(255) [not null]
+  mimeType                varchar(100) [not null, default: 'application/pdf']
+  sizeBytes               bigint
+  documentTypeId          uuid         [not null, ref: > PB_DocumentTypes.id]
+  documentStatusId        uuid         [not null, ref: > PB_DocumentStatus.id]
+  uploadedByAccountTypeId uuid         [not null, ref: > PB_AccountTypes.id]
+  uploadedByPymeId        uuid         [ref: > PB_Pymes.id]
+  uploadedByAdvisorId     uuid         [ref: > PB_Advisors.id]
+  uploadedAt              timestamptz  [not null, default: `now()`]
+
+  note: 'CHECK: exactamente uno de uploadedByPymeId/uploadedByAdvisorId es NOT NULL'
+}
+
+Table PB_UseCases {
+  id                uuid         [pk, default: `gen_random_uuid()`]
+  advisorId         uuid         [not null, ref: > PB_Advisors.id]
+  documentId        uuid         [not null, ref: > PB_Documents.id]
+  title             varchar(200)
+  industryId        uuid         [ref: > PB_Industries.id]
+  companySizeId     uuid         [ref: > PB_CompanySizes.id]
+  metricUsed        varchar(100)
+  metricValueTypeId uuid         [ref: > PB_MetricValueTypes.id]
+  metricBefore      decimal(14,4)
+  metricAfter       decimal(14,4)
+  useCaseStatusId   uuid         [not null, ref: > PB_UseCaseStatus.id]
+  processedAt       timestamptz
+  createdAt         timestamptz  [not null, default: `now()`]
+  updatedAt         timestamptz  [not null, default: `now()`]
+}
+
+Table PB_DocumentBlocks {
+  id                 uuid        [pk, default: `gen_random_uuid()`]
+  useCaseId          uuid        [not null, ref: > PB_UseCases.id]
+  advisorId          uuid        [not null, ref: > PB_Advisors.id]
+  thematicCategoryId uuid        [not null, ref: > PB_ThematicCategories.id]
+  industryId         uuid        [ref: > PB_Industries.id]
+  content            text        [not null]
+  contentHash        varchar(64) [not null]
+  embedding          varchar     [not null, note: 'vector(768) — pgvector HNSW cosine']
+  createdAt          timestamptz [not null, default: `now()`]
+
+  indexes {
+    (advisorId, contentHash) [unique, note: 'dedupe por advisor']
+  }
+}
+
+Table PB_RecommendationSets {
+  id            uuid        [pk, default: `gen_random_uuid()`]
+  pymeId        uuid        [not null, ref: > PB_Pymes.id]
+  versionNumber integer     [not null]
+  isActive      boolean     [not null, default: true]
+  generatedAt   timestamptz [not null, default: `now()`]
+
+  indexes {
+    (pymeId, versionNumber) [unique]
+    (pymeId) [unique, note: 'WHERE isActive — solo un set activo por PYME']
+  }
+}
+
+Table PB_RecommendationItems {
+  id                  uuid         [pk, default: `gen_random_uuid()`]
+  recommendationSetId uuid         [not null, ref: > PB_RecommendationSets.id]
+  advisorId           uuid         [not null, ref: > PB_Advisors.id]
+  rank                smallint     [not null]
+  compositeScore      decimal(8,6) [not null]
+  semanticScore       decimal(8,6)
+  needsAlignmentScore decimal(8,6)
+  reputationScore     decimal(12,8)
+  createdAt           timestamptz  [not null, default: `now()`]
+
+  indexes {
+    (recommendationSetId, advisorId) [unique]
+    (recommendationSetId, rank) [unique]
+  }
+}
+
+// ── DOMINIO MATCHING ─────────────────────────────────────────────────────────
+
+Table PB_Matches {
+  id            uuid        [pk, default: `gen_random_uuid()`]
+  pymeId        uuid        [not null, ref: > PB_Pymes.id]
+  advisorId     uuid        [not null, ref: > PB_Advisors.id]
+  matchStatusId uuid        [not null, ref: > PB_MatchStatus.id]
+  createdAt     timestamptz [not null, default: `now()`]
+
+  indexes {
+    (pymeId, advisorId) [unique]
+  }
+}
+
+Table PB_MatchStatusHistory {
+  matchId       uuid        [not null, ref: > PB_Matches.id]
+  matchStatusId uuid        [not null, ref: > PB_MatchStatus.id]
+  occurredAt    timestamptz [not null, default: `now()`]
+
+  indexes {
+    (matchId, matchStatusId) [pk]
+  }
+}
+
+// ── DOMINIO COMMUNICATION ────────────────────────────────────────────────────
+
+Table PB_ChatSessions {
+  id        uuid        [pk, default: `gen_random_uuid()`]
+  matchId   uuid        [not null, unique, ref: > PB_Matches.id]
+  isActive  boolean     [not null, default: true]
+  createdAt timestamptz [not null, default: `now()`]
+}
+
+Table PB_Messages {
+  id                  uuid        [pk, default: `gen_random_uuid()`]
+  chatSessionId       uuid        [not null, ref: > PB_ChatSessions.id]
+  messageTypeId       uuid        [not null, ref: > PB_MessageTypes.id]
+  senderAccountTypeId uuid        [ref: > PB_AccountTypes.id, note: 'NULL si system message']
+  senderPymeId        uuid        [ref: > PB_Pymes.id]
+  senderAdvisorId     uuid        [ref: > PB_Advisors.id]
+  content             text        [not null]
+  createdAt           timestamptz [not null, default: `now()`]
+
+  note: 'CHECK: senderPymeId XOR senderAdvisorId (ambos NULL si system)'
+}
+
+Table PB_MessageStatusHistory {
+  messageId       uuid        [not null, ref: > PB_Messages.id]
+  messageStatusId uuid        [not null, ref: > PB_MessageStatus.id]
+  occurredAt      timestamptz [not null, default: `now()`]
+
+  indexes {
+    (messageId, messageStatusId) [pk]
+  }
+}
+
+Table PB_BlockedMessageAttempts {
+  id                       uuid        [pk, default: `gen_random_uuid()`]
+  chatSessionId            uuid        [not null, ref: > PB_ChatSessions.id]
+  senderPymeId             uuid        [ref: > PB_Pymes.id]
+  senderAdvisorId          uuid        [ref: > PB_Advisors.id]
+  attemptedContent         text        [not null]
+  blockedContentCategoryId uuid        [not null, ref: > PB_BlockedContentCategories.id]
+  createdAt                timestamptz [not null, default: `now()`]
+}
+
+// ── DOMINIO CONTRACT ─────────────────────────────────────────────────────────
+
+Table PB_Contracts {
+  id               uuid        [pk, default: `gen_random_uuid()`]
+  matchId          uuid        [not null, unique, ref: > PB_Matches.id]
+  contractStatusId uuid        [not null, ref: > PB_ContractStatus.id]
+  currentVersionId uuid        [ref: > PB_ContractVersions.id, note: 'FK diferida']
+  createdAt        timestamptz [not null, default: `now()`]
+  updatedAt        timestamptz [not null, default: `now()`]
+}
+
+Table PB_ContractVersions {
+  id                      uuid         [pk, default: `gen_random_uuid()`]
+  contractId              uuid         [not null, ref: > PB_Contracts.id]
+  versionNumber           integer      [not null]
+  proposedByAccountTypeId uuid         [not null, ref: > PB_AccountTypes.id]
+  proposedByPymeId        uuid         [ref: > PB_Pymes.id]
+  proposedByAdvisorId     uuid         [ref: > PB_Advisors.id]
+  contractVersionStatusId uuid         [not null, ref: > PB_ContractVersionStatus.id]
+  implementationBudget    decimal(14,2)[not null]
+  monthlyRetainer         decimal(14,2)[not null]
+  startDate               date         [not null]
+  endDate                 date         [not null]
+  commissionPct           decimal(7,4) [not null]
+  mainObjective           text         [not null]
+  advisorResultProfit     decimal(14,2)
+  createdAt               timestamptz  [not null, default: `now()`]
+
+  indexes {
+    (contractId, versionNumber) [unique]
+  }
+
+  note: 'CHECK: exactamente uno de proposedByPymeId/proposedByAdvisorId es NOT NULL'
+}
+
+Table PB_ContractMetrics {
+  id                uuid         [pk, default: `gen_random_uuid()`]
+  contractVersionId uuid         [not null, ref: > PB_ContractVersions.id]
+  name              varchar(100) [not null]
+  metricValueTypeId uuid         [not null, ref: > PB_MetricValueTypes.id]
+  target            decimal(14,4)[not null]
+  baselineValue     decimal(14,4)[note: 'NULL hasta que el proyecto inicia']
+  createdAt         timestamptz  [not null, default: `now()`]
+
+  indexes {
+    (contractVersionId, name) [unique]
+  }
+}
+
+Table PB_ContractRoadmapPhases {
+  id                uuid        [pk, default: `gen_random_uuid()`]
+  contractVersionId uuid        [not null, ref: > PB_ContractVersions.id]
+  phaseOrder        smallint    [not null]
+  name              varchar(100)[not null]
+  description       text
+  completed         boolean     [not null, default: false]
+  completedAt       timestamptz
+
+  indexes {
+    (contractVersionId, phaseOrder) [unique]
+  }
+}
+
+Table PB_PhaseMetricTargets {
+  id               uuid        [pk, default: `gen_random_uuid()`]
+  phaseId          uuid        [not null, ref: > PB_ContractRoadmapPhases.id]
+  contractMetricId uuid        [not null, ref: > PB_ContractMetrics.id]
+  targetPct        decimal(7,4)[not null, note: '% del target global que debe alcanzarse en esta fase']
+
+  indexes {
+    (phaseId, contractMetricId) [unique]
+  }
+}
+
+Table PB_ContractSubPhases {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  phaseId     uuid        [not null, ref: > PB_ContractRoadmapPhases.id]
+  name        varchar(100)[not null]
+  description text
+  completed   boolean     [not null, default: false]
+  completedAt timestamptz
+}
+
+// ── DOMINIO PROJECT ──────────────────────────────────────────────────────────
+
+Table PB_Projects {
+  id                uuid        [pk, default: `gen_random_uuid()`]
+  contractVersionId uuid        [not null, unique, ref: > PB_ContractVersions.id]
+  projectStatusId   uuid        [not null, ref: > PB_ProjectStatus.id]
+  completedAt       timestamptz
+  createdAt         timestamptz [not null, default: `now()`]
+  updatedAt         timestamptz [not null, default: `now()`]
+}
+
+Table PB_ProjectHealthHistory {
+  id                    uuid         [pk, default: `gen_random_uuid()`]
+  projectId             uuid         [not null, ref: > PB_Projects.id]
+  projectHealthStatusId uuid         [not null, ref: > PB_ProjectHealthStatus.id]
+  completedSubPhases    smallint     [not null]
+  totalSubPhases        smallint     [not null]
+  healthScore           decimal(8,2) [not null]
+  timeProgressRatio     decimal(6,5) [not null]
+  recordedAt            timestamptz  [not null, default: `now()`]
+}
+
+Table PB_ProjectKpiValidations {
+  id                  uuid         [pk, default: `gen_random_uuid()`]
+  projectId           uuid         [not null, ref: > PB_Projects.id]
+  contractMetricId    uuid         [not null, ref: > PB_ContractMetrics.id]
+  metricsBefore       decimal(14,4)[not null]
+  metricsAfter        decimal(14,4)[not null]
+  finalImprovementPct decimal(7,4) [not null]
+  met                 boolean      [not null]
+  validatedAt         timestamptz  [not null, default: `now()`]
+
+  indexes {
+    (projectId, contractMetricId) [unique]
+  }
+}
+
+// ── DOMINIO REVIEW ───────────────────────────────────────────────────────────
+
+Table PB_Reviews {
+  id                    uuid         [pk, default: `gen_random_uuid()`]
+  projectId             uuid         [not null, ref: > PB_Projects.id]
+  pymeId                uuid         [not null, ref: > PB_Pymes.id]
+  advisorId             uuid         [not null, ref: > PB_Advisors.id]
+  reviewerAccountTypeId uuid         [not null, ref: > PB_AccountTypes.id, note: 'pyme | advisor — indica quién escribió la reseña; el subject es la otra parte']
+  rating                decimal(3,1) [not null, note: 'CHECK: 1–5 en múltiplos de 0.5']
+  comment               text
+  createdAt             timestamptz  [not null, default: `now()`]
+
+  indexes {
+    (projectId, reviewerAccountTypeId) [unique, note: 'una reseña por parte por proyecto']
+  }
+}
+
+// ── DOMINIO NOTIFICATION ─────────────────────────────────────────────────────
+
+Table PB_Notifications {
+  id                     uuid        [pk, default: `gen_random_uuid()`]
+  recipientAccountTypeId uuid        [not null, ref: > PB_AccountTypes.id]
+  recipientPymeId        uuid        [ref: > PB_Pymes.id]
+  recipientAdvisorId     uuid        [ref: > PB_Advisors.id]
+  notificationTypeId     uuid        [not null, ref: > PB_NotificationTypes.id]
+  title                  varchar(200)[not null]
+  body                   text
+  payload                json        [not null, default: `'{}'`]
+  relatedEntityType      varchar(100)
+  relatedEntityId        uuid
+  isRead                 boolean     [not null, default: false]
+  readAt                 timestamptz
+  createdAt              timestamptz [not null, default: `now()`]
+
+  note: 'CHECK: exactamente uno de recipientPymeId/recipientAdvisorId es NOT NULL'
+}
+
+Table PB_NotificationDeliveries {
+  id                           uuid [pk, default: `gen_random_uuid()`]
+  notificationId               uuid [not null, ref: > PB_Notifications.id]
+  notificationChannelId        uuid [not null, ref: > PB_NotificationChannels.id]
+  notificationDeliveryStatusId uuid [not null, ref: > PB_NotificationDeliveryStatus.id]
+  errorMessage                 varchar(255)
+
+  indexes {
+    (notificationId, notificationChannelId) [unique]
+  }
+}
+
+Table PB_NotificationDeliveryStatusHistory {
+  deliveryId                   uuid        [not null, ref: > PB_NotificationDeliveries.id]
+  notificationDeliveryStatusId uuid        [not null, ref: > PB_NotificationDeliveryStatus.id]
+  occurredAt                   timestamptz [not null, default: `now()`]
+
+  indexes {
+    (deliveryId, notificationDeliveryStatusId) [pk]
+  }
+}
+
+Table PB_NotificationPreferences {
+  id                    uuid        [pk, default: `gen_random_uuid()`]
+  ownerAccountTypeId    uuid        [not null, ref: > PB_AccountTypes.id]
+  ownerPymeId           uuid        [ref: > PB_Pymes.id]
+  ownerAdvisorId        uuid        [ref: > PB_Advisors.id]
+  notificationTypeId    uuid        [not null, ref: > PB_NotificationTypes.id]
+  notificationChannelId uuid        [not null, ref: > PB_NotificationChannels.id]
+  enabled               boolean     [not null, default: true]
+  createdAt             timestamptz [not null, default: `now()`]
+  updatedAt             timestamptz [not null, default: `now()`]
+
+  indexes {
+    (ownerPymeId, notificationTypeId, notificationChannelId)    [unique]
+    (ownerAdvisorId, notificationTypeId, notificationChannelId) [unique]
+  }
+
+  note: 'CHECK: exactamente uno de ownerPymeId/ownerAdvisorId es NOT NULL'
+}
+
+// ── DOMINIO EVENT ────────────────────────────────────────────────────────────
+
+Table PB_DomainEvents {
+  id            uuid        [pk, default: `gen_random_uuid()`]
+  eventTypeId   uuid        [not null, ref: > PB_EventTypes.id]
+  aggregateType varchar(100)
+  aggregateId   uuid
+  payload       json        [not null, default: `'{}'`]
+  occurredAt    timestamptz [not null, default: `now()`]
+  publishedAt   timestamptz
+  createdAt     timestamptz [not null, default: `now()`]
+}
+
+// ── LOGS (sistema interno) ───────────────────────────────────────────────────
+
+Table PV_LogTypes {
+  logtypeid       integer     [pk, increment]
+  name            varchar(45) [not null]
+  ref1description varchar(120)[not null]
+  ref2description varchar(120)[not null]
+  val1description varchar(120)[not null]
+  val2description varchar(120)[not null]
+}
+
+Table PV_LogSource {
+  logsourceid integer     [pk, increment]
+  name        varchar(45) [not null]
+}
+
+Table PV_LogSeverity {
+  logseverityid integer     [pk, increment]
+  name          varchar(45) [not null]
+}
+
+Table PV_Logs {
+  logid         integer     [pk, increment]
+  description   varchar(120)[not null]
+  name          varchar(50) [not null]
+  posttime      timestamp   [not null, default: `now()`]
+  computer      varchar(45) [not null]
+  trace         varchar(200)[not null]
+  referenceid1  bigint
+  referenceid2  bigint
+  checksum      varchar(250)[not null]
+  logtypeid     integer     [not null, ref: > PV_LogTypes.logtypeid]
+  logsourceid   integer     [not null, ref: > PV_LogSource.logsourceid]
+  logseverityid integer     [not null, ref: > PV_LogSeverity.logseverityid]
+  value1        varchar(500)
+  value2        varchar(500)
 }

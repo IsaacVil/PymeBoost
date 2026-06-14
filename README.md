@@ -2574,9 +2574,11 @@ Used for state changes that other domains react to. The source publishes a domai
 | **ContractProposed** | Contract sent for negotiation | Contract Domain | Communication Domain, Notification Domain | Enable discussion, notify parties |
 | **ContractAccepted** | Contract terms agreed | Contract Domain | Project Domain, Notification Domain | Create project, notify parties, start work |
 | **ProjectCreated** | Project starts | Project Domain | Notification Domain, Communication Domain | Enable project chat |
+| **BaselineSubmitted** | PYME submits baseline PDF | Project Domain | Notification Domain | Notify advisor, unlock subphase work |
+| **SubphaseCompleted** | Advisor validates a subphase | Project Domain | Notification Domain | Notify PYME, check if phase completes |
 | **ProjectStatusChanged** | Project health or stage updates | Project Domain | Notification Domain | Notify stakeholders of progress |
 | **ProjectCompleted** | Project finalized | Project Domain | Review Domain, Notification Domain | Enable reviews, calculate final metrics |
-| **ReviewSubmitted** | Review left for advisor/PYME | Review Domain | Advisor Domain, Notification Domain, Pyme Domain | Update reputation, notify subject, archive review |
+| **ReviewSubmitted** | Review left for advisor/PYME | Review Domain | Advisor Domain, Notification Domain, Pyme Domain | Update reputation, notify reviewed party, archive review |
 | **UseCaseUploaded** | Advisor uploads use case PDFs | User Domain | AI Domain | Trigger PDF processing pipeline |
 | **AdvisorUseCaseProcessed** | Use case PDF processing completes | AI Domain | Notification Domain | Notify advisor of processing result (success or failure) |
 | **SmeNeedsAssessmentUpdated** | SME submits or retakes needs assessment | Pyme Domain | Pyme Domain | Invalidate recommendation cache, trigger recommendation recalculation |
@@ -3924,7 +3926,7 @@ Triggered by the `ReviewSubmitted` Pub/Sub event published by the Review Domain 
 
 The advisor profile stores two fields to make this O(1): `reputation_score` (the running average, never rounded) and `rating_count` (total number of ratings received so far).
 
-1. The Advisor Domain receives the `ReviewSubmitted` event containing the `advisor_id` and the `new_rating` value.
+1. The Advisor Domain receives the `ReviewSubmitted` event. It acts only when `reviewer_account_type` is `pyme` (meaning the advisor was reviewed). It reads `advisor_id` and `rating` from the payload.
 2. The current `reputation_score` and `rating_count` are retrieved from the advisor's profile record.
 3. The new reputation score is computed incrementally — no query against the reviews table: `(reputation_score * rating_count + new_rating) / (rating_count + 1)`.
 4. `rating_count` is incremented by 1.
@@ -3940,7 +3942,7 @@ Triggered by the `ReviewSubmitted` event published by the Review Domain each tim
 
 The PYME profile stores two fields to make this O(1): `reputation_score` (the running average, never rounded) and `rating_count` (total number of ratings received so far).
 
-1. The Pyme Domain receives the `ReviewSubmitted` event containing the `pyme_id` (as `subject_id`) and the `rating` value.
+1. The Pyme Domain receives the `ReviewSubmitted` event. It acts only when `reviewer_account_type` is `advisor` (meaning the PYME was reviewed). It reads `pyme_id` and `rating` from the payload.
 2. The current `reputation_score` and `rating_count` are retrieved from the PYME's profile record.
 3. The new reputation score is computed incrementally — no query against the reviews table: `(reputation_score * rating_count + rating) / (rating_count + 1)`.
 4. `rating_count` is incremented by 1.
@@ -4318,7 +4320,7 @@ Implementation: [backend/domains/review/controllers/leave_advisor_review_control
 
 A PYME may leave a review for an advisor only after the shared project has been completed. One review is allowed per project.
 
-1. The PYME sends a POST request to `/api/reviews/advisor` with: `project_id`, `subject_id` (advisor's ID), `rating` (1–5), and an optional `comment`.
+1. The PYME sends a POST request to `/api/reviews/advisor` with: `project_id`, `rating` (1–5), and an optional `comment`. The advisor is derived from the project record — no `subject_id` is required.
 2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
 3. Google Cloud API Gateway routes the request to Cloud Run.
 4. FastAPI validates the JWT using Auth0 JWKS and extracts the `pyme_id` from the token claims.
@@ -4326,9 +4328,9 @@ A PYME may leave a review for an advisor only after the shared project has been 
 6. The system verifies that the requesting user is the PYME participant of that project. If not, `403 Forbidden` is returned.
 7. The system verifies that the project status is `COMPLETED`. Reviews cannot be submitted for active or cancelled projects.
 8. The system verifies that no review from this PYME for this project already exists. If one does, the request is rejected with `409 Conflict`.
-9. The rating is validated to be within the 1–5 range.
-10. A review record is created with `reviewer_id` (the PYME's ID), `subject_id` (the advisor's ID), `rating`, `comment`, and `created_at`.
-11. A `ReviewSubmitted` event is published to the event bus with `review_id`, `subject_id`, and `rating`.
+9. The rating is validated to be within the 1–5 range in multiples of 0.5.
+10. A review record is created with `pymeId`, `advisorId` (derived from the project), `reviewerAccountTypeId` (`pyme`), `rating`, `comment`, and `createdAt`.
+11. A `ReviewSubmitted` event is published to the event bus with `review_id`, `pyme_id`, `advisor_id`, `reviewer_account_type` (`pyme`), and `rating`.
 12. The review confirmation is returned to the PYME.
 
 The Notification Domain receives the `ReviewSubmitted` event and notifies the advisor that a review was submitted.
@@ -4341,7 +4343,7 @@ Implementation: [backend/domains/review/controllers/leave_pyme_review_controller
 
 An advisor may leave a review for a PYME only after the shared project has been completed. One review is allowed per project.
 
-1. The advisor sends a POST request to `/api/reviews/pyme` with: `project_id`, `subject_id` (PYME's ID), `rating` (1–5), and an optional `comment`.
+1. The advisor sends a POST request to `/api/reviews/pyme` with: `project_id`, `rating` (1–5), and an optional `comment`. The PYME is derived from the project record — no `subject_id` is required.
 2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
 3. Google Cloud API Gateway routes the request to Cloud Run.
 4. FastAPI validates the JWT using Auth0 JWKS and extracts the `advisor_id` from the token claims.
@@ -4349,9 +4351,9 @@ An advisor may leave a review for a PYME only after the shared project has been 
 6. The system verifies that the requesting user is the advisor participant of that project. If not, `403 Forbidden` is returned.
 7. The system verifies that the project status is `COMPLETED`. Reviews cannot be submitted for active or cancelled projects.
 8. The system verifies that no review from this advisor for this project already exists. If one does, the request is rejected with `409 Conflict`.
-9. The rating is validated to be within the 1–5 range.
-10. A review record is created with `reviewer_id` (the advisor's ID), `subject_id` (the PYME's ID), `rating`, `comment`, and `created_at`.
-11. A `ReviewSubmitted` event is published to the event bus with `review_id`, `subject_id`, and `rating`.
+9. The rating is validated to be within the 1–5 range in multiples of 0.5.
+10. A review record is created with `pymeId` (derived from the project), `advisorId`, `reviewerAccountTypeId` (`advisor`), `rating`, `comment`, and `createdAt`.
+11. A `ReviewSubmitted` event is published to the event bus with `review_id`, `pyme_id`, `advisor_id`, `reviewer_account_type` (`advisor`), and `rating`.
 12. The review confirmation is returned to the advisor.
 
  The Notification Domain receives the `ReviewSubmitted` event and notifies the PYME that a review was submitted.
@@ -4689,15 +4691,15 @@ Workflow (Event Domain):
 
 #### ReviewSubmitted Event
 
-Payload: `review_id`, `subject_id`, `rating`
+Payload: `review_id`, `pyme_id`, `advisor_id`, `reviewer_account_type`, `rating`
 
-This event is emitted when a review is submitted (see `Leave a Review`), and updates the reputation of whoever was reviewed.
+This event is emitted when a review is submitted (see `Leave a Review`), and updates the reputation of whoever was reviewed. `reviewer_account_type` is either `pyme` or `advisor` — the subject is always the opposite party.
 
 Published by: `Leave a Review` use case (Review Domain), once the review has been persisted.
 
 Consumed by:
-- Advisor Domain — if `subject_id` is an advisor, recomputes the advisor's reputation and publishes `AdvisorReputationUpdated`.
-- Pyme Domain — if `subject_id` is a PYME, recomputes the PYME's reputation and publishes `PymeReputationUpdated`.
+- Advisor Domain — if `reviewer_account_type` is `pyme`, the advisor was reviewed; recomputes the advisor's reputation using `advisor_id` and publishes `AdvisorReputationUpdated`.
+- Pyme Domain — if `reviewer_account_type` is `advisor`, the PYME was reviewed; recomputes the PYME's reputation using `pyme_id` and publishes `PymeReputationUpdated`.
 - Notification Domain — notifies the reviewed party that a review was submitted.
 
 Workflow (Event Domain):
@@ -5433,14 +5435,17 @@ CREATE INDEX idx_advisor_sub_industry_scores ON advisor_sub_industry_scores(advi
 #### Review Domain
 
 ```sql
--- Retrieve all reviews for a subject (reputation calculation)
-CREATE INDEX idx_reviews_subject_id ON reviews(subject_id);
+-- Retrieve all reviews where this PYME was involved (reputation + history)
+CREATE INDEX idx_reviews_pyme ON "PB_Reviews"("pymeId");
 
--- Retrieve reviews left by a user
-CREATE INDEX idx_reviews_reviewer_id ON reviews(reviewer_id);
+-- Retrieve all reviews where this advisor was involved (reputation + history)
+CREATE INDEX idx_reviews_advisor ON "PB_Reviews"("advisorId");
+
+-- Filter reviews by who wrote them (pyme vs advisor)
+CREATE INDEX idx_reviews_reviewer_account_type ON "PB_Reviews"("reviewerAccountTypeId");
 
 -- Retrieve reviews for a project
-CREATE INDEX idx_reviews_project_id ON reviews(project_id);
+CREATE INDEX idx_reviews_project ON "PB_Reviews"("projectId");
 ```
 
 #### Notification Domain
