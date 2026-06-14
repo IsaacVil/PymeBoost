@@ -5100,9 +5100,9 @@ The full database schema is defined in DBML format. You can find the source file
 📄 [`database/diagram/er-diagram.dbml`](database/diagram/er-diagram.dbml)
 
 
-This schema is also available in PNG format for better and easier viewing. You can find the source file at:
+This schema is also available in pdf format for better and easier viewing. You can find the source file at:
 
-📄 [`database/diagram/er-diagram.png`](database/diagram/er-diagram.png)
+📄 [`database/diagram/er-diagram.pdf`](database/diagram/er-diagram.pdf)
 
 > Note: The DBML file and diagram are part of the intended design. Some schema elements described in this document may be aspirational and not yet synchronized with the current model code in the repository. Treat the DBML as the design source; implementation may lag in a few domains.
 
