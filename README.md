@@ -382,8 +382,7 @@ PymeBoost is built around these core features:
 - **Matching:** Advisor discovery, recommendations, swipe decisions, match creation.
 - **Contracts:** Contract negotiation, proposal submission, acceptance, tracking.
 - **Messaging:** Real-time chat between PYME and advisors, message history.
-- **Dashboard:** Project overview, metrics, milestones, status tracking.
-- **Reports:** Report generation, viewing, download, sharing.
+- **Dashboard:** Project overview, metrics, status tracking.
 - **Auth:** User authentication, login, logout, session management.
 
 ---
@@ -465,18 +464,6 @@ src/
 │   │   │   └── dashboardValidator.ts
 │   │   └── page.tsx
 │   │
-│   ├── reports/
-│   │   ├── components/
-│   │   │   ├── ReportViewer.tsx
-│   │   │   └── ReportGenerator.tsx
-│   │   ├── hooks/
-│   │   │   └── useReports.ts
-│   │   ├── services/
-│   │   │   └── reportService.ts
-│   │   ├── types/
-│   │   │   └── report.ts
-│   │   └── page.tsx
-│   │
 │   └── auth/
 │       ├── components/
 │       │   ├── LoginForm.tsx
@@ -547,7 +534,6 @@ src/
 | [frontend/src/features/contracts/page.tsx](frontend/src/features/contracts/page.tsx) | Contract lifecycle management. Components for viewing, negotiating, and tracking contracts. |
 | [frontend/src/features/messaging/page.tsx](frontend/src/features/messaging/page.tsx) | Real-time chat between PYME and advisors. Components for chat panel, message list, and input. |
 | [frontend/src/features/dashboard/page.tsx](frontend/src/features/dashboard/page.tsx) | Project overview and metrics. Components for stats, timelines, and performance tracking. |
-| [frontend/src/features/reports/page.tsx](frontend/src/features/reports/page.tsx) | Report generation and viewing. Components for report viewer and generator. |
 | [frontend/src/features/auth/page.tsx](frontend/src/features/auth/page.tsx) | User authentication and session management. Components for login and logout. |
 | [frontend/src/features/matching/hooks/useAdvisorMatching.ts](frontend/src/features/matching/hooks/useAdvisorMatching.ts) | Business logic hooks that implement workflows. Called by components. |
 | [frontend/src/features/matching/services/matchingService.ts](frontend/src/features/matching/services/matchingService.ts) | API communication functions. Called by hooks. One service per feature. |
@@ -833,11 +819,11 @@ PymeBoost employs strategic, essential OOP design patterns to maintain a modular
 |------------------|----------|----------------|---------|----------------|
 | AuthGuard | [frontend/src/shared/guards/AuthGuard.tsx](frontend/src/shared/guards/AuthGuard.tsx) | Protects private routes; validates active session before rendering | Guard | **Security at a single point.** PymeBoost handles sensitive advisor-SME relationships and contracts. Without Guard, every component must check auth, creating security gaps. Guard enforces authorization before any logic executes. |
 | authStore | [frontend/src/store/authStore.ts](frontend/src/store/authStore.ts) | Manages global auth state (user, token, permissions) | Singleton | **One authoritative source.** Auth state must be consistent across all features (contracts, messaging, dashboards). Multiple instances = token mismatches = silent feature breakage. Zustand enforces one instance automatically. |
-| notificationStore | [frontend/src/store/notificationStore.ts](frontend/src/store/notificationStore.ts) | Publishes system-wide toasts, alerts, notifications | Observer (Pub-Sub) | **Decouples event producers from consumers.** When contracts are accepted or milestones update, 5+ features must react without knowing each other. Without Observer, features need direct imports or prop drilling through 5+ levels = fragile code. |
+| notificationStore | [frontend/src/store/notificationStore.ts](frontend/src/store/notificationStore.ts) | Publishes system-wide toasts, alerts, notifications | Observer (Pub-Sub) | **Decouples event producers from consumers.** When contracts are accepted or phases complete, 5+ features must react without knowing each other. Without Observer, features need direct imports or prop drilling through 5+ levels = fragile code. |
 | ApiClient | [frontend/src/lib/apiClient.ts](frontend/src/lib/apiClient.ts) | Base HTTP client with reusable request/response logic | Template Method | **Eliminates duplicate error handling.** Every API call needs JWT injection, error handling, rate limiting, retries. Template Method defines the flow once, reused by all services. Without it, duplicate logic across 10+ services means bugs fixed in one place don't propagate. |
 | MatchingService | [frontend/src/features/matching/services/matchingService.ts](frontend/src/features/matching/services/matchingService.ts) | Executes Swipe Approved / Swipe Rejected actions as discrete commands; fetches AI-generated recommendations | Command | **Swipe actions are the core interaction unit.** Each swipe (approved/rejected) is encapsulated as a Command object with `execute()`. This decouples the action from the trigger, enables logging, queuing, and future undo — without Command, swipe logic would be scattered across components. |
 | useAdvisorMatching | [frontend/src/features/matching/hooks/useAdvisorMatching.ts](frontend/src/features/matching/hooks/useAdvisorMatching.ts) | Assembles AI recommendation fetch + swipe commands + notifications into a single hook | Factory | **Encapsulates workflow complexity.** Setup requires: TanStack Query config, swipe command creation, cache invalidation, notification publishing. Factory gives components `useAdvisorMatching()` instead of assembling these pieces manually — reduces bugs and cognitive load. |
-| ContractValidator | [frontend/src/features/contracts/validators/contractValidator.ts](frontend/src/features/contracts/validators/contractValidator.ts) | Validates contract terms per tier: standard (1mo/3%), medium (3mo/5%), high (6mo/7%), custom (incremental commission) | Strategy | **Each tier has different commission and duration rules.** Standard locks commission at 3%, custom enforces 3% + 1% per extra month via `.refine()`. Without Strategy, a single schema can't enforce tier-specific rules — invalid commissions would silently reach the backend. |
+| ContractValidator | [frontend/src/features/contracts/validators/contractValidator.ts](frontend/src/features/contracts/validators/contractValidator.ts) | Validates contract terms per tier: standard (1mo/3%), medium (3mo/5%), high (6mo/7%), custom (1–12mo, commission auto-calculated), annual (alias for custom at 12mo/10%) | Strategy | **Each tier has different commission and duration rules.** Standard locks commission at 3%, custom enforces linear interpolation `3 + (months-1) × (7/11)%` via `.refine()`, annual is validated as custom with duration_months=12. Without Strategy, a single schema can't enforce tier-specific rules — invalid commissions would silently reach the backend. |
 | QueryClientFactory | [frontend/src/lib/queryClient.ts](frontend/src/lib/queryClient.ts) | Initializes and configures TanStack Query | Factory | **Consistent caching across all features.** Factory centralizes cache settings, retry logic, staleTime. Without it, some features cache aggressively while others refetch constantly = data inconsistency and poor UX. |
 
 ---
@@ -871,7 +857,7 @@ PymeBoost employs strategic, essential OOP design patterns to maintain a modular
 - [`authStore`](frontend/src/store/authStore.ts): Single instance manages user, token, permissions globally.
   - **Why Singleton:** Any feature reading auth must see the same state. Multiple instances = data inconsistency.
 - [`notificationStore`](frontend/src/store/notificationStore.ts): Single instance publishes toasts, alerts system-wide.
-  - **Why Singleton + Observer:** Swipe approved, contracts accepted, milestones met → all features receive notifications from one source.
+  - **Why Singleton + Observer:** Swipe approved, contracts accepted, phases completed → all features receive notifications from one source.
 - [`uiStore`](frontend/src/store/uiStore.ts): Single instance manages modal states, sidebar visibility, theme.
 
 **Server State (TanStack Query) — Factory + Cache Strategy:**
@@ -1132,7 +1118,7 @@ PymeBoost has four main user workflows that drive the platform. Each workflow sp
 - Rating modal at project end
 - History accessible from dashboard
 
-**Features Involved:** Dashboard, Reports, Contracts
+**Features Involved:** Dashboard, Contracts
 
 ---
 
@@ -1145,8 +1131,9 @@ Sign Up → Onboarding → Browse Advisors → Swipe & Match → Chat → Negoti
 
 **Advisor Journey**
 ```
-Sign Up → Profile Setup → Wait for Matches → Accept Chat → Negotiate Terms → Sign Contract → Work & Report → Receive Rating → View Analytics
+Sign Up → Profile Setup → Receive Match Notification → Chat → Negotiate Terms → Sign Contract → Work & Report → Receive Rating → View Analytics
 ```
+*(Advisors receive all matches automatically; they may cancel a match at any time before contract acceptance if they choose not to proceed.)*
 
 ---
 
@@ -1203,7 +1190,7 @@ PymeBoost uses Auth0 for centralized authentication. Frontend delegates login/lo
 | User Type | Can Do | Cannot Do |
 |-----------|--------|-----------|
 | **PYME (Verified)** | Browse advisors, swipe, message, create contracts, track projects, rate advisors | Access advisor analytics, upload fake documents |
-| **Advisor (Verified)** | Receive matches, message, negotiate contracts, submit reports, view ratings | Browse all PYMES, initiate contacts, accept unverified PYMES |
+| **Advisor (Verified)** | Receive matches automatically, cancel matches, message, negotiate contracts, submit reports, view ratings | Browse all PYMES, initiate contacts, swipe on PYMEs |
 | **Unauthenticated** | View homepage, sign up | Access any feature |
 
 **Permission Enforcement:**
@@ -1643,7 +1630,7 @@ Next.js splits the bundle automatically by route. The split works well only beca
 | `/contracts` | +35KB | ContractViewer, tier validation logic, Zod schemas |
 | `/dashboard` | +30KB | Chart components, metrics rendering |
 | `/messages` | +25KB | WebSocket client, ChatPanel, MessageList |
-| `/reports` | +20KB | ReportViewer, PDF rendering utilities |
+
 
 Heavy components that are only visible inside modals are lazy-loaded so their JS is excluded from the initial route chunk and only downloaded when the user triggers them. [ContractsPage](frontend/src/features/contracts/page.tsx) applies this to `ContractNegotiation` — the negotiation panel never appears on first render, so its code (ContractViewer + ContractTerms + Zod validation logic) is deferred until the user clicks "View":
 
@@ -1687,7 +1674,7 @@ PymeBoost has images in three specific places: advisor avatars in [MatchingCard]
 | Feature | Strategy | `staleTime` | `gcTime` | Why |
 |---------|----------|------------|---------|-----|
 | Advisor recommendations | `dynamic` | 2 min | 5 min | AI scores update periodically but not per second |
-| Contracts / reports | `stable` | 10 min | 20 min | Status changes only on explicit user actions |
+| Contracts | `stable` | 10 min | 20 min | Status changes only on explicit user actions |
 | User profile / permissions | `stable` | 10 min | 20 min | Account type rarely changes mid-session |
 | Chat messages | none (WebSocket) | — | — | Messages arrive via WebSocket into [useMessaging](frontend/src/features/messaging/hooks/useMessaging.ts) local state, not polled |
 | Static assets (CSS, JS) | Browser cache | — | 1 year | Cache-busted by hash on every Vercel deploy |
@@ -1804,9 +1791,9 @@ The container diagram visualizes the Next.js Frontend as a black box within its 
 
 **Main Components:**
 - **Browser:** PYME and Advisor users
-- **Next.js Frontend:** Main React application (SSR)
+- **Next.js Frontend:** Main React application (CSR)
 - **Auth0:** OAuth 2.0 authentication service
-- **Backend API:** Node.js REST API with JWT validation
+- **Backend API:** Python/FastAPI REST API with JWT validation
 - **Google Cloud Logging:** Observability system (logs, metrics)
 - **Sentry:** Real-time frontend error tracking
 
@@ -1833,7 +1820,6 @@ Six independent features, each with its own: components, hooks, services, valida
 - **Contracts:** Negotiation and contract signing
 - **Messaging:** Real-time chat and message history
 - **Dashboard:** Project tracking and metrics display
-- **Reports:** Report generation and viewing
 - **Auth:** Login, logout, session management
 
 **Characteristic:** They don't import from each other. Each feature is an autonomous module.
@@ -1961,7 +1947,7 @@ PymeBoost is built around these core business domains:
 - **Matching:** Advisor discovery, recommendation engine, swipe decisions, match creation.
 - **Contract:** Negotiation, proposal submission, terms agreement, tracking.
 - **Communication:** Real-time chat, messaging between PYME and advisors.
-- **Project:** Project lifecycle, milestones, health monitoring, completion tracking.
+- **Project:** Project lifecycle, health monitoring, completion tracking.
 - **Review:** Ratings and feedback for advisors and PYMEs.
 - **Notification:** Event-driven alerts, email notifications, system-wide broadcasts.
 - **Event:** Event audit logging, event sourcing, domain event storage.
@@ -2139,32 +2125,32 @@ backend/
 │   ├── project/
 │   │   ├── controllers/
 │   │   │   ├── create_project_controller.py
+│   │   │   ├── submit_baseline_controller.py
+│   │   │   ├── validate_subphase_controller.py
 │   │   │   ├── get_project_status_controller.py
-│   │   │   ├── generate_milestones_controller.py
-│   │   │   ├── validate_milestone_controller.py
 │   │   │   ├── monitor_health_controller.py
 │   │   │   └── close_project_controller.py
 │   │   ├── services/
 │   │   │   ├── project_service.py
-│   │   │   ├── milestone_service.py
+│   │   │   ├── subphase_service.py
 │   │   │   ├── health_monitoring_service.py
 │   │   │   └── project_completion_service.py
 │   │   ├── repositories/
 │   │   │   ├── project_repository.py
-│   │   │   └── milestone_repository.py
+│   │   │   └── subphase_repository.py
 │   │   ├── models/
 │   │   │   ├── project_model.py
-│   │   │   ├── milestone_model.py
+│   │   │   ├── subphase_model.py
 │   │   │   └── project_health_model.py
 │   │   ├── schemas/
 │   │   │   ├── create_project_request.py
+│   │   │   ├── subphase_dto.py
 │   │   │   ├── project_response.py
-│   │   │   ├── milestone_dto.py
 │   │   │   └── health_status_dto.py
 │   │   └── events/
 │   │       ├── project_created_event.py
+│   │       ├── subphase_completed_event.py
 │   │       ├── project_status_changed_event.py
-│   │       ├── milestone_completed_event.py
 │   │       └── project_completed_event.py
 │   │
 │   ├── review/
@@ -2231,7 +2217,10 @@ backend/
 │       │   ├── thematic_classification_service.py
 │       │   ├── recommendation_service.py
 │       │   ├── recommendation_batch_service.py
-│       │   └── recommendation_on_demand_service.py
+│       │   ├── recommendation_on_demand_service.py
+│       │   ├── reflection_service.py
+│       │   ├── reflection_recommendation_validation_service.py
+│       │   └── reflection_promise_classification_service.py
 │       ├── repositories/
 │       │   ├── use_case_repository.py
 │       │   ├── document_block_repository.py
@@ -2567,9 +2556,8 @@ Used for state changes that other domains react to. The source publishes a domai
 | **MatchSwiped** | Advisor swipes on PYME | Matching Domain | Notification Domain | Notify counterparty of interest |
 | **ContractProposed** | Contract sent for negotiation | Contract Domain | Communication Domain, Notification Domain | Enable discussion, notify parties |
 | **ContractAccepted** | Contract terms agreed | Contract Domain | Project Domain, Notification Domain | Create project, notify parties, start work |
-| **ProjectCreated** | Project starts | Project Domain | Notification Domain, Communication Domain | Initialize milestones, enable project chat |
+| **ProjectCreated** | Project starts | Project Domain | Notification Domain, Communication Domain | Enable project chat |
 | **ProjectStatusChanged** | Project health or stage updates | Project Domain | Notification Domain | Notify stakeholders of progress |
-| **MilestoneCompleted** | PYME/Advisor completes milestone | Project Domain | Notification Domain, Review Domain | Notify parties, enable review collection |
 | **ProjectCompleted** | Project finalized | Project Domain | Review Domain, Notification Domain | Enable reviews, calculate final metrics |
 | **ReviewSubmitted** | Review left for advisor/PYME | Review Domain | Advisor Domain, Notification Domain, Pyme Domain | Update reputation, notify subject, archive review |
 | **UseCaseUploaded** | Advisor uploads use case PDFs | User Domain | AI Domain | Trigger PDF processing pipeline |
@@ -2763,7 +2751,7 @@ Shared infrastructure lives in `backend/shared/` and is used by all domains:
 - Refresh token validity: **30 days** from Auth0 (token can be renewed while still valid)
 - Backend validates token on every request against JWKS cache
 - If token expired AND refresh token also expired → 401 Unauthorized, user must re-authenticate
-- JWKS cache TTL: 50 hours (synchronized with session TTL + grace period); fallback to Auth0 if cache miss
+- JWKS cache TTL: 3 hours (matching the maximum JWT validity: 1 hour standard + 2 hour grace period); fallback to Auth0 if cache miss
 
 **Rate Limiting:**
 
@@ -3085,10 +3073,10 @@ Code must pass these checks before merging to main:
 ### Single Point of Failure Analysis
 - **Auth0:**
    1. Valid JWT token arrives at API
-   2. Validated against Auth0 JWKS (JSON Web Key Set) cached in Redis (50h TTL)
-   3. Session stored in Redis with extended TTL (base 48h + 2h grace during outage = 50h max)
+   2. Validated against Auth0 JWKS (JSON Web Key Set) cached in Redis (3h TTL)
+   3. Session stored in Redis with TTL of 3 hours (matching the maximum JWT validity: 1 hour standard + 2 hour grace period)
    4. If Auth0 goes down → Backend continues validating signatures against cached JWKS
-   5. **Guarantee:** JWKS always available for entire session lifetime (both expire at 50h)
+   5. **Guarantee:** JWKS always available for entire session lifetime (both expire at 3h)
    6. **Result:** Every JWT signature validated cryptographically; no unverified claims extraction needed
    7. If Redis also down → Fallback to database, no JWT validation (fails safely with 401)
 
@@ -3132,18 +3120,22 @@ Auth-specific error flows are in [2.8 Caching Strategy](#28-caching-strategy).
 
 #### API Error Response Format
 
-All error responses follow a single format, consistent with the frontend contract defined in [section 1.6](#16-state-management--api-communication):
+All error responses follow a single format, consistent with the error response format defined in [section 2.4](#24-security):
 
 ```json
 {
-  "success": false,
-  "error": "Human-readable message describing what went wrong"
+  "error_code": "RESOURCE_NOT_FOUND",
+  "message": "Human-readable message describing what went wrong",
+  "timestamp": "2026-06-05T10:30:00Z",
+  "trace_id": "abc-123-def"
 }
 ```
 
 **Rules:**
-- `success` is always `false` on any non-2xx response (other than 200-299 response).
-- `error` is always a single string; no nested objects.
+- `error_code` is a machine-readable constant (e.g. `RESOURCE_NOT_FOUND`, `VALIDATION_ERROR`, `UNAUTHORIZED`).
+- `message` is always a single human-readable string; no nested objects.
+- `timestamp` is the ISO 8601 UTC time when the error occurred.
+- `trace_id` correlates the error with backend logs in Cloud Logging.
 - Stack traces, internal class names, and database details are **never** included in the response body — they go to Cloud Logging only.
 - Pydantic validation failures (422) are intercepted by a custom FastAPI exception handler in [`main.py`](backend/main.py) and converted to this format before reaching the client.
 
@@ -3156,10 +3148,11 @@ Domain exceptions defined in [`shared/exceptions/`](backend/shared/exceptions/) 
 | Exception class | HTTP status | When it is raised | Example |
 |----------------|-------------|-------------------|---------|
 | `ValidationException` | `400 Bad Request` | Input format valid but value violates a domain rule | Commission percentage outside allowed range |
+| `DomainException` | `400 Bad Request` | Business rule violated (not a state conflict) | Email already registered, advisor unavailable |
 | `AuthException` (unauthenticated) | `401 Unauthorized` | JWT missing, expired, or signature invalid | Request arrives without `Authorization` header |
 | `AuthException` (forbidden) | `403 Forbidden` | Valid JWT but insufficient role or resource ownership | PYME tries to read another PYME's contract |
 | `NotFoundException` | `404 Not Found` | Requested resource does not exist | Advisor ID not found in the database |
-| `DomainException` | `409 Conflict` | Business rule violated due to existing state | PYME already has an active contract with this advisor |
+| `ConflictException` | `409 Conflict` | Business rule violated due to existing resource state | PYME already has an active contract with this advisor |
 | Pydantic `RequestValidationError` | `422 Unprocessable Entity` | Request body fails schema validation | Required field missing, wrong type |
 | Any unhandled exception | `500 Internal Server Error` | Unexpected failure not caught by any handler | Bug in service logic, null pointer |
 
@@ -3395,14 +3388,14 @@ With 1 GB memory and a maximum of ~500 concurrent sessions (~1 MB total), evicti
 
 ### Connection Management
 
-Cloud Run scales to a maximum of 50 instances. Each FastAPI instance maintains an **async connection pool** to Redis (via `redis-py` with asyncio support).
+Cloud Run scales to a maximum of 10 instances. Each FastAPI instance maintains an **async connection pool** to Redis (via `redis-py` with asyncio support).
 
 | Parameter | Value | Calculation |
 |-----------|-------|-------------|
 | Pool size per Cloud Run instance | 10 connections | Enough for concurrent async handlers; avoids connection churn |
-| Max instances | 50 | Defined in Cloud Run auto-scaling config |
-| Max total connections to Redis | 500 | 50 instances × 10 connections/instance |
-| Cloud Memorystore 1 GB Standard max connections | 65,000 | Per GCP documentation; 500 is 0.76% of the limit |
+| Max instances | 10 | Defined in Cloud Run auto-scaling config |
+| Max total connections to Redis | 100 | 10 instances × 10 connections/instance |
+| Cloud Memorystore 1 GB Standard max connections | 65,000 | Per GCP documentation; 100 is 0.15% of the limit |
 | Connection timeout | 2 seconds | Fail fast; Cloud Run can retry or scale |
 | Socket keepalive | Enabled | Prevents idle connections from being dropped by the VPC firewall |
 
@@ -3418,7 +3411,7 @@ Cloud Run scales to a maximum of 50 instances. Each FastAPI instance maintains a
 
 ### Elements That Scale with Request Volume
  
-* Cloud Run: Auto-scale 5-50 instances (trigger: CPU > 70% or request concurrency > 80)
+* Cloud Run: Auto-scale 1-10 instances (trigger: CPU > 70% or request concurrency > 80)
 * Cloud SQL: Vertical scaling; read replicas for read-heavy workloads
 * Pub/Sub: Auto-scales throughput; subscriber concurrency auto-adjusts (max 1000 concurrent pulls per subscription)
 * Background Workers (Cloud Tasks): Auto-scale job processing threads based on queue depth
@@ -3431,7 +3424,7 @@ Cloud Run scales to a maximum of 50 instances. Each FastAPI instance maintains a
 * Request concurrency > 80 → add Cloud Run instance
 * Pub/Sub queue depth > 100 messages → increase subscriber concurrency
 * Cloud SQL CPU > 80% → scale up (vertical); add read replica if reads spike
-* Max limit: 50 Cloud Run instances (cost control)
+* Max limit: 10 Cloud Run instances (cost control — one instance handles ~5–20 req/s; 10 instances is sufficient for expected load during year 1)
 
  ---
 ## 2.10 Backend Key Workflows
@@ -3443,6 +3436,7 @@ Cloud Run scales to a maximum of 50 instances. Each FastAPI instance maintains a
 Implementation: [backend/domains/user/controllers/create_sme_account_controller.py](backend/domains/user/controllers/create_sme_account_controller.py)
 
 1. The user completes the registration form on the frontend, providing:
+   - Name of the company
    - Name of the owner.
    - Business email address.
    - Phone number.
@@ -3638,8 +3632,9 @@ Each uploaded PDF must contain the following information:
 | 2. Company Context | Business model, market position, main challenges at the time |
 | 3. Initial Situation | Specific problem or opportunity that triggered the engagement |
 | 4. Actions Performed | Steps, methodologies, and interventions executed by the advisor |
-| 5. Metrics Before | Quantitative baseline — revenue, costs, conversion rates, or other KPIs |
-| 6. Metrics After | Quantitative results after the engagement — same KPIs as Metrics Before |
+| 5. Metric Used | Name of the primary metric tracked during this engagement, the value before the intervention, and the value after |
+| 6. Metrics Before | Quantitative baseline — revenue, costs, conversion rates, or other KPIs |
+| 7. Metrics After | Quantitative results after the engagement — same KPIs as Metrics Before |
 
 **Workflow:**
 
@@ -3675,12 +3670,38 @@ Triggered by the `UseCaseUploaded` Pub/Sub event.
    - `company_context`
    - `initial_situation`
    - `actions_performed`
+   - `metric_used`
    - `metrics_before`
    - `metrics_after`
-7. Each classified block is stored with: thematic category, embedding, content hash, and source use case reference.
-8. The blocks are indexed in **pgvector** (Cloud SQL PostgreSQL extension) grouped by thematic category and advisor industry, creating an inverted index used by Advisor Recommendation and Advisor Similar Project Retrieval workflows.
-9. If any required thematic category has no blocks assigned after classification, the use case is marked as `FAILED` and an `AdvisorUseCaseProcessed` event is published to Pub/Sub with `status: FAILED`.
-10. The use case status is updated to `PROCESSED` and an `AdvisorUseCaseProcessed` event is published to Pub/Sub with `status: PROCESSED`.
+7. The `metric_used` block is parsed to extract: metric name, value before, and value after. These are stored directly on the `PB_UseCases` record (`metricUsed`, `metricBefore`, `metricAfter`).
+8. Each classified block is stored with: thematic category, embedding, content hash, and source use case reference.
+9. The blocks are indexed in **pgvector** (Cloud SQL PostgreSQL extension) grouped by thematic category and advisor industry, creating an inverted index used by Advisor Similar Project Retrieval.
+10. Each block's embedding is compared via cosine similarity against all sub-industry representative embeddings in `PB_SubIndustries`. The resulting scores are aggregated into the advisor's sub-industry score vector in `PB_AdvisorSubIndustryScores` (upsert, normalized across all sub-industries for that advisor).
+11. If any required thematic category has no blocks assigned after classification, the use case is marked as `FAILED` and an `AdvisorUseCaseProcessed` event is published to Pub/Sub with `status: FAILED`.
+12. The use case status is updated to `PROCESSED` and an `AdvisorUseCaseProcessed` event is published to Pub/Sub with `status: PROCESSED`.
+
+---
+
+#### Baseline PDF Processing
+
+Implementation: [backend/domains/ai/services/baseline_pdf_processing_service.py](backend/domains/ai/services/baseline_pdf_processing_service.py)
+
+Triggered by the `BaselinePdfUploaded` Pub/Sub event, published when a PYME submits the baseline document at project start.
+
+1. The service retrieves the PDF from Google Cloud Storage.
+2. The PDF is sent to **Google Cloud Document AI** (OCR processor):
+   - Extracts raw text, layout structure, and section boundaries.
+   - Returns a structured JSON with text blocks and their positions.
+3. The extracted text is divided into blocks based on the detected section boundaries.
+4. Each block is classified into one of the following thematic categories:
+   - `company_information`
+   - `company_context`
+   - `initial_situation`
+   - `baseline_metrics`
+5. The `baseline_metrics` blocks are parsed to extract key/value metric pairs.
+6. For each extracted metrics, the system looks up the matching `PB_ContractMetrics` record by name for this contract version and sets `baselineValue`.
+7. If any metric defined in the contract has no match in the extracted data, the document is marked as `FAILED` and a `BaselinePdfProcessed` event is published with `status: FAILED`.
+8. The document is marked as `PROCESSED` and a `BaselinePdfProcessed` event is published with `status: PROCESSED`.
 
 ---
 
@@ -3690,18 +3711,15 @@ Implementation: [backend/domains/ai/services/recommendation_service.py](backend/
 
 Describes how recommendations are computed for a single SME. Called by both the Batch Job and the On-Demand workflow — the logic is the same regardless of what triggered it.
 
-1. The SME's profile is loaded: industry (categorical), company size (categorical), and needs vector (from the Business Needs Assessment).
-2. Industry and company size are used as categorical pre-filters on the pgvector search, narrowing the candidate advisor use case blocks before semantic scoring.
-3. A similarity search is executed in **pgvector** against the `document_block` table, filtering by thematic categories `initial_situation` and `company_information`.
-4. The returned blocks are grouped by `advisor_id`. For each advisor, an average semantic similarity score is computed from their matched blocks.
-5. The needs vector is used as a secondary signal: advisors whose use cases cover the business areas where the PYME rated themselves lowest are boosted.
-6. Each advisor is ranked using a composite score:
-   - Semantic similarity score (pgvector search).
-   - Needs vector alignment.
+1. The SME's profile is loaded: industry (categorical), company size (categorical), and needs vector (sub-industry distribution from the Business Needs Assessment).
+2. Industry and company size are used as categorical pre-filters, narrowing the candidate advisor pool before scoring.
+3. Each advisor's pre-computed sub-industry score vector (`PB_AdvisorSubIndustryScores`) is retrieved. This vector is maintained incrementally as advisors upload use cases — no pgvector search is needed at recommendation time.
+4. Each advisor is ranked using a composite score:
+   - Sub-industry alignment: dot product between the SME's needs vector and the advisor's sub-industry score vector.
    - Reputation score (retrieved from Advisor Domain via synchronous query).
-7. The top N advisors are selected with their full profiles: name, industries, certifications, base rate, and reputation score.
-8. The ranked list is persisted in the database associated with the PYME's profile.
-9. The Redis cache entry for this PYME is updated with the new results and a TTL of 24 hours.
+5. The top N advisors are selected with their full profiles: name, industries, certifications, base rate, and reputation score.
+6. The ranked list is persisted in the database associated with the PYME's profile.
+7. The Redis cache entry for this PYME is updated with the new results and a TTL of 24 hours.
 
 ---
 
@@ -3744,8 +3762,8 @@ Triggered synchronously via HTTP when an SME browses an advisor's profile or aft
 2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
 3. Google Cloud API Gateway routes the request to Cloud Run.
 4. FastAPI validates the JWT using Auth0 JWKS and extracts the `pyme_id`.
-5. The SME's profile is retrieved: industry (categorical), company size (categorical), and improvement category distribution from the Business Needs Assessment. If the SME has not yet completed the assessment, the search falls back to industry and company size filters only.
-6. A pgvector similarity search is executed against the advisor's indexed use case blocks, filtering by thematic categories `company_information` and `initial_situation`. The query vector is derived from the SME's top improvement categories.
+5. The SME's profile is retrieved: industry (categorical), company size (categorical), and sub-industry needs vector from the Business Needs Assessment. If the SME has not yet completed the assessment, the search falls back to industry and company size filters only.
+6. A pgvector similarity search is executed against the advisor's indexed use case blocks, filtering by thematic categories `company_information` and `initial_situation`. The query vector is derived from the SME's top sub-industries by needs score.
 7. Results are grouped by `use_case_id`. For each use case, an aggregate similarity score is computed as a **weighted average of the cosine similarity scores** of its matched blocks. `initial_situation` blocks carry higher weight than `company_information` blocks because the initial situation reflects the actual business problem.
 8. The use cases are ranked by score. and for the best use case similarity, the full block set is assembled: `company_context`, `initial_situation`, `actions_performed`, `metrics_before`, and `metrics_after`.
 9. The summarie is returned, containing: use case title, company context, initial situation description, key actions taken, and the before/after outcome metrics.
@@ -3756,14 +3774,13 @@ Triggered synchronously via HTTP when an SME browses an advisor's profile or aft
 
 Implementation: [backend/domains/ai/services/promise_classification_service.py](backend/domains/ai/services/promise_classification_service.py)
 
-Triggered by the `PromiseTextUpdated` Pub/Sub event, published whenever an advisor adds or edits a promise. Classifies the free-form promise text against the predefined industry catalog using embeddings and cosine similarity — the same approach used for thematic classification of PDF blocks. Stores the resulting industry tags on the promise record for use at display time.
+Triggered by the `PromiseTextUpdated` Pub/Sub event, published whenever an advisor adds or edits a promise. Classifies the free-form promise text against the predefined industry catalog using embeddings and cosine similarity.
 
 1. The AI Domain receives the `PromiseTextUpdated` event containing the `promise_id` and `promise_text`.
 2. An embedding is generated for the `promise_text`.
 3. The industry catalog is retrieved from the database. Each industry entry has a pre-computed representative embedding stored alongside it.
 4. The cosine similarity between the promise embedding and each industry embedding is computed.
-5. All similarity scores are stored on the promise record as a map of `industry_code → score`. The full distribution is preserved for potential future use.
-6. The `industry_tags` field on the promise record is updated with the 1 to 2 industry codes with the highest scores, used for display-time ordering.
+5. All similarity scores are stored in `PB_PromiseIndustryScores` as `industry_id → score` pairs, replacing any previous scores for this promise.
 
 ---
 
@@ -3802,7 +3819,7 @@ The SME can retake the assessment at any time; the previous distribution is over
 2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
 3. Google Cloud API Gateway routes the request to Cloud Run.
 4. FastAPI validates the JWT using Auth0 JWKS.
-5. The system retrieves all active questions from the `question_catalog` table (ID, text, improvement category).
+5. The system retrieves all active questions from the `question_catalog` table (ID, text, and associated sub-industries).
 6. The question list is returned to the frontend.
 
 **Submit Answers:**
@@ -3813,8 +3830,8 @@ The SME can retake the assessment at any time; the previous distribution is over
 4. Google Cloud API Gateway routes the request to Cloud Run.
 5. FastAPI validates the JWT using Auth0 JWKS and extracts the PYME ID.
 6. The system validates that all active questions are answered and all ratings are within 1–5.
-7. Answers are grouped by their question's `improvement_category`. The average rating is computed per category.
-8. Each category average is normalized to produce a percentage distribution: `category_score / sum_of_all_category_scores`. The result is a fixed-dimension vector where all values sum to 1.0, with each dimension representing one improvement category.
+7. For each answer, the rating is distributed equally across the question's sub-industries. Each sub-industry accumulates the sum of ratings across all questions that reference it.
+8. The accumulated score per sub-industry is normalized: `sub_industry_score / sum_of_all_scores`. The result is a fixed-dimension vector where all values sum to 1.0, with each dimension representing one sub-industry.
 9. If the SME already has a needs distribution, it is overwritten with the new one, preserving the previous version for audit.
 10. The distribution vector is stored in pgvector associated with the PYME profile.
 11. The Advisor Recommendation cache for this SME is invalidated in Redis, forcing recalculation on the next request or when the event triggers it, whichever happens first.
@@ -3852,12 +3869,12 @@ Implementation: [backend/domains/advisor/controllers/success_metric_promises_con
 3. Google Cloud API Gateway routes the request to Cloud Run.
 4. FastAPI validates the JWT using Auth0 JWKS and extracts the `advisor_id`.
 5. The system checks that the advisor does not already have 3 active promises. If they do, the request is rejected.
-6. The promise text is stored as a new record associated with the `advisor_id`, with a generated `promise_id`. The `industry_tags` field is left empty until classification completes.
+6. The promise text is stored as a new record associated with the `advisor_id`, with a generated `promise_id`. Industry scores are populated asynchronously once classification completes.
 7. A `PromiseTextUpdated` event is published to Pub/Sub with the `promise_id` and `promise_text`, triggering the `Promise Industry Classification` workflow in the AI Domain.
 
 **Display on profile card:**
 
-When an SME views an advisor's profile, the active promises are retrieved from the database. Promises whose `industry_tags` include the SME's industry are shown first; the rest follow in creation order. No computation is required at read time — the ordering is a sort on the stored tags.
+When an SME views an advisor's profile, the active promises are retrieved from the database ordered by their score for the SME's industry (`PB_PromiseIndustryScores ORDER BY score DESC`); the rest follow in creation order.
 
 #### Advisor Success Metric Promises (Edit a promise)
 
@@ -3868,7 +3885,7 @@ Implementation: [backend/domains/advisor/controllers/success_metric_promises_con
 3. Google Cloud API Gateway routes the request to Cloud Run.
 4. FastAPI validates the JWT and confirms the `promise_id` belongs to the requesting advisor.
 5. Only the text of that specific promise is updated. All other promises remain unchanged.
-6. The `industry_tags` for this promise are cleared and a `PromiseTextUpdated` event is published to Pub/Sub, triggering reclassification in the AI Domain.
+6. The industry scores for this promise are cleared and a `PromiseTextUpdated` event is published to Pub/Sub, triggering reclassification in the AI Domain.
 
 #### Advisor Success Metric Promises (Delete a promise)
 
@@ -3935,17 +3952,17 @@ Returns the PYME's current list of advisor candidates enriched with profile data
 
    **b. Top 1 similar project** — the `Advisor Similar Project Retrieval` workflow is called for this advisor passing the PYME's industry and needs vector. Only the single highest-scoring use case is returned: company context, initial situation, key actions, and before/after metrics.
 
-   **c. Most relevant promise** — the advisor's active promises are read from the database, already sorted by `industry_tags` closeness to the PYME's industry (pre-computed by `Promise Industry Classification`). The first entry in that sorted list is selected.
+   **c. Most relevant promise** — the advisor's active promises are read from the database sorted by their score for the PYME's industry in `PB_PromiseIndustryScores`. The first entry in that sorted list is selected.
 
 9. The enriched candidate list is returned. Each card entry contains: `advisor_id`, `name`, `industries`, `rating`, `top_project` (summary), and `top_promise` (text).
 
 ---
 
-#### Advisor Swipe Decision
+#### PYME Swipe Decision
 
 Implementation: [backend/domains/matching/controllers/create_swipe_decision_controller.py](backend/domains/matching/controllers/create_swipe_decision_controller.py)
 
-The candidates available to swipe on are those returned by the `Get Advisor Candidates` workflow. The `advisor_id` values surfaced by that workflow are the only valid targets for a swipe decision.
+The PYME decides on advisor candidates surfaced by the `Get Advisor Candidates` workflow. A right swipe always creates a match immediately — the advisor is notified and can cancel the match at any time using the `Cancel Match` workflow. The `advisor_id` values surfaced by `Get Advisor Candidates` are the only valid targets for a swipe decision.
 
 1. The PYME sends a POST request to `/api/matching/swipe` with: `pyme_id`, `advisor_id`, and `approved` (`true` for right swipe, `false` for left swipe).
 2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
@@ -3955,7 +3972,7 @@ The candidates available to swipe on are those returned by the `Get Advisor Cand
 6. The system checks that no swipe decision already exists for this PYME–advisor pair. If one exists, the request is rejected with `409 Conflict`.
 7. A swipe record is persisted with `pyme_id`, `advisor_id`, and the `approved` flag.
 8. If `approved` is `false` (left swipe): the swipe is recorded and no further action is taken. The advisor is excluded from future `Get Advisor Candidates` results for this PYME.
-9. If `approved` is `true` (right swipe): a `MatchSwiped` event is published to the event bus with `pyme_id` and `advisor_id`, which triggers the `Create Match` workflow automatically.
+9. If `approved` is `true` (right swipe): a `MatchSwiped` event is published to the event bus with `pyme_id` and `advisor_id`, which triggers the `Create Match` workflow automatically. The match is created without requiring advisor approval — the advisor is notified and may cancel via `Cancel Match` if they choose not to proceed.
 
 ---
 
@@ -4061,8 +4078,8 @@ The PYME initiates contract negotiation from the chat interface by clicking "Pro
 |---|---|
 | `implementation_budget` | One-time implementation cost (float) |
 | `monthly_retainer` | Fixed monthly advisor fee (float) |
-| `duration_tier` | `standard` (1 mo, 3%), `medium` (3 mo, 5%), `high` (6 mo, 7%), `annual` (12 mo, 10%), `custom` (1–12 mo, commission auto-calculated) |
-| `duration_months` | Required only for `custom` tier; must be an integer between 1 and 12 |
+| `duration_tier` | `standard` (1 mo, 3%), `medium` (3 mo, 5%), `high` (6 mo, 7%), `custom` (1–12 mo, commission auto-calculated); `annual` is a convenience alias for `custom` with `duration_months = 12`, yielding 10% commission |
+| `duration_months` | Required only for `custom` tier (including when sent as `annual`); must be an integer between 1 and 12 |
 | `main_objective` | Free-text description of the engagement's primary goal |
 | `advisor_result_profit` | Advisor's bonus tied to results (float or percentage) |
 | `expected_metrics` | List of N metrics; each has a `name` (e.g., `"Conversión de Campañas"`), a `value_type` (`number` or `percentage`), and a `target` (e.g., `+25`) |
@@ -4077,8 +4094,8 @@ The PYME initiates contract negotiation from the chat interface by clicking "Pro
 5. The match record is retrieved using the `match_id` in the payload. The system verifies the requesting user is the PYME of that match and that the match status is `ACTIVE`.
 6. The system verifies that no contract in `PENDING_PROPOSAL` status already exists for this match. Only one active negotiation is allowed at a time.
 7. The `duration_tier` is validated:
-   - `standard`, `medium`, `high`, or `annual`: commission is set automatically from the tier.
-   - `custom`: `duration_months` must be between 1 and 12. The commission is computed automatically using linear interpolation: `commission = 3 + (duration_months - 1) × (7 / 11)`, which yields exactly 3% at 1 month and exactly 10% at 12 months. The result is rounded to two decimal places and stored on the contract record — it is never supplied by the client.
+   - `standard`, `medium`, or `high`: commission is set automatically from the tier.
+   - `custom` (or its alias `annual`): `duration_months` must be between 1 and 12. If the tier is `annual`, `duration_months` defaults to 12 server-side. The commission is computed automatically using linear interpolation: `commission = 3 + (duration_months - 1) × (7 / 11)`, which yields exactly 3% at 1 month and exactly 10% at 12 months. The result is rounded to two decimal places and stored on the contract record — it is never supplied by the client.
 8. `expected_metrics` must contain at least one entry. Each metric must have a non-empty `name`, a valid `value_type`, and a numeric `target`.
 9. `roadmap` must contain at least one phase. Each phase's `goal` must reference the `name` of one of the declared `expected_metrics`.
 10. A contract record is created with status `PENDING_PROPOSAL`, linked to the `match_id`.
@@ -4130,7 +4147,7 @@ The non-proposing party formally accepts the current proposal. This is the "Marr
 9. The contract status is updated to `ACCEPTED`.
 10. The match status is updated to `FINALIZED`.
 11. A `ContractAccepted` event is published to the event bus with `contract_id` and `match_id`.
-12. The Project Domain receives the `ContractAccepted` event and creates a project with milestones derived from the contract's roadmap phases and expected metrics.
+12. The Project Domain receives the `ContractAccepted` event and creates a project derived from the contract's roadmap phases and expected metrics.
 13. The Notification Domain notifies both parties that the contract was accepted and the project has been created.
 14. The accepted contract details are returned; the frontend redirects both parties to the project dashboard.
 
@@ -4159,47 +4176,65 @@ A simple rejection of the current proposal. The match remains active and the pro
 
 ### Project Domain Workflows
 
-#### Project Milestone Validation
+#### Project Baseline Submission
 
-Implementation: [backend/domains/project/controllers/validate_milestone_controller.py](backend/domains/project/controllers/validate_milestone_controller.py)
+Implementation: [backend/domains/project/controllers/submit_baseline_controller.py](backend/domains/project/controllers/submit_baseline_controller.py)
 
-When a project phase ends, the advisor is presented with a form pre-populated with every metric defined in the contract. For each metric the advisor enters the current observed value. The system automatically computes improvement percentages and determines milestone completion — no file upload or AI processing involved.
+Triggered when a project is created. The PYME must submit a PDF documenting the current state of each contracted metric before the project work begins. Subphase validation is blocked until this document is processed successfully.
 
-1. The advisor sends a POST request to `/api/projects/{project_id}/milestones/{milestone_id}/validate` with a body containing the current observed value for each contract metric.
+The PDF must follow this structure:
+
+| Section | Description |
+|---|---|
+| 1. Company Information | Name, industry, company size |
+| 2. Current Situation | Brief description of the business context at project start |
+| 3. Metrics | One entry per contracted metric: metric name, current value, and unit of measurement |
+
+Each metric entry in section 3 must match by name the metrics defined in `PB_ContractMetrics` for this contract version. For example, if the contract defines a metric named `monthly_sales`, the PDF must include a `monthly_sales` entry with its current numeric value. The AI extracts these as key/value pairs and sets the `baselineValue` on each matching `PB_ContractMetrics` record.
+
+1. The PYME sends a POST request to `/api/projects/{project_id}/baseline` with the PDF file attached (multipart/form-data).
+2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
+3. Google Cloud API Gateway routes the request to Cloud Run.
+4. FastAPI validates the JWT using Auth0 JWKS and extracts the `pyme_id`.
+5. The system verifies the requesting user is the PYME owner of this project and that the project status is `ACTIVE` with no baseline already submitted. If not, `403 Forbidden` or `409 Conflict` is returned.
+6. The PDF is stored in Google Cloud Storage under the project's namespace. The file reference is recorded in `PB_Documents` with `documentTypeId = baseline` and status `PENDING`.
+7. A `BaselinePdfUploaded` event is published to Pub/Sub, triggering the `Baseline PDF Processing` workflow in the AI Domain.
+8. The project status remains `ACTIVE` — subphase validation is blocked until a `BaselinePdfProcessed` event with `status: PROCESSED` is received and all `baselineValue` fields on the contract metrics are populated.
+
+---
+
+#### Project SubPhase Validation
+
+Implementation: [backend/domains/project/controllers/validate_subphase_controller.py](backend/domains/project/controllers/validate_subphase_controller.py)
+
+The advisor submits observed metric values for a subphase. The system validates them against the phase's metric targets and marks the subphase as completed if all targets are met. Once all subphases of a phase are completed, the phase is automatically closed.
+
+1. The advisor sends a POST request to `/api/projects/{project_id}/subphases/{subphase_id}/validate` with a body containing the current observed value for each contract metric defined in the parent phase.
 2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
 3. Google Cloud API Gateway routes the request to Cloud Run.
 4. FastAPI validates the JWT using Auth0 JWKS and extracts the `user_id`.
 5. The system verifies the requesting user is the advisor assigned to this project. If not, `403 Forbidden` is returned.
-6. The system verifies the project status is `ACTIVE` and the milestone exists, belongs to this project, and has not already been completed.
-7. The system loads the contract's `expected_metrics` for this project, which contains for each metric: `baseline_value` (recorded at project creation) and `target_improvement_pct` (the contracted improvement goal).
-8. For each submitted metric reading the system computes the **actual improvement percentage**:
+6. The system verifies the project status is `ACTIVE` and the subphase exists, belongs to this project, and has not already been completed.
+7. The system loads the parent phase's `PB_PhaseMetricTargets`, which defines for each metric the `targetPct` that must be reached in this phase.
+8. For each submitted metric reading the system computes the **actual improvement percentage** against the project baseline:
 
    ```
    actual_improvement_pct = ((current_value − baseline_value) / baseline_value) × 100
    ```
-
-9. The system then computes **completion per metric** against the contracted target:
-
-   ```
-   metric_completion_pct = (actual_improvement_pct / target_improvement_pct) × 100   (capped at 100 %)
-   ```
-
-10. The **overall milestone completion** is the average `metric_completion_pct` across all metrics.
-11. The computed results (actual improvement % and completion % per metric) are persisted and linked to the milestone record.
-12. If the overall milestone completion reaches 100 %, the milestone `completed` flag is set to `true`.
-13. A `MilestoneCompleted` event is published to the event bus with `milestone_id` and `project_id`.
-14. After marking the milestone complete, the system checks whether **all** milestones for the project now have `completed = true`. If so, an `AllMilestonesMet` event is published with `project_id` — this triggers the `Project Completion Validation` workflow.
-15. The computed milestone report is returned in the response.
-
+9. The reading is persisted in `PB_SubPhaseMetricReadings`.
+10. If `actual_improvement_pct ≥ targetPct` for all phase metrics, the subphase is marked `completed` in `PB_ProjectSubPhaseStatus`.
+11. If all subphases of the parent phase are now `completed`, the phase is marked `completed` in `PB_ProjectPhaseStatus` and a `PhaseCompleted` event is published.
+12. If all phases of the project are now `completed`, an `AllPhasesCompleted` event is published, triggering the `Project Completion Validation` workflow.
+ 
 #### Project Health Monitoring
 
 Implementation: [backend/domains/project/controllers/monitor_health_controller.py](backend/domains/project/controllers/monitor_health_controller.py)
 
-Health is recalculated automatically every time a `MilestoneCompleted` event fires.
+Health is recalculated automatically every time a roadmap phase is completed.
 
-1. The Project Domain receives a `MilestoneCompleted` event with `milestone_id` and `project_id`.
+1. The Project Domain receives a `PhaseCompleted` event with `phase_id` and `project_id`.
 2. The service loads the project record, which includes `start_date` and `end_date` derived from the contract duration.
-3. It computes the **completion ratio**: `completed_milestones / total_milestones`.
+3. It computes the **completion ratio**: `completed_subphases / total_subphases` across all phases.
 4. It computes the **time progress ratio**: `(today − start_date) / (end_date − start_date)`, clamped to [0, 1].
 5. The `health_score` reflects how far ahead or behind the project is relative to elapsed time:
 
@@ -4207,7 +4242,7 @@ Health is recalculated automatically every time a `MilestoneCompleted` event fir
    health_score = (completion_ratio / time_progress_ratio) × 100 
    ```
 
-6. The new `health_score` is upserted into the `project_health` table for this project.
+6. A new health snapshot is appended to `PB_ProjectHealthHistory` with the current `health_score` and the current subphase (`current_subphase_id`).
 7. A `ProjectStatusChanged` event is published to the event bus with `project_id` and the derived status label:
    - `health_score ≥ 80` → `ON_TRACK`
    - `50 ≤ health_score < 80` → `AT_RISK`
@@ -4219,9 +4254,9 @@ Health is recalculated automatically every time a `MilestoneCompleted` event fir
 
 Implementation: [backend/domains/project/controllers/close_project_controller.py](backend/domains/project/controllers/close_project_controller.py)
 
-Triggered by the `AllMilestonesMet` event.
+Triggered by the `AllPhasesCompleted` event.
 
-Upon receiving the `AllMilestonesMet` event, the Project Domain sets the project status to `AWAITING_COMPLETION_DOCUMENT` and notifies the advisor to submit the final document.
+Upon receiving the `AllPhasesCompleted` event, the Project Domain sets the project status to `AWAITING_COMPLETION_DOCUMENT` and notifies the advisor to submit the final document.
 
 The completion document follows the same PDF structure as the advisor's use case files:
 
@@ -4231,8 +4266,9 @@ The completion document follows the same PDF structure as the advisor's use case
 | 2. Company Context | Business model and starting context |
 | 3. Initial Situation | Problem or opportunity that triggered the engagement |
 | 4. Actions Performed | Steps and interventions executed during the project |
-| 5. Metrics Before | Baseline KPI values at project start |
-| 6. Metrics After | Final KPI values at project end |
+| 5. Metric Used | Name of the primary metric tracked, value before the project, and value after |
+| 6. Metrics Before | Baseline KPI values at project start |
+| 7. Metrics After | Final KPI values at project end |
 
 1. The advisor sends a POST request to `/api/projects/{project_id}/completion-document` with the PDF file attached (multipart/form-data).
 2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
@@ -4390,7 +4426,7 @@ Payload: `advisor_id`, `industry_tags`
 
 This event is emitted when an advisor's industry classification changes, which affects both PYME recommendations and matching.
 
-Published by: `Update Advisor Industry` use case (Advisor Domain), once the new `industry_tags` have been persisted.
+Published by: `Update Advisor Industry` use case (User Domain — [update_advisor_industry_controller.py](backend/domains/user/controllers/update_advisor_industry_controller.py)), once the new `industry_tags` have been persisted.
 
 Consumed by:
 - Pyme Domain — re-evaluates which PYMEs the advisor is relevant to, given the updated `industry_tags`.
@@ -4423,9 +4459,9 @@ Workflow (Event Domain):
 
 Payload: `promise_id`, `promise_text`
 
-This event is emitted when a PYME adds or edits a promise, triggering AI classification. It is delivered over Pub/Sub.
+This event is emitted when an advisor adds or edits a success metric promise, triggering AI classification. It is delivered over Pub/Sub.
 
-Published by: `Add / Edit Promise` use case (Pyme Domain) over Pub/Sub, once the promise has been persisted.
+Published by: `Add / Edit Promise` use case (Advisor Domain) over Pub/Sub, once the promise has been persisted.
 
 Consumed by:
 - AI Domain — triggers the `Promise Industry Classification` workflow on `promise_text`.
@@ -4477,9 +4513,9 @@ Workflow (Event Domain):
 
 Payload: `pyme_id`, `advisor_id`, `approved`
 
-This event is emitted on each advisor swipe decision; a match is only formed when the advisor approves.
+This event is emitted on each PYME swipe decision. When the PYME swipes right (`approved = true`), a match is created immediately without requiring advisor approval — the advisor is notified and may cancel the match at any time using the `Cancel Match` workflow.
 
-Published by: `Advisor Swipe Decision` use case (Matching Domain), once the decision has been recorded.
+Published by: `PYME Swipe Decision` use case (Matching Domain), once the decision has been recorded.
 
 Consumed by:
 - Matching Domain (self) — only when `approved = true`, triggers the `Create Match` use case (which in turn publishes `MatchCreated`). When `approved = false`, no further action is taken.
@@ -4613,39 +4649,6 @@ Workflow (Event Domain):
 2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
-
-#### MilestoneCompleted Event
-
-Payload: `milestone_id`, `project_id`
-
-This event is emitted when a single milestone is validated as complete.
-
-Published by: `Project Milestone Validation` process (Project Domain), once the milestone is confirmed.
-
-Consumed by:
-- Notification Domain — notifies the participants that `milestone_id` was completed.
-
-Workflow (Event Domain):
-1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
-2. The EventBus delivers the event to every registered consumer listed above.
-
----
-
-#### AllMilestonesMet Event
-
-Payload: `project_id`
-
-This event is emitted when every milestone of a project has been completed, signalling that completion can be evaluated.
-
-Published by: `Project Milestone Validation` process (Project Domain), once it detects that all milestones are met.
-
-Consumed by:
-- Project Domain (self) — triggers the `Project Completion Validation` workflow for `project_id`.
-- Notification Domain — notifies the participants that all milestones have been met.
-
-Workflow (Event Domain):
-1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
-2. The EventBus delivers the event to every registered consumer listed above.
 
 ---
 
@@ -4822,7 +4825,7 @@ Workflow (Event Domain):
 | Class / Interface | Location | Responsibility | Pattern | Justification |
 |------------------|----------|----------------|---------|--------------|
 | EventBus | [backend/shared/events/event_bus.py](backend/shared/events/event_bus.py) | Publishes/subscribes domain events (`MatchCreated`, `ContractAccepted`, …) | Observer | Domains react to each other's state changes without direct imports; the alternative is hard cross-domain coupling. |
-| DatabaseConnectionPool | [backend/shared/database/connection.py](backend/shared/database/connection.py) | One shared SQLAlchemy connection pool **per Cloud Run instance/process** | Singleton (process-scoped) | Not a cluster-wide singleton — Cloud Run runs 5–50 instances (§2.9). The Singleton bounds the pool to one per process so that `instances × pool_size` stays under Cloud SQL's connection limit; without it each request would open its own pool and exhaust the database. |
+| DatabaseConnectionPool | [backend/shared/database/connection.py](backend/shared/database/connection.py) | One shared SQLAlchemy connection pool **per Cloud Run instance/process** | Singleton (process-scoped) | Not a cluster-wide singleton — Cloud Run runs 1–10 instances (§2.9). The Singleton bounds the pool to one per process so that `instances × pool_size` stays under Cloud SQL's connection limit; without it each request would open its own pool and exhaust the database. |
 | EventRegistry | [backend/shared/events/event_registry.py](backend/shared/events/event_registry.py) | One registry of all event handlers, loaded once at startup | Singleton (process-scoped) | A second registry inside the same process would double-subscribe handlers and fire each event twice; one instance per process guarantees each handler is registered exactly once. |
 | DocumentAiClient | [backend/shared/clients/document_ai_client.py](backend/shared/clients/document_ai_client.py) | One shared, thread-safe Document AI (gRPC) client reused across requests **per process** | Singleton (process-scoped) | The OCR call is asynchronous, so a single thread-safe client serves many concurrent requests; expensive to create, it is instantiated once per process and shared by all. |
 | JwtValidator / PermissionChecker | [backend/shared/auth/jwt_validator.py](backend/shared/auth/jwt_validator.py) | Validates Auth0 JWT and checks role/ownership before the controller runs | Proxy | Centralized authorization at one boundary; every endpoint validates JWT + `accountType` + resource ownership (OWASP broken-auth). |
@@ -4834,7 +4837,6 @@ Workflow (Event Domain):
 | NotificationChannelFactory | [backend/domains/notification/factories/channel_factory.py](backend/domains/notification/factories/channel_factory.py) | Creates the right sender (email, push, in-app) per event | Abstract Factory | Decouples "what to notify" from "which channel"; adding a channel doesn't touch publishers. |
 | CachingRepositoryDecorator | [backend/shared/persistence/caching_repository.py](backend/shared/persistence/caching_repository.py) | Wraps a repository adding Redis read/write without touching the query | Decorator | Adds transparent cache-aside to any repository (reputation, catalogs) without duplicating logic. |
 | OnboardingFacade | [backend/domains/user/facades/onboarding_facade.py](backend/domains/user/facades/onboarding_facade.py) | Orchestrates Auth0 + cédula jurídica verification + PYME profile + welcome event | Facade | Onboarding spans several services; a facade gives a single entry point and hides the wiring. |
-| MilestoneComposite | [backend/domains/project/models/milestone_composite.py](backend/domains/project/models/milestone_composite.py) | Models phases with sub-tasks as a uniform tree (progress = aggregation of children) | Composite | Project progress is hierarchical; treating leaf and branch alike simplifies % calculation. |
 | NotificationBridge | [backend/domains/notification/bridge/notification_bridge.py](backend/domains/notification/bridge/notification_bridge.py) | Separates the "notification type" abstraction from the "transport" implementation | Bridge | Allows N types × M transports without class explosion; both axes evolve independently. |
 | LazyAdvisorProfileProxy | [backend/domains/matching/proxies/advisor_profile_proxy.py](backend/domains/matching/proxies/advisor_profile_proxy.py) | Stand-in that calls the Advisor domain (via ACL/REST) only when the data is accessed | Proxy (Virtual/Remote) | Avoids fetching the full profile if the matching flow doesn't need it; cheaper cross-domain queries. |
 | MessageModerationChain | [backend/domains/communication/moderation/moderation_chain.py](backend/domains/communication/moderation/moderation_chain.py) | Chain: keywords → email → phone → social links → spam | Chain of Responsibility | Blocking off-platform contact is a requirement; each rule is an addable/reorderable link. |
@@ -4949,11 +4951,11 @@ The backend is organized **by domain**, not by technical layer. Each domain unde
 - Models: [Contract](backend/domains/contract/models/contract_model.py), [Negotiation](backend/domains/contract/models/negotiation_model.py)
 - Events: [ContractProposed](backend/domains/contract/events/contract_proposed_event.py), [ContractAccepted](backend/domains/contract/events/contract_accepted_event.py), [ContractRejected](backend/domains/contract/events/contract_rejected_event.py)
 
-**Project Domain** — [backend/domains/project/](backend/domains/project/) — projects, milestones, health monitoring, completion
-- Controllers: [Create project](backend/domains/project/controllers/create_project_controller.py), [Generate milestones](backend/domains/project/controllers/generate_milestones_controller.py), [Validate milestone](backend/domains/project/controllers/validate_milestone_controller.py), [Monitor health](backend/domains/project/controllers/monitor_health_controller.py), [Get project status](backend/domains/project/controllers/get_project_status_controller.py), [Close project](backend/domains/project/controllers/close_project_controller.py)
-- Services: [Project](backend/domains/project/services/project_service.py), [Milestone](backend/domains/project/services/milestone_service.py), [Health monitoring](backend/domains/project/services/health_monitoring_service.py), [Project completion](backend/domains/project/services/project_completion_service.py)
-- Models: [Project](backend/domains/project/models/project_model.py), [Milestone](backend/domains/project/models/milestone_model.py), [Project health](backend/domains/project/models/project_health_model.py)
-- Events: [ProjectCreated](backend/domains/project/events/project_created_event.py), [ProjectStatusChanged](backend/domains/project/events/project_status_changed_event.py), [MilestoneCompleted](backend/domains/project/events/milestone_completed_event.py), [ProjectCompleted](backend/domains/project/events/project_completed_event.py)
+**Project Domain** — [backend/domains/project/](backend/domains/project/) — projects, subphases, health monitoring, completion
+- Controllers: [Create project](backend/domains/project/controllers/create_project_controller.py), [Submit baseline](backend/domains/project/controllers/submit_baseline_controller.py), [Validate subphase](backend/domains/project/controllers/validate_subphase_controller.py), [Monitor health](backend/domains/project/controllers/monitor_health_controller.py), [Get project status](backend/domains/project/controllers/get_project_status_controller.py), [Close project](backend/domains/project/controllers/close_project_controller.py)
+- Services: [Project](backend/domains/project/services/project_service.py), [Subphase](backend/domains/project/services/subphase_service.py), [Health monitoring](backend/domains/project/services/health_monitoring_service.py), [Project completion](backend/domains/project/services/project_completion_service.py)
+- Models: [Project](backend/domains/project/models/project_model.py), [Subphase](backend/domains/project/models/subphase_model.py), [Project health](backend/domains/project/models/project_health_model.py)
+- Events: [ProjectCreated](backend/domains/project/events/project_created_event.py), [SubphaseCompleted](backend/domains/project/events/subphase_completed_event.py), [ProjectStatusChanged](backend/domains/project/events/project_status_changed_event.py), [ProjectCompleted](backend/domains/project/events/project_completed_event.py)
 
 **Communication Domain** — [backend/domains/communication/](backend/domains/communication/) — chat sessions, messaging, access control
 - Controllers: [Send message](backend/domains/communication/controllers/send_message_controller.py), [Get messages](backend/domains/communication/controllers/get_messages_controller.py), [Validate chat access](backend/domains/communication/controllers/validate_chat_access_controller.py)
@@ -4977,1148 +4979,3 @@ The backend is organized **by domain**, not by technical layer. Each domain unde
 **Tests** — [backend/tests/](backend/tests/) — [unit](backend/tests/unit/) (per-domain) and [integration](backend/tests/integration/) suites
 
 ---
-
-# Data Design
-
-
-## 2.17 Data Stack
-
-| Component | Technology |
-|---|---|
-| Database | PostgreSQL |
-| ORM | SQLAlchemy |
-| Migrations | Alembic |
-
-The relational database used is PostgreSQL. Backend access is handled through SQLAlchemy as the ORM, following the domain-driven architecture of the project. Schema migrations are managed with Alembic.
-
----
-
-## 2.18 Database Schema (DBML)
-
-```dbml
-// ─── USER DOMAIN ───────────────────────────────────────────
-Table users {
-  id          String [pk]
-  email       String [unique, not null]
-  account_type String [not null, note: 'pyme | advisor']
-  created_at  DateTime [not null]
-}
-
-Table sessions {
-  id         String [pk]
-  user_id    String [not null, ref: > users.id]
-  expires_at DateTime [not null]
-}
-
-// ─── PYME DOMAIN ───────────────────────────────────────────
-Table pymes {
-  id           String [pk]
-  user_id      String [not null, ref: > users.id]
-  company_name String [not null]
-  industry     String
-}
-
-Table industries {
-  id   String [pk]
-  name String [not null]
-}
-
-Table optimization_areas {
-  id      String [pk]
-  pyme_id String [not null, ref: > pymes.id]
-  area    String [not null]
-}
-
-// ─── ADVISOR DOMAIN ────────────────────────────────────────
-Table advisors {
-  id        String [pk]
-  user_id   String [not null, ref: > users.id]
-  full_name String [not null]
-  base_rate Decimal
-}
-
-Table reputations {
-  id         String [pk]
-  advisor_id String [not null, ref: > advisors.id]
-  score      Float [not null]
-}
-
-Table specializations {
-  id         String [pk]
-  advisor_id String [not null, ref: > advisors.id]
-  industry   String [not null]
-}
-
-// ─── MATCHING DOMAIN ───────────────────────────────────────
-Table swipes {
-  id         String [pk]
-  pyme_id    String [not null, ref: > pymes.id]
-  advisor_id String [not null, ref: > advisors.id]
-  approved   Boolean [not null]
-}
-
-Table matches {
-  id         String [pk]
-  pyme_id    String [not null, ref: > pymes.id]
-  advisor_id String [not null, ref: > advisors.id]
-  status     String [not null, note: 'pending | active | closed']
-  created_at DateTime [not null]
-}
-
-// ─── COMMUNICATION DOMAIN ──────────────────────────────────
-Table chat_sessions {
-  id         String [pk]
-  match_id   String [not null, ref: > matches.id]
-  created_at DateTime [not null]
-}
-
-Table messages {
-  id         String [pk]
-  session_id String [not null, ref: > chat_sessions.id]
-  sender_id  String [not null, ref: > users.id]
-  content    String [not null]
-  read       Boolean [default: false]
-  sent_at    DateTime [not null]
-}
-
-// ─── CONTRACT DOMAIN ───────────────────────────────────────
-Table contracts {
-  id            String [pk]
-  match_id      String [not null, ref: > matches.id]
-  status        String [not null, note: 'draft | active | completed | cancelled']
-  budget        Decimal
-  duration_days Integer
-  created_at    DateTime [not null]
-}
-
-Table negotiations {
-  id          String [pk]
-  contract_id String [not null, ref: > contracts.id]
-  proposed_by String [not null, ref: > users.id]
-  created_at  DateTime [not null]
-}
-
-// ─── PROJECT DOMAIN ────────────────────────────────────────
-Table projects {
-  id          String [pk]
-  contract_id String [not null, ref: > contracts.id]
-  status      String [not null]
-  created_at  DateTime [not null]
-}
-
-Table milestones {
-  id         String [pk]
-  project_id String [not null, ref: > projects.id]
-  title      String [not null]
-  completed  Boolean [default: false]
-  due_date   DateTime
-}
-
-Table project_health {
-  id           String [pk]
-  project_id   String [not null, ref: > projects.id]
-  health_score Float [not null]
-}
-
-// ─── REVIEW DOMAIN ─────────────────────────────────────────
-Table reviews {
-  id          String [pk]
-  reviewer_id String [not null, ref: > users.id]
-  subject_id  String [not null, ref: > users.id]
-  rating      Float [not null]
-  comment     String
-  created_at  DateTime [not null]
-}
-
-// ─── NOTIFICATION DOMAIN ───────────────────────────────────
-Table notifications {
-  id         String [pk]
-  user_id    String [not null, ref: > users.id]
-  message    String [not null]
-  read       Boolean [default: false]
-  created_at DateTime [not null]
-}
-
-Table notification_preferences {
-  id             String [pk]
-  user_id        String [not null, ref: > users.id]
-  email_enabled  Boolean [default: true]
-  in_app_enabled Boolean [default: true]
-}
-
-// ─── EVENT DOMAIN ──────────────────────────────────────────
-Table domain_events {
-  id          String [pk]
-  event_type  String [not null]
-  payload     JSON [not null]
-  occurred_at DateTime [not null]
-}
-```
-
-### Foreign Key Delete Behaviors
-
-| Child Table | FK Column | References | ON DELETE | Rationale |
-|---|---|---|---|---|
-| `sessions` | `user_id` | `users.id` | CASCADE | Session belongs to user — deleted with it |
-| `pymes` | `user_id` | `users.id` | CASCADE | Profile belongs to user |
-| `optimization_areas` | `pyme_id` | `pymes.id` | CASCADE | Area belongs to PYME |
-| `advisors` | `user_id` | `users.id` | CASCADE | Profile belongs to user |
-| `reputations` | `advisor_id` | `advisors.id` | CASCADE | Reputation belongs to advisor |
-| `specializations` | `advisor_id` | `advisors.id` | CASCADE | Specialization belongs to advisor |
-| `swipes` | `pyme_id`, `advisor_id` | `pymes.id`, `advisors.id` | CASCADE | Swipe history follows the participant |
-| `matches` | `pyme_id`, `advisor_id` | `pymes.id`, `advisors.id` | RESTRICT | Cannot delete participant with active matches |
-| `chat_sessions` | `match_id` | `matches.id` | CASCADE | Chat belongs to match |
-| `messages` | `session_id` | `chat_sessions.id` | CASCADE | Message belongs to session |
-| `messages` | `sender_id` | `users.id` | RESTRICT | Cannot delete user who sent messages |
-| `contracts` | `match_id` | `matches.id` | RESTRICT | Cannot delete match with a contract |
-| `negotiations` | `contract_id` | `contracts.id` | CASCADE | Negotiation belongs to contract |
-| `negotiations` | `proposed_by` | `users.id` | RESTRICT | Cannot delete user who negotiated |
-| `projects` | `contract_id` | `contracts.id` | RESTRICT | Cannot delete contract with a project |
-| `milestones` | `project_id` | `projects.id` | CASCADE | Milestone belongs to project |
-| `project_health` | `project_id` | `projects.id` | CASCADE | Health record belongs to project |
-| `reviews` | `reviewer_id`, `subject_id` | `users.id` | RESTRICT | Cannot delete users with review history |
-| `notifications` | `user_id` | `users.id` | CASCADE | Notifications belong to user |
-| `notification_preferences` | `user_id` | `users.id` | CASCADE | Preferences belong to user |
-
----
-
-## 2.19 Entity-Relationship Diagram
-
-![ER Diagram](docs/images/backend/er-diagram.png)
-
----
-
-## Database Scripts
-
-### Schema Creation
-
-```sql
--- ─── USER DOMAIN ───────────────────────────────────────────
-CREATE TABLE users (
-    id           VARCHAR PRIMARY KEY,
-    email        VARCHAR UNIQUE NOT NULL,
-    account_type VARCHAR NOT NULL CHECK (account_type IN ('pyme', 'advisor')),
-    created_at   TIMESTAMP NOT NULL
-);
-
-CREATE TABLE sessions (
-    id         VARCHAR PRIMARY KEY,
-    user_id    VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    expires_at TIMESTAMP NOT NULL
-);
-
--- ─── PYME DOMAIN ───────────────────────────────────────────
-CREATE TABLE industries (
-    id   VARCHAR PRIMARY KEY,
-    name VARCHAR NOT NULL
-);
-
-CREATE TABLE pymes (
-    id           VARCHAR PRIMARY KEY,
-    user_id      VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    company_name VARCHAR NOT NULL,
-    industry     VARCHAR
-);
-
-CREATE TABLE optimization_areas (
-    id      VARCHAR PRIMARY KEY,
-    pyme_id VARCHAR NOT NULL REFERENCES pymes(id) ON DELETE CASCADE,
-    area    VARCHAR NOT NULL
-);
-
--- ─── ADVISOR DOMAIN ────────────────────────────────────────
-CREATE TABLE advisors (
-    id        VARCHAR PRIMARY KEY,
-    user_id   VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    full_name VARCHAR NOT NULL,
-    base_rate DECIMAL(12,2)
-);
-
-CREATE TABLE reputations (
-    id         VARCHAR PRIMARY KEY,
-    advisor_id VARCHAR NOT NULL REFERENCES advisors(id) ON DELETE CASCADE,
-    score      FLOAT NOT NULL CHECK (score >= 0.0 AND score <= 5.0)
-);
-
-CREATE TABLE specializations (
-    id         VARCHAR PRIMARY KEY,
-    advisor_id VARCHAR NOT NULL REFERENCES advisors(id) ON DELETE CASCADE,
-    industry   VARCHAR NOT NULL
-);
-
--- ─── MATCHING DOMAIN ───────────────────────────────────────
-CREATE TABLE matches (
-    id         VARCHAR PRIMARY KEY,
-    pyme_id    VARCHAR NOT NULL REFERENCES pymes(id) ON DELETE RESTRICT,
-    advisor_id VARCHAR NOT NULL REFERENCES advisors(id) ON DELETE RESTRICT,
-    status     VARCHAR NOT NULL CHECK (status IN ('pending', 'active', 'closed')),
-    created_at TIMESTAMP NOT NULL
-);
-
-CREATE TABLE swipes (
-    id         VARCHAR PRIMARY KEY,
-    pyme_id    VARCHAR NOT NULL REFERENCES pymes(id) ON DELETE CASCADE,
-    advisor_id VARCHAR NOT NULL REFERENCES advisors(id) ON DELETE CASCADE,
-    approved   BOOLEAN NOT NULL
-);
-
--- ─── COMMUNICATION DOMAIN ──────────────────────────────────
-CREATE TABLE chat_sessions (
-    id         VARCHAR PRIMARY KEY,
-    match_id   VARCHAR NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
-    created_at TIMESTAMP NOT NULL
-);
-
-CREATE TABLE messages (
-    id         VARCHAR PRIMARY KEY,
-    session_id VARCHAR NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
-    sender_id  VARCHAR NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-    content    VARCHAR NOT NULL,
-    read       BOOLEAN DEFAULT FALSE,
-    sent_at    TIMESTAMP NOT NULL
-);
-
--- ─── CONTRACT DOMAIN ───────────────────────────────────────
-CREATE TABLE contracts (
-    id            VARCHAR PRIMARY KEY,
-    match_id      VARCHAR NOT NULL REFERENCES matches(id) ON DELETE RESTRICT,
-    status        VARCHAR NOT NULL CHECK (status IN ('draft', 'active', 'completed', 'cancelled')),
-    budget        DECIMAL(12,2),
-    duration_days INTEGER,
-    created_at    TIMESTAMP NOT NULL
-);
-
-CREATE TABLE negotiations (
-    id          VARCHAR PRIMARY KEY,
-    contract_id VARCHAR NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
-    proposed_by VARCHAR NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-    created_at  TIMESTAMP NOT NULL
-);
-
--- ─── PROJECT DOMAIN ────────────────────────────────────────
-CREATE TABLE projects (
-    id          VARCHAR PRIMARY KEY,
-    contract_id VARCHAR NOT NULL REFERENCES contracts(id) ON DELETE RESTRICT,
-    status      VARCHAR NOT NULL CHECK (status IN ('active', 'completed', 'cancelled')),
-    created_at  TIMESTAMP NOT NULL
-);
-
-CREATE TABLE milestones (
-    id         VARCHAR PRIMARY KEY,
-    project_id VARCHAR NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    title      VARCHAR NOT NULL,
-    completed  BOOLEAN DEFAULT FALSE,
-    due_date   TIMESTAMP
-);
-
-CREATE TABLE project_health (
-    id           VARCHAR PRIMARY KEY,
-    project_id   VARCHAR NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    health_score FLOAT NOT NULL
-);
-
--- ─── REVIEW DOMAIN ─────────────────────────────────────────
-CREATE TABLE reviews (
-    id          VARCHAR PRIMARY KEY,
-    reviewer_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-    subject_id  VARCHAR NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-    rating      FLOAT NOT NULL CHECK (rating >= 1.0 AND rating <= 5.0),
-    comment     VARCHAR,
-    created_at  TIMESTAMP NOT NULL
-);
-
--- ─── NOTIFICATION DOMAIN ───────────────────────────────────
-CREATE TABLE notifications (
-    id         VARCHAR PRIMARY KEY,
-    user_id    VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    message    VARCHAR NOT NULL,
-    read       BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL
-);
-
-CREATE TABLE notification_preferences (
-    id             VARCHAR PRIMARY KEY,
-    user_id        VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    email_enabled  BOOLEAN DEFAULT TRUE,
-    in_app_enabled BOOLEAN DEFAULT TRUE
-);
-
--- ─── EVENT DOMAIN ──────────────────────────────────────────
-CREATE TABLE domain_events (
-    id          VARCHAR PRIMARY KEY,
-    event_type  VARCHAR NOT NULL,
-    payload     JSON NOT NULL,
-    occurred_at TIMESTAMP NOT NULL
-);
-```
-
----
-
-### Seed Data
-
-```sql
--- ─── USERS ─────────────────────────────────────────────────
-INSERT INTO users VALUES
-('user-1', 'hilo@empresa.cr', 'pyme', NOW()),
-('user-2', 'mariana@advisors.cr', 'advisor', NOW()),
-('user-3', 'sofia@advisors.cr', 'advisor', NOW());
-
--- ─── INDUSTRIES ────────────────────────────────────────────
-INSERT INTO industries VALUES
-('ind-1', 'Retail'),
-('ind-2', 'E-commerce'),
-('ind-3', 'Moda'),
-('ind-4', 'Tecnología');
-
--- ─── PYMES ─────────────────────────────────────────────────
-INSERT INTO pymes VALUES
-('pyme-1', 'user-1', 'Hilo & Aguja', 'Moda');
-
-INSERT INTO optimization_areas VALUES
-('area-1', 'pyme-1', 'Marketing Digital'),
-('area-2', 'pyme-1', 'Conversión de campañas');
-
--- ─── ADVISORS ──────────────────────────────────────────────
-INSERT INTO advisors VALUES
-('adv-1', 'user-2', 'Mariana Solís', 150000),
-('adv-2', 'user-3', 'Sofía Ramírez', 135000);
-
-INSERT INTO reputations VALUES
-('rep-1', 'adv-1', 4.8),
-('rep-2', 'adv-2', 4.6);
-
-INSERT INTO specializations VALUES
-('spec-1', 'adv-1', 'Marketing Digital'),
-('spec-2', 'adv-2', 'Branding');
-
--- ─── MATCHING ──────────────────────────────────────────────
-INSERT INTO swipes VALUES
-('swipe-1', 'pyme-1', 'adv-1', TRUE),
-('swipe-2', 'pyme-1', 'adv-2', TRUE);
-
-INSERT INTO matches VALUES
-('match-1', 'pyme-1', 'adv-1', 'active', NOW()),
-('match-2', 'pyme-1', 'adv-2', 'active', NOW());
-
--- ─── CHAT ──────────────────────────────────────────────────
-INSERT INTO chat_sessions VALUES
-('chat-1', 'match-2', NOW());
-
-INSERT INTO messages VALUES
-('msg-1', 'chat-1', 'user-3', 'Hola, revisé el perfil de Hilo & Aguja.', NOW()),
-('msg-2', 'chat-1', 'user-1', 'Perfecto, me interesa ver los números.', NOW());
-
--- ─── CONTRACTS ─────────────────────────────────────────────
-INSERT INTO contracts VALUES
-('contract-1', 'match-1', 'active', 900000, '3m', NOW());
-
-INSERT INTO negotiations VALUES
-('neg-1', 'contract-1', 'user-3', NOW());
-
--- ─── PROJECTS ──────────────────────────────────────────────
-INSERT INTO projects VALUES
-('proj-1', 'contract-1', 'active', NOW());
-
-INSERT INTO milestones VALUES
-('ms-1', 'proj-1', 'Análisis Inicial', TRUE, NOW()),
-('ms-2', 'proj-1', 'Optimización de Campañas', TRUE, NOW()),
-('ms-3', 'proj-1', 'Optimización de Landing Pages', FALSE, NOW());
-
-INSERT INTO project_health VALUES
-('ph-1', 'proj-1', 67.0);
-
--- ─── REVIEWS ───────────────────────────────────────────────
-INSERT INTO reviews VALUES
-('rev-1', 'user-1', 'user-2', 4.5, 'Excelente trabajo, muy profesional.', NOW());
-
--- ─── NOTIFICATIONS ─────────────────────────────────────────
-INSERT INTO notifications VALUES
-('notif-1', 'user-1', 'Nuevo match con Mariana Solís', FALSE, NOW());
-
-INSERT INTO notification_preferences VALUES
-('pref-1', 'user-1', TRUE, TRUE),
-('pref-2', 'user-2', TRUE, TRUE);
-```
-
----
-
-
-## 2.20 Database Migrations
-
-PymeBoost uses Alembic for database schema versioning and migrations.
-
-### Setup
-
-```bash
-pip install alembic
-alembic init migrations
-```
-
-### Configuration
-
-In `alembic.ini`, set the database URL:
-
-```ini
-sqlalchemy.url = postgresql://user:password@localhost/pymeboost
-```
-
-### Creating a Migration
-
-```bash
-alembic revision --autogenerate -m "description of change"
-```
-
-### Applying Migrations
-
-```bash
-# Apply all pending migrations
-alembic upgrade head
-
-# Rollback one migration
-alembic downgrade -1
-
-# Rollback to specific version
-alembic downgrade <revision_id>
-```
-
-### Versioning Strategy
-
-- Every schema change requires a new migration file
-- Migration files are versioned and tracked in `/migrations/versions/`
-- Never modify an existing migration — always create a new one
-- All migrations must be reviewed before merging to main
-
----
-
-## 2.21 Data Security
-
-### Encryption
-- Passwords are hashed using **bcrypt** before storing in the database
-- Sensitive fields (emails, personal data) are encrypted at the application layer using **AES-256**
-- All communication between client and server uses **HTTPS/TLS**
-
-### Secret Management
-- All secrets and credentials are stored in environment variables via `.env` file
-- `.env` is excluded from version control via `.gitignore`
-- Production secrets are managed through the cloud provider's secret manager
-
-### Audit & Traceability
-- All domain events are logged in the `domain_events` table with timestamp and payload
-- Every critical action (match, contract, payment) generates a domain event for full traceability
-
-### Backups
-- Daily automated backups of the PostgreSQL database
-- Backups retained for 30 days
-- Point-in-time recovery enabled for production environment
-
-### Failure Recovery
-- Database connections use connection pooling to handle failures gracefully
-- Alembic rollback strategy in place for failed migrations
-- Health checks monitor database availability
-
-## 2.22 Database Indexes
-
-PymeBoost indexing strategy optimizes for the most frequent queries and filters defined by the business logic in the Matching, Communication, and Project domains.
-
-### Index Specification by Domain
-
-#### User Domain
-
-```sql
--- Fast email lookups for authentication (login every request)
-CREATE INDEX idx_users_email ON users(email);
-
--- Fast session retrieval by user (JWT validation on every request)
-CREATE INDEX idx_sessions_user_id ON sessions(user_id);
-
--- Clean up expired sessions (background job)
-CREATE INDEX idx_sessions_expires_at ON sessions(expires_at) 
-  WHERE expires_at > NOW();
-```
-
-#### Pyme Domain
-
-```sql
--- Fast PYME lookup by user (one-to-one relationship)
-CREATE INDEX idx_pymes_user_id ON pymes(user_id);
-
--- Fast industry filtering (used in discovery service)
-CREATE INDEX idx_pymes_industry ON pymes(industry);
-
--- Retrieve optimization areas per PYME
-CREATE INDEX idx_optimization_areas_pyme_id ON optimization_areas(pyme_id);
-```
-
-#### Advisor Domain
-
-```sql
--- Fast advisor lookup by user
-CREATE INDEX idx_advisors_user_id ON advisors(user_id);
-
--- Fast reputation lookup (used in matching scoring)
-CREATE INDEX idx_reputations_advisor_id ON reputations(advisor_id);
-
--- Fast specialization lookup for matching
-CREATE INDEX idx_specializations_advisor_id ON specializations(advisor_id);
-
--- Filter advisors by industry (discovery service)
-CREATE INDEX idx_specializations_industry ON specializations(industry);
-```
-
-#### Matching Domain
-
-```sql
--- Fast match retrieval for a PYME
-CREATE INDEX idx_matches_pyme_id ON matches(pyme_id);
-
--- Fast match retrieval for an advisor
-CREATE INDEX idx_matches_advisor_id ON matches(advisor_id);
-
--- Filter matches by status (active, finalized, cancelled)
-CREATE INDEX idx_matches_status ON matches(status);
-
--- Prevent duplicate swipes
-CREATE UNIQUE INDEX idx_swipes_unique_pair ON swipes(pyme_id, advisor_id);
-```
-
-#### Communication Domain
-
-```sql
--- Fast chat session lookup for a match
-CREATE INDEX idx_chat_sessions_match_id ON chat_sessions(match_id);
-
--- Fast message retrieval by session (pagination)
-CREATE INDEX idx_messages_session_id ON messages(session_id, sent_at DESC);
-
--- Count unread messages (notification badge)
-CREATE INDEX idx_messages_session_read_status ON messages(session_id, read) 
-  WHERE read = false;
-```
-
-#### Contract Domain
-
-```sql
--- Fast contract lookup for a match
-CREATE INDEX idx_contracts_match_id ON contracts(match_id);
-
--- Filter contracts by status (used in dashboards)
-CREATE INDEX idx_contracts_status ON contracts(status);
-
--- Retrieve negotiations for a contract
-CREATE INDEX idx_negotiations_contract_id ON negotiations(contract_id);
-```
-
-#### Project Domain
-
-```sql
--- Fast project lookup for a contract (one-to-one)
-CREATE UNIQUE INDEX idx_projects_contract_id ON projects(contract_id);
-
--- Fast milestone retrieval by project (timeline views)
-CREATE INDEX idx_milestones_project_id ON milestones(project_id);
-
--- Fast completion status check (health monitoring)
-CREATE INDEX idx_milestones_completed ON milestones(project_id, completed);
-
--- Fast health lookup
-CREATE INDEX idx_project_health_project_id ON project_health(project_id);
-
--- Sort milestones by due date
-CREATE INDEX idx_milestones_due_date ON milestones(project_id, due_date ASC);
-```
-
-#### Review Domain
-
-```sql
--- Retrieve all reviews for an advisor (reputation calculation)
-CREATE INDEX idx_reviews_subject_id ON reviews(subject_id);
-
--- Retrieve reviews left by a user
-CREATE INDEX idx_reviews_reviewer_id ON reviews(reviewer_id);
-```
-
-#### Notification Domain
-
-```sql
--- Fast notification retrieval for a user (feed pagination)
-CREATE INDEX idx_notifications_user_id ON notifications(user_id, created_at DESC);
-
--- Count unread notifications (badge)
-CREATE INDEX idx_notifications_read_status ON notifications(user_id, read) 
-  WHERE read = false;
-```
-
-### Index Maintenance
-
-Run monthly index review:
-
-```bash
-# Find unused indexes
-SELECT schemaname, tablename, indexname, idx_scan
-FROM pg_stat_user_indexes
-WHERE idx_scan = 0
-ORDER BY idx_used DESC;
-
-# Check index size
-SELECT indexname, pg_size_pretty(pg_relation_size(indexrelid)) AS size
-FROM pg_stat_user_indexes
-ORDER BY pg_relation_size(indexrelid) DESC;
-```
-
----
-
-## 2.23 Database Design Validation Tools
-
-### SQLCheck for Schema Linting
-
-Install and run schema validation:
-
-```bash
-# Install
-brew install sqlcheck  # macOS
-
-# Validate schema
-sqlcheck -i < backend/shared/database/migrations/schema.sql
-```
-
-### Query Performance Analysis
-
-For critical queries, use EXPLAIN ANALYZE:
-
-```bash
-# Connect to database
-psql $DATABASE_URL
-
-# Analyze matching query (get_advisor_matches_controller.py)
-EXPLAIN ANALYZE
-SELECT m.id, m.pyme_id, m.advisor_id, m.status
-FROM matches m
-WHERE m.pyme_id = 'pyme-123' AND m.status IN ('ACTIVE', 'FINALIZED')
-ORDER BY m.created_at DESC;
-
-# Check for Index Scan (good) vs Seq Scan (bad)
-```
-
-### Data Quality Checks (Post-Migration)
-
-Run after every migration to ensure data integrity:
-
-```sql
--- Check for orphaned foreign keys
-SELECT * FROM matches m
-WHERE NOT EXISTS (SELECT 1 FROM pymes p WHERE p.id = m.pyme_id);
-
--- Check for duplicate swipes
-SELECT pyme_id, advisor_id, COUNT(*) as cnt
-FROM swipes
-GROUP BY pyme_id, advisor_id
-HAVING COUNT(*) > 1;
-
--- Verify reputation scores are within bounds (1.0 - 5.0)
-SELECT advisor_id, score FROM reputations
-WHERE score < 1.0 OR score > 5.0;
-```
-
-### CI/CD Validation
-
-Add to `.github/workflows/backend-ci.yml`:
-
-```yaml
-- name: Validate Database Schema
-  run: |
-    sqlcheck -i < backend/shared/database/migrations/schema.sql > schema_report.txt
-    if grep -q "Error:" schema_report.txt; then
-      echo "Schema validation failed"
-      cat schema_report.txt
-      exit 1
-    fi
-```
-
----
-
-## 2.24 Caching Strategy (Redis)
-
-Redis caches frequently accessed data to reduce database load. All cache data is ephemeral—if Redis is lost, the application continues with database queries.
-
-### Cache Key Patterns
-
-#### Session Cache (User Domain)
-
-**Key Pattern:** `session:{user_id}`
-
-**TTL:** 10800 seconds (3 hours)
-
-**Use Case:** JWT validation and user context on every request
-
-```json
-{
-  "user_id": "user-abc-123",
-  "email": "user@empresa.cr",
-  "account_type": "pyme",
-  "verified": true,
-  "created_at": "2026-06-01T10:00:00Z"
-}
-```
-
-**Invalidation:**
-- Manual on logout (session_cache_service.py)
-- Automatic after 3 hours
-
-#### JWKS Cache (Auth0 Public Keys)
-
-**Key Pattern:** `jwks:{auth0_domain}`
-
-**TTL:** 10800 seconds (3 hours)
-
-**Use Case:** JWT signature validation without hitting Auth0 every request
-
-```json
-{
-  "keys": [
-    {
-      "kty": "RSA",
-      "use": "sig",
-      "kid": "abc123",
-      "n": "...",
-      "e": "AQAB",
-      "alg": "RS256"
-    }
-  ],
-  "cached_at": "2026-06-12T11:30:00Z"
-}
-```
-
-**Invalidation:**
-- Automatic after 3 hours
-- Manual on Auth0 certificate rotation
-
-#### Advisor Profile Cache (Advisor Domain)
-
-**Key Pattern:** `advisor_profile:{advisor_id}`
-
-**TTL:** 86400 seconds (24 hours)
-
-**Use Case:** Frequently accessed during swipe operations (matching_card.tsx)
-
-```json
-{
-  "advisor_id": "adv-1",
-  "full_name": "Mariana Solís",
-  "base_rate": 150000,
-  "reputation_score": 4.8,
-  "industries": ["Marketing Digital", "E-commerce"],
-  "specializations": [...]
-}
-```
-
-**Invalidation:**
-- Manual when profile updated (update_advisor_profile_controller.py)
-- Manual when reputation changes (reputation_service.py)
-- Automatic after 24 hours
-
-#### Recommendation Cache (Pyme Domain)
-
-**Key Pattern:** `recommendations:{pyme_id}`
-
-**TTL:** 86400 seconds (24 hours)
-
-**Use Case:** Caches expensive AI-generated advisor recommendations
-
-```json
-{
-  "pyme_id": "pyme-123",
-  "recommendation_list": [
-    {
-      "advisor_id": "adv-1",
-      "name": "Mariana Solís",
-      "match_score": 0.92,
-      "base_rate": 150000
-    }
-  ],
-  "generated_at": "2026-06-12T08:00:00Z"
-}
-```
-
-**Invalidation:**
-- Manual when advisor industry changes
-- Manual when PYME optimization areas updated
-- Automatic after 24 hours
-
-### Cache-Aside Pattern
-
-All caches follow this pattern:
-
-1. Check Redis for key
-2. If hit: return immediately
-3. If miss: query database, cache result, return value
-4. On expiration: key deleted automatically
-
-**Python Implementation (session_cache_service.py):**
-
-```python
-async def get_session(self, user_id: str):
-    cache_key = f"session:{user_id}"
-    cached = await self.redis.get(cache_key)
-    
-    if cached:
-        return json.loads(cached)  # Cache hit
-    
-    # Cache miss — query database
-    session = await self.session_repository.get(user_id)
-    
-    if session:
-        await self.redis.setex(
-            cache_key,
-            10800,  # 3 hours
-            json.dumps(session.dict())
-        )
-    
-    return session
-```
-
-### Redis Configuration
-
-From `config.py`:
-
-```python
-REDIS_URL: str = ""  # redis://localhost:6379/0 (set in .env)
-```
-
-**Expected format:** `redis://[user:password]@localhost:6379/0`
-
-For production: Redis instance with HA should be used (Cloud Memorystore on GCP recommended).
-
----
-
-## 2.25 Database Seeding
-
-### Seed Script Location
-
-**File:** `backend/shared/database/seeders/`
-
-All environments use the same seeding approach, with data size varying by environment:
-
-- **Development:** Full dataset (6 users, 3 PYMEs, 3 advisors, realistic matches)
-- **Staging:** Production-like subset (same structure, smaller scale)
-- **Testing:** Minimal data for test isolation
-
-### Usage
-
-```bash
-# Seed development database with test data
-python -m backend.shared.database.seeders.seed_all --env development
-
-# Seed staging database
-python -m backend.shared.database.seeders.seed_all --env staging
-
-# Seed test database (minimal)
-python -m backend.shared.database.seeders.seed_all --env test
-```
-
-### Seed Data Includes
-
-**Users:** 3 PYMEs + 3 Advisors with Auth0 integration  
-**Industries:** 8 industry categories  
-**PYME Profiles:** Company names, industries, optimization areas  
-**Advisor Profiles:** Full names, base rates, specializations, reputation scores  
-**Matches:** Multiple PYME-Advisor pairs with different statuses  
-**Swipes:** Approval decisions  
-**Communications:** Chat sessions with sample messages  
-**Notifications:** User notification preferences  
-
-### Idempotency
-
-All seed scripts are idempotent—safe to run multiple times. They:
-- Check for existing data before inserting
-- Use UUID generation for IDs
-- Skip if records already exist
-
----
-
-## 2.26 Migration Strategy and Rollback
-
-### Alembic Configuration
-
-Located at: `backend/shared/database/migrations/`
-
-**Commands:**
-
-```bash
-cd backend
-
-# Generate new migration after model changes
-alembic revision --autogenerate -m "add_new_feature"
-
-# Apply all pending migrations
-alembic upgrade head
-
-# Rollback one migration
-alembic downgrade -1
-
-# View migration history
-alembic history
-
-# Check current revision
-alembic current
-```
-
-### Migration Workflow
-
-#### 1. Create Migration
-
-After changing a SQLAlchemy model:
-
-```bash
-alembic revision --autogenerate -m "descriptive_name"
-```
-
-Creates file: `migrations/versions/{timestamp}_{description}.py`
-
-#### 2. Review Migration
-
-Always review auto-generated migrations:
-
-```python
-# Check that:
-# CREATE/ALTER statements are correct
-# Indexes are added for new columns
-# Foreign keys are explicit
-# Downgrade function is the exact inverse
-```
-
-#### 3. Test Migration
-
-Test locally before pushing:
-
-```bash
-# Upgrade
-alembic upgrade +1
-
-# Verify schema change
-psql $DATABASE_URL -c "\d table_name"
-
-# Rollback
-alembic downgrade -1
-
-# Verify rollback worked
-psql $DATABASE_URL -c "\d table_name"
-```
-
-#### 4. Deploy
-
-CI/CD runs migrations automatically on deploy:
-
-```yaml
-# From .github/workflows/deploy-backend.yml
-- name: Run Database Migrations
-  run: |
-    alembic upgrade head
-```
-
-### Rollback Strategy
-
-#### Quick Rollback (< 5 minutes)
-
-If migration causes immediate issues:
-
-```bash
-# Identify current revision
-alembic current
-
-# Rollback one step
-alembic downgrade -1
-
-# Verify
-alembic current
-```
-
-#### Emergency Rollback (data-safe)
-
-If migration affected data:
-
-1. **Backup production database** (GCP Cloud SQL automated backups)
-2. **Downgrade schema:**
-   ```bash
-   alembic downgrade -1
-   ```
-3. **Restore data from backup** (point-in-time recovery via GCP)
-4. **Fix migration code** and reapply
-
-### Migration Naming Convention
-
-**Format:** `{revision_id}_{timestamp}_{description}.py`
-
-Examples:
-- `001_2026_06_12_create_user_domain.py`
-- `002_2026_06_12_create_advisor_domain.py`
-- `003_2026_06_13_add_advisor_promises.py`
-
-### Database Connection Details
-
-**From config.py:**
-
-```python
-DATABASE_URL: str = ""  # postgresql://user:password@host:5432/pymeboost
-DATABASE_POOL_SIZE: int = 5
-```
-
-**Connection pooling:**
-- Pool size: 5 (default, configurable)
-- Max overflow: 10
-- Pool timeout: 30 seconds
-- Pool recycle: 3600 seconds (1 hour)
-
-**Critical:** Keep `DATABASE_POOL_SIZE` low in development to catch connection leaks early.
-
-### Testing Strategy for Migrations
-
-Create test migrations before production deploy:
-
-```bash
-# Create test database from staging
-pg_dump production_db | psql test_db
-
-# Run migration on test database
-DATABASE_URL=postgresql://test:test@localhost/test_db alembic upgrade head
-
-# Run data validation checks
-bash backend/scripts/validate_database.sh
-
-# If passes, safe to deploy to production
-```
-
-### Performance Considerations
-
-Migrations that may cause downtime:
-
-- Adding `NOT NULL` column without default (use `DEFAULT` clause)
-- Renaming large tables (use change tracking instead)
-- Full table rewrites during ALTER TABLE
-- Adding nullable columns
-- Adding indexes with `CONCURRENTLY`
-- Dropping unused indexes
-
-**Example: Safe NOT NULL column addition**
-
-```python
-# Good: Add with default, then remove default later
-def upgrade():
-    op.add_column('users', sa.Column('phone', sa.String, nullable=False, server_default=''))
-    op.alter_column('users', 'phone', server_default=None)
-
-def downgrade():
-    op.drop_column('users', 'phone')
-```
-
-### Monitoring Post-Migration
-
-After production migration, monitor:
-
-- Database connection count (should remain stable)
-- Query latency (should not spike)
-- Error rate (should not increase)
-- Disk usage (should increase only by new data)
-
-Use Cloud SQL monitoring dashboard on GCP to verify.
-
-

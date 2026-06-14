@@ -1,0 +1,2 @@
+class CedulaJuridicaVerificationService:
+    pass

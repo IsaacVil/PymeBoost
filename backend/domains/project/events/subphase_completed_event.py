@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
+
 @dataclass
-class MilestoneCompletedEvent:
-    milestone_id: str
+class SubphaseCompletedEvent:
+    subphase_id: str
     project_id: str
