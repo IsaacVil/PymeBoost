@@ -6,7 +6,7 @@ LAYOUT_WITH_LEGEND()
 title PymeBoost Backend - C4 Level 2 (Containers)
 
 Person(pyme, "PYME Owner", "Registers, browses advisors,\nnegotiates contracts,\ntracks projects")
-Person(advisor, "Advisor", "Receives matches,\nnegotiates, submits reports")
+Person(advisor, "Advisor", "Receives matches,\nnegotiates, validates subphases,\ncloses projects")
 
 System_Boundary(backend_boundary, "PymeBoost Backend (GCP Private VPC)") {
     Container(api_gateway, "API Gateway", "Google Cloud API Gateway + Cloud Armor", "Routing, rate limiting,\nWAF / firewall, endpoint validation")

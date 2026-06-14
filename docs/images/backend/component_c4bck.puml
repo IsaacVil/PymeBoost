@@ -20,7 +20,7 @@ Container_Boundary(app, "Backend API (FastAPI on Cloud Run)") {
         Component(c_matching, "Matching",       "controllers/", "Discovery, swipe decisions,\nmatch create / cancel / finalize")
         Component(c_contract, "Contract",       "controllers/", "Proposals, counter-offers,\naccept / reject negotiation")
         Component(c_comm,     "Communication",  "controllers/", "Chat access & messaging")
-        Component(c_project,  "Project",        "controllers/", "Lifecycle, milestones,\nhealth monitoring, closure")
+        Component(c_project,  "Project",        "controllers/", "Lifecycle, subphases,\nhealth monitoring, closure")
         Component(c_review,   "Review",         "controllers/", "Ratings & feedback")
     }
 
@@ -31,11 +31,11 @@ Container_Boundary(app, "Backend API (FastAPI on Cloud Run)") {
         Component(svc_matching,     "Matching",       "services/", "Match creation, swipe logic,\ndiscovery, match expiration")
         Component(svc_contract,     "Contract",       "services/", "Negotiation, proposal,\nterms validation, contract generation")
         Component(svc_comm,         "Communication",  "services/", "Chat sessions,\nmessage delivery")
-        Component(svc_project,      "Project",        "services/", "Lifecycle, milestones,\nhealth monitoring, completion")
+        Component(svc_project,      "Project",        "services/", "Lifecycle, subphases,\nhealth monitoring, completion")
         Component(svc_review,       "Review",         "services/", "Rating calculation,\nfeedback processing")
         Component(svc_notification, "Notification",   "services/, handlers/", "Event-driven alerts,\nemail & in-app notifications")
         Component(svc_event,        "Event",          "services/, publishers/", "Event audit log &\nPub/Sub publishing")
-        Component(svc_ai,           "AI",             "services/, handlers/", "PDF ingestion, OCR,\nembedding generation, thematic\nclassification, recommendation engine")
+        Component(svc_ai,           "AI",             "services/, handlers/", "PDF ingestion, OCR,\nembedding generation, thematic\nclassification, recommendation engine,\nreflection self-critique pattern")
     }
 
     System_Boundary(acl_layer, "ACL — Anticorruption Layer (Cross-Domain Translation)") {
@@ -53,7 +53,7 @@ Container_Boundary(app, "Backend API (FastAPI on Cloud Run)") {
         Component(r_matching, "Matching",      "repositories/", "Match, swipe,\ndiscovery queries")
         Component(r_contract, "Contract",      "repositories/", "Contract &\nnegotiation queries")
         Component(r_comm,     "Communication", "repositories/", "Message & chat\nsession queries")
-        Component(r_project,  "Project",       "repositories/", "Project &\nmilestone queries")
+        Component(r_project,  "Project",       "repositories/", "Project &\nsubphase queries")
         Component(r_review,   "Review",        "repositories/", "Review & rating queries")
         Component(r_ai,       "AI",            "repositories/", "Use case, document blocks,\nrecommendation results (pgvector)")
     }
@@ -81,8 +81,9 @@ ContainerDb(storage,    "Object Storage",   "Cloud Storage")
 System_Ext(auth0,       "Auth0",            "JWT / JWKS")
 System_Ext(document_ai, "Cloud Document AI","OCR")
 System_Ext(langgraph,   "LangGraph",        "Agent Orchestration")
-System_Ext(proxycurl,   "ProxyCurl API",    "LinkedIn Profile Extraction (Nubela)")
-System_Ext(ops,         "Cloud Operations", "Logging / Monitoring / Trace")
+System_Ext(proxycurl,    "ProxyCurl API",    "LinkedIn Profile Extraction (Nubela)")
+System_Ext(hacienda_api, "Hacienda API",     "Costa Rica Registry (api.hacienda.go.cr)")
+System_Ext(ops,          "Cloud Operations", "Logging / Monitoring / Trace")
 
 ' --- Entry ---
 Rel(frontend, router, "Sends API requests", "REST + JWT / HTTPS")
@@ -161,9 +162,9 @@ Rel(s_auth,        redis, "caches sessions & JWKS",   "Redis")
 Rel(svc_user,      redis, "session cache",            "Redis")
 
 ' --- Domain-specific external integrations ---
-Rel(svc_user, proxycurl,   "extracts LinkedIn profile",       "HTTPS")
-Rel(svc_user, document_ai, "validates cédula jurídica (OCR)", "HTTPS")
-Rel(svc_user, storage,     "stores legal documents",          "HTTPS")
+Rel(svc_user, proxycurl,    "extracts LinkedIn profile",  "HTTPS")
+Rel(svc_user, hacienda_api, "validates cédula jurídica", "HTTPS")
+Rel(svc_user, storage,      "stores legal documents",    "HTTPS")
 Rel(svc_ai,   document_ai, "processes use case PDFs (OCR)",   "HTTPS")
 Rel(svc_ai,   langgraph,   "orchestrates recommendations",    "HTTPS")
 Rel(r_ai,     db,          "vector similarity queries",       "pgvector / TLS")
