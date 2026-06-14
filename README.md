@@ -5703,7 +5703,6 @@ PymeBoost uses specialized AI agents as quality validators during development. E
 
 Agents are run before committing each feature. Findings and corrections are documented below under "Agent Validations".
 
----
 
 ## Agent Catalog
 

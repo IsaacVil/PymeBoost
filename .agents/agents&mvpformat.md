@@ -466,29 +466,3 @@ For each feature:
 | 6 | Demo | MVP running locally + presentation |
 
 ---
-
-## The Most Important Thing
-
-**Agents are QUALITY tools, not just an extra academic requirement.**
-
-- Each agent you use in the MVP must be documented
-- Documentation of findings + corrections is EVALUATED
-- Validated code = fewer bugs = stronger demo
-- This gives you points in the final evaluation
-
-**Critical order that cannot be changed:**
-1. Create Agents
-2. Document agent usage
-3. Build MVP with agents validating
-4. Final demo with clean code
-
----
-
-## Next Steps
-
-1. **Now:** Create Agent 1 (SRP) as prototype
-2. **Day 2:** Replicate the pattern for the remaining 7 agents
-3. **Day 3:** Document "Agents" section in README
-4. **Day 4:** Start Feature 1 of MVP with agents validating
-
-Do you need me to generate Agent 1 (SRP) now as an example?
