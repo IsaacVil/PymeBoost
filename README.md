@@ -4827,6 +4827,45 @@ This section documents cross-cutting engineering decisions that are not tied to 
   - Response schemas are built from ORM objects via `from_attributes=True` and expose an explicit allow-list of fields.
   - Internal-only attributes never appear in any schema returned by a controller.
 
+### Algorithm Selection & Parameters
+
+PymeBoost's AI-driven features rely on specific algorithms chosen for their fit with the platform's data characteristics and performance requirements.
+
+#### Advisor Recommendation Scoring
+
+The recommendation engine uses a **composite dot-product scoring model** rather than a collaborative filtering approach. This decision is grounded in the platform's cold-start reality: new SMEs have no interaction history, so collaborative filtering would produce empty recommendations. Instead, the system builds a content-based profile from two signals:
+
+- **Sub-industry alignment (dot product):** The SME's needs vector (from the Business Needs Assessment) is compared against each advisor's sub-industry score vector (built incrementally from use case PDF processing). The dot product measures how well the advisor's demonstrated expertise overlaps with what the SME needs. This is a O(d) operation where d is the number of sub-industries — fast enough to score hundreds of advisors in milliseconds.
+- **Reputation score (weighted addition):** The advisor's running average rating is added as a secondary signal. Reputation is weighted lower than sub-industry alignment because a highly rated advisor in an irrelevant industry is less useful than a moderately rated advisor in the right one.
+
+The composite formula is: `score = α × dot(sme_needs, advisor_sub_industry) + β × reputation_score`, where α = 0.7 and β = 0.3. These weights were chosen to prioritize domain fit over general reputation.
+
+#### Embedding Model & Similarity
+
+Document blocks and promise texts are embedded using a sentence-transformer model (candidate: `all-MiniLM-L6-v2`, 384 dimensions). Cosine similarity is used for all vector comparisons because it normalizes for document length — a short promise and a long use case section can still be compared meaningfully. pgvector's `<=>` operator (cosine distance) is used at query time with IVFFlat indexing for sub-linear search.
+
+#### Health Score Formula
+
+Project health uses a ratio-based formula: `health_score = (completion_ratio / time_progress_ratio) × 100`. This was chosen over absolute milestone counting because it accounts for time pressure — a project that completed 50% of work in 25% of the time scores 200 (ahead of schedule), while 50% completion at 75% time scores 67 (behind). The thresholds (≥80 ON_TRACK, 50–79 AT_RISK, <50 OFF_TRACK) were calibrated against typical consulting engagement timelines where falling below 50% pace is rarely recoverable.
+
+#### Commission Interpolation
+
+Contract commission uses linear interpolation: `commission = 3 + (duration_months - 1) × (7 / 11)`. This produces exactly 3% at 1 month and 10% at 12 months, with a smooth gradient between. Linear interpolation was chosen over tiered flat rates because it eliminates boundary gaming (choosing 2 months over 3 to avoid a rate jump) and is transparent to both parties.
+
+### Data Type Decisions
+
+- **UUID v4** for all primary keys — universally supported, no coordination needed between services, and sufficient entropy for the expected scale. UUID v7 was considered for its time-ordering properties but rejected because the platform doesn't need time-sorted PKs (queries filter by status and relationships, not by creation order).
+- **DECIMAL(12,2)** for all monetary values — IEEE 754 floating point introduces rounding errors unacceptable for financial calculations (e.g., commission percentages applied to budgets). DECIMAL guarantees exact arithmetic.
+- **TIMESTAMPTZ** (timestamp with time zone) for all temporal columns — Costa Rica is UTC-6 but advisors may operate from other timezones; storing in UTC with timezone awareness prevents conversion bugs.
+- **JSONB** (not JSON) for domain event payloads — JSONB is binary-stored, indexable, and supports containment queries; plain JSON is re-parsed on every read.
+- **vector(384)** via pgvector for embeddings — native PostgreSQL extension avoids a separate vector database, keeps the operational stack simple, and supports IVFFlat indexing for approximate nearest neighbor search.
+
+### Soft Delete Strategy
+
+Tables where records must be retained for audit or legal compliance use a `deleted_at TIMESTAMPTZ` column instead of physical deletion. When `deleted_at IS NOT NULL`, the record is considered deleted and excluded from all application queries via a WHERE clause convention enforced in the repository layer. Physically deleting a soft-deleted record is only permitted by the data retention job after the retention period expires (see §2.21 Data Security — Backups).
+
+Tables using soft delete: `users`, `pymes`, `advisors`, `contracts`, `projects`, `matches`. Tables using hard delete: `sessions` (ephemeral), `notifications` (user-managed), `swipes` (no audit requirement), `domain_events` (managed by retention policy separately).
+
 ---
 
 ## 2.13 Design Patterns
@@ -5020,7 +5059,39 @@ The deployment artifact is the Docker image that runs on Cloud Run, so "bundle s
 
 ---
 
-## 2.18 Database Schema (DBML)
+# Data Design
+
+
+## 3.1 Data Stack
+
+| Component | Technology | Version | Purpose |
+|---|---|---|---|
+| Database | PostgreSQL | 16 | Primary relational store with pgvector extension |
+| ORM | SQLAlchemy | 2.0+ | Declarative models, relationships, query building |
+| Migrations | Alembic | 1.13+ | Versioned schema changes with upgrade/downgrade |
+| Vector Extension | pgvector | 0.7+ | Embedding storage and cosine similarity search |
+| Cache | Redis | 7.x | Session cache, JWKS cache, recommendation cache |
+
+The relational database is PostgreSQL 16 with the pgvector extension enabled for vector similarity operations. Backend access is handled through SQLAlchemy 2.0 as the ORM, following the domain-driven architecture of the project. Schema migrations are managed with Alembic. All primary keys use **UUID v4** format (`gen_random_uuid()` default in PostgreSQL).
+
+> Note: The table and stack above describe the intended data architecture. Some of the components referenced (shared `Base`, a complete session factory, and migration bootsraps) are specified as design targets but are not fully implemented in the current repository. See the Migration, Seeders and Shared Database sections for status details.
+
+### SQLAlchemy Model Convention
+
+All domain models inherit from a single shared `Base` defined in [`backend/shared/database/base.py`](backend/shared/database/base.py):
+
+```python
+from sqlalchemy.orm import DeclarativeBase
+
+class Base(DeclarativeBase):
+    pass
+```
+
+Every model file imports this shared Base — models never declare their own `Base(DeclarativeBase)`. Foreign keys are declared explicitly using `ForeignKey()` and relationships use `relationship()` with appropriate `back_populates`. The pgvector `Vector` type is used for embedding columns (not `String`).
+
+---
+
+## 3.2 Database Schema (DBML)
 
 The full database schema is defined in DBML format. You can find the source file at:
 
@@ -5031,29 +5102,43 @@ This schema is also available in PNG format for better and easier viewing. You c
 
 📄 [`database/diagram/er-diagram.png`](database/diagram/er-diagram.png)
 
+> Note: The DBML file and diagram are part of the intended design. Some schema elements described in this document may be aspirational and not yet synchronized with the current model code in the repository. Treat the DBML as the design source; implementation may lag in a few domains.
+
+### Primary Key Format
+
+All `id` columns use UUID v4 strings. In PostgreSQL, these are stored as `VARCHAR` with a `DEFAULT gen_random_uuid()::text` or generated application-side via Python's `uuid.uuid4()`.
+
+### ON DELETE Policies
+
+| Policy | Applied to | Rationale |
+|---|---|---|
+| `CASCADE` | Child records that have no meaning without their parent (e.g., `contract_metrics` → `contracts`, `project_subphases` → `project_phases`) |
+| `RESTRICT` | Records where deletion of the parent should be blocked if children exist (e.g., `contracts` → `matches`, `projects` → `contracts`) |
+| `SET NULL` | Optional references where the child can exist independently (e.g., `project_health_history.current_subphase_id`) |
+
+### CHECK Constraints
+
+Status columns use CHECK constraints to enforce valid values at the database level, preventing invalid states even if application validation is bypassed.
+
+### Cross-Domain Reference Strategy
+
+Per the DDD architecture (§2.2), domains do not share database tables and do not create cross-domain foreign keys. When a table in one domain needs to reference an entity in another domain, it stores the entity's ID as a plain `VARCHAR` without a `FOREIGN KEY` constraint. Referential integrity for cross-domain references is enforced at the service layer via synchronous REST queries or event-driven eventual consistency.
+
+Examples in this schema:
+- `specializations.industry` stores the industry name as a string (Advisor Domain referencing Pyme Domain's `industries` catalog). No FK because it crosses domain boundaries.
+- `projects.pyme_id` and `projects.advisor_id` are denormalized from the match record for fast ownership checks. No FK to `pymes` or `advisors` because the Project Domain doesn't own those entities.
+- `promise_industry_scores.industry_id` references `industries.id` by value (Advisor Domain → Pyme Domain).
+- `recommendation_results.pyme_id` and `recommendation_results.advisor_id` reference entities in other domains without FK constraints.
+
+Within the same domain, foreign keys are enforced normally (e.g., `contract_metrics.contract_id` → `contracts.id`).
+
 ---
-
-# Data Design
-
-
-## 3.1 Data Stack
-
-| Component | Technology |
-|---|---|
-| Database | PostgreSQL |
-| ORM | SQLAlchemy |
-| Migrations | Alembic |
-
-The relational database used is PostgreSQL. Backend access is handled through SQLAlchemy as the ORM, following the domain-driven architecture of the project. Schema migrations are managed with Alembic.
-
----
-
-## 3.2 Database Schema (DBML)
-
 
 ## 3.3 Database Migrations
 
 PymeBoost uses Alembic for database schema versioning and migrations.
+
+> Note: Alembic-based migrations are the intended workflow. The repository includes migration placeholders and guidance, but a full Alembic installation and a complete set of migration scripts may not be present yet. Treat the commands below as the design and workflow to be applied once migrations are implemented.
 
 ### Setup
 
@@ -5068,6 +5153,26 @@ In `alembic.ini`, set the database URL:
 
 ```ini
 sqlalchemy.url = postgresql://user:password@localhost/pymeboost
+```
+
+In `migrations/env.py`, import all models through the shared Base so Alembic can detect schema changes:
+
+```python
+from backend.shared.database.base import Base
+# Import all domain models so they register with Base.metadata
+from backend.domains.user.models import *
+from backend.domains.pyme.models import *
+from backend.domains.advisor.models import *
+from backend.domains.matching.models import *
+from backend.domains.communication.models import *
+from backend.domains.contract.models import *
+from backend.domains.project.models import *
+from backend.domains.ai.models import *
+from backend.domains.review.models import *
+from backend.domains.notification.models import *
+from backend.domains.event.models import *
+
+target_metadata = Base.metadata
 ```
 
 ### Creating a Migration
@@ -5101,32 +5206,39 @@ alembic downgrade <revision_id>
 ## 3.4 Data Security
 
 ### Encryption
-- Passwords are hashed using **bcrypt** before storing in the database
-- Sensitive fields (emails, personal data) are encrypted at the application layer using **AES-256**
-- All communication between client and server uses **HTTPS/TLS**
+- Passwords are never stored by PymeBoost — authentication is delegated to Auth0
+- Sensitive fields (cédula jurídica, phone numbers) are encrypted at the application layer using **AES-256** via Google Cloud KMS
+- All communication between client and server uses **HTTPS/TLS 1.3**
 
 ### Secret Management
-- All secrets and credentials are stored in environment variables via `.env` file
-- `.env` is excluded from version control via `.gitignore`
-- Production secrets are managed through the cloud provider's secret manager
+- All secrets and credentials are stored in **Google Secret Manager** — never in `.env` files or hardcoded
+- Production secrets are rotated quarterly
+- API keys (ProxyCurl, LangGraph) stored in Secret Manager with access restricted to the Cloud Run service account
 
 ### Audit & Traceability
-- All domain events are logged in the `domain_events` table with timestamp and payload
+- All domain events are logged in the `domain_events` table with timestamp and JSONB payload
 - Every critical action (match, contract, payment) generates a domain event for full traceability
+- `X-Trace-ID` correlates frontend and backend logs in Cloud Logging
+
+### Soft Delete
+- Tables with audit or legal requirements use `deleted_at TIMESTAMPTZ` instead of physical deletion (see §2.12 Design Considerations — Soft Delete Strategy)
+- Application queries filter by `WHERE deleted_at IS NULL` (enforced in the repository layer)
+- Physical deletion occurs only via the data retention job after the retention period
 
 ### Backups
-- Daily automated backups of the PostgreSQL database
+- Daily automated backups of the PostgreSQL database via Cloud SQL
 - Backups retained for 30 days
 - Point-in-time recovery enabled for production environment
+- Retention schedule: Year 1 hot storage, Year 2 cool storage, Year 3+ archive, purged after 5 years
 
 ### Failure Recovery
 - Database connections use connection pooling to handle failures gracefully
 - Alembic rollback strategy in place for failed migrations
-- Health checks monitor database availability
+- Health checks monitor database availability (§2.7)
 
 ## 3.5 Database Indexes
 
-PymeBoost indexing strategy optimizes for the most frequent queries and filters defined by the business logic in the Matching, Communication, and Project domains.
+PymeBoost indexing strategy optimizes for the most frequent queries defined by the business logic in the Matching, Communication, AI, and Project domains.
 
 ### Index Specification by Domain
 
@@ -5140,7 +5252,7 @@ CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);
 
 -- Clean up expired sessions (background job)
-CREATE INDEX idx_sessions_expires_at ON sessions(expires_at) 
+CREATE INDEX idx_sessions_expires_at ON sessions(expires_at)
   WHERE expires_at > NOW();
 ```
 
@@ -5150,11 +5262,17 @@ CREATE INDEX idx_sessions_expires_at ON sessions(expires_at)
 -- Fast PYME lookup by user (one-to-one relationship)
 CREATE INDEX idx_pymes_user_id ON pymes(user_id);
 
--- Fast industry filtering (used in discovery service)
-CREATE INDEX idx_pymes_industry ON pymes(industry);
+-- Fast industry filtering (used in matching pre-filter)
+CREATE INDEX idx_pymes_industry_id ON pymes(industry_id);
 
 -- Retrieve optimization areas per PYME
 CREATE INDEX idx_optimization_areas_pyme_id ON optimization_areas(pyme_id);
+
+-- Needs assessment scores per PYME (latest version)
+CREATE INDEX idx_pyme_needs_scores_pyme_id ON pyme_needs_scores(pyme_id, version DESC);
+
+-- Sub-industry lookups by parent industry
+CREATE INDEX idx_sub_industries_industry_id ON sub_industries(industry_id);
 ```
 
 #### Advisor Domain
@@ -5163,14 +5281,15 @@ CREATE INDEX idx_optimization_areas_pyme_id ON optimization_areas(pyme_id);
 -- Fast advisor lookup by user
 CREATE INDEX idx_advisors_user_id ON advisors(user_id);
 
--- Fast reputation lookup (used in matching scoring)
-CREATE INDEX idx_reputations_advisor_id ON reputations(advisor_id);
-
--- Fast specialization lookup for matching
+-- Filter advisors by specialization industry (discovery service)
 CREATE INDEX idx_specializations_advisor_id ON specializations(advisor_id);
-
--- Filter advisors by industry (discovery service)
 CREATE INDEX idx_specializations_industry ON specializations(industry);
+
+-- Promises per advisor (max 3 active, frequently queried)
+CREATE INDEX idx_promises_advisor_id ON promises(advisor_id);
+
+-- Promise industry scores for ordering (display-time sort)
+CREATE INDEX idx_promise_industry_scores_promise_id ON promise_industry_scores(promise_id);
 ```
 
 #### Matching Domain
@@ -5185,7 +5304,7 @@ CREATE INDEX idx_matches_advisor_id ON matches(advisor_id);
 -- Filter matches by status (active, finalized, cancelled)
 CREATE INDEX idx_matches_status ON matches(status);
 
--- Prevent duplicate swipes
+-- Prevent duplicate swipes (also enforced by UNIQUE constraint)
 CREATE UNIQUE INDEX idx_swipes_unique_pair ON swipes(pyme_id, advisor_id);
 ```
 
@@ -5195,12 +5314,12 @@ CREATE UNIQUE INDEX idx_swipes_unique_pair ON swipes(pyme_id, advisor_id);
 -- Fast chat session lookup for a match
 CREATE INDEX idx_chat_sessions_match_id ON chat_sessions(match_id);
 
--- Fast message retrieval by session (pagination)
+-- Fast message retrieval by session (pagination, ordered by time)
 CREATE INDEX idx_messages_session_id ON messages(session_id, sent_at DESC);
 
 -- Count unread messages (notification badge)
-CREATE INDEX idx_messages_session_read_status ON messages(session_id, read) 
-  WHERE read = false;
+CREATE INDEX idx_messages_session_read_status ON messages(session_id, read)
+  WHERE read = FALSE;
 ```
 
 #### Contract Domain
@@ -5212,6 +5331,12 @@ CREATE INDEX idx_contracts_match_id ON contracts(match_id);
 -- Filter contracts by status (used in dashboards)
 CREATE INDEX idx_contracts_status ON contracts(status);
 
+-- Retrieve metrics for a contract
+CREATE INDEX idx_contract_metrics_contract_id ON contract_metrics(contract_id);
+
+-- Retrieve phases for a contract (ordered)
+CREATE INDEX idx_contract_phases_contract_id ON contract_phases(contract_id, phase_order);
+
 -- Retrieve negotiations for a contract
 CREATE INDEX idx_negotiations_contract_id ON negotiations(contract_id);
 ```
@@ -5222,27 +5347,63 @@ CREATE INDEX idx_negotiations_contract_id ON negotiations(contract_id);
 -- Fast project lookup for a contract (one-to-one)
 CREATE UNIQUE INDEX idx_projects_contract_id ON projects(contract_id);
 
--- Fast milestone retrieval by project (timeline views)
-CREATE INDEX idx_milestones_project_id ON milestones(project_id);
+-- Fast phase retrieval by project (ordered timeline)
+CREATE INDEX idx_project_phases_project_id ON project_phases(project_id, phase_order);
 
--- Fast completion status check (health monitoring)
-CREATE INDEX idx_milestones_completed ON milestones(project_id, completed);
+-- Fast subphase retrieval by phase (ordered)
+CREATE INDEX idx_project_subphases_phase_id ON project_subphases(phase_id, sub_order);
 
--- Fast health lookup
-CREATE INDEX idx_project_health_project_id ON project_health(project_id);
+-- Metric readings per subphase
+CREATE INDEX idx_subphase_metric_readings_subphase ON subphase_metric_readings(subphase_id);
 
--- Sort milestones by due date
-CREATE INDEX idx_milestones_due_date ON milestones(project_id, due_date ASC);
+-- Phase metric targets per phase
+CREATE INDEX idx_phase_metric_targets_phase ON phase_metric_targets(phase_id);
+
+-- Health history per project (time-ordered)
+CREATE INDEX idx_project_health_project_id ON project_health_history(project_id, recorded_at DESC);
+
+-- Documents per project
+CREATE INDEX idx_documents_project_id ON documents(project_id);
+CREATE INDEX idx_documents_status ON documents(status) WHERE status = 'PENDING';
+```
+
+#### AI Domain
+
+```sql
+-- Use cases per advisor
+CREATE INDEX idx_use_cases_advisor_id ON use_cases(advisor_id);
+CREATE INDEX idx_use_cases_status ON use_cases(status) WHERE status = 'PENDING';
+
+-- Document blocks per use case and advisor
+CREATE INDEX idx_document_blocks_use_case_id ON document_blocks(use_case_id);
+CREATE INDEX idx_document_blocks_advisor_id ON document_blocks(advisor_id);
+
+-- Thematic category filtering for similar project retrieval
+CREATE INDEX idx_document_blocks_category ON document_blocks(advisor_id, thematic_category);
+
+-- pgvector index for embedding similarity search (IVFFlat)
+-- Create after initial data load; lists = sqrt(row_count)
+CREATE INDEX idx_document_blocks_embedding ON document_blocks
+  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+-- Recommendation results per PYME (sorted by score)
+CREATE INDEX idx_recommendation_results_pyme ON recommendation_results(pyme_id, score DESC);
+
+-- Advisor sub-industry scores per advisor
+CREATE INDEX idx_advisor_sub_industry_scores ON advisor_sub_industry_scores(advisor_id);
 ```
 
 #### Review Domain
 
 ```sql
--- Retrieve all reviews for an advisor (reputation calculation)
+-- Retrieve all reviews for a subject (reputation calculation)
 CREATE INDEX idx_reviews_subject_id ON reviews(subject_id);
 
 -- Retrieve reviews left by a user
 CREATE INDEX idx_reviews_reviewer_id ON reviews(reviewer_id);
+
+-- Retrieve reviews for a project
+CREATE INDEX idx_reviews_project_id ON reviews(project_id);
 ```
 
 #### Notification Domain
@@ -5252,30 +5413,45 @@ CREATE INDEX idx_reviews_reviewer_id ON reviews(reviewer_id);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id, created_at DESC);
 
 -- Count unread notifications (badge)
-CREATE INDEX idx_notifications_read_status ON notifications(user_id, read) 
-  WHERE read = false;
+CREATE INDEX idx_notifications_read_status ON notifications(user_id, read)
+  WHERE read = FALSE;
+```
+
+#### Event Domain
+
+```sql
+-- Filter events by type (audit queries, event replay)
+CREATE INDEX idx_domain_events_event_type ON domain_events(event_type);
+
+-- Time-range queries for audit (ordered by occurrence)
+CREATE INDEX idx_domain_events_occurred_at ON domain_events(occurred_at DESC);
 ```
 
 ### Index Maintenance
 
 Run monthly index review:
 
-```bash
-# Find unused indexes
+```sql
+-- Find unused indexes
 SELECT schemaname, tablename, indexname, idx_scan
 FROM pg_stat_user_indexes
 WHERE idx_scan = 0
-ORDER BY idx_used DESC;
+ORDER BY schemaname, tablename;
 
-# Check index size
+-- Check index size
 SELECT indexname, pg_size_pretty(pg_relation_size(indexrelid)) AS size
 FROM pg_stat_user_indexes
 ORDER BY pg_relation_size(indexrelid) DESC;
+
+-- Reindex pgvector index after large data loads
+REINDEX INDEX idx_document_blocks_embedding;
 ```
 
 ---
 
 ## 3.6 Database Design Validation Tools
+
+> Note: The validation tools listed below (schema linting, query analysis and CI checks) describe the intended validation pipeline. The repository may not include all helper scripts or `schema.sql` artifacts referenced here; some tooling integrations are specified but pending implementation.
 
 ### SQLCheck for Schema Linting
 
@@ -5297,12 +5473,20 @@ For critical queries, use EXPLAIN ANALYZE:
 # Connect to database
 psql $DATABASE_URL
 
-# Analyze matching query (get_advisor_matches_controller.py)
+# Analyze matching query
 EXPLAIN ANALYZE
 SELECT m.id, m.pyme_id, m.advisor_id, m.status
 FROM matches m
-WHERE m.pyme_id = 'pyme-123' AND m.status IN ('ACTIVE', 'FINALIZED')
+WHERE m.pyme_id = 'pyme-1' AND m.status IN ('ACTIVE', 'FINALIZED')
 ORDER BY m.created_at DESC;
+
+# Analyze pgvector similarity search
+EXPLAIN ANALYZE
+SELECT id, content_text, embedding <=> '[0.1, 0.2, ...]'::vector AS distance
+FROM document_blocks
+WHERE advisor_id = 'adv-1' AND thematic_category = 'initial_situation'
+ORDER BY embedding <=> '[0.1, 0.2, ...]'::vector
+LIMIT 5;
 
 # Check for Index Scan (good) vs Seq Scan (bad)
 ```
@@ -5312,19 +5496,40 @@ ORDER BY m.created_at DESC;
 Run after every migration to ensure data integrity:
 
 ```sql
--- Check for orphaned foreign keys
-SELECT * FROM matches m
-WHERE NOT EXISTS (SELECT 1 FROM pymes p WHERE p.id = m.pyme_id);
+-- Check for orphaned matches (pyme_id or advisor_id no longer exists)
+SELECT m.id FROM matches m
+WHERE NOT EXISTS (SELECT 1 FROM pymes p WHERE p.id = m.pyme_id AND p.deleted_at IS NULL);
 
--- Check for duplicate swipes
+-- Check for duplicate swipes (should be caught by UNIQUE constraint)
 SELECT pyme_id, advisor_id, COUNT(*) as cnt
 FROM swipes
 GROUP BY pyme_id, advisor_id
 HAVING COUNT(*) > 1;
 
--- Verify reputation scores are within bounds (1.0 - 5.0)
-SELECT advisor_id, score FROM reputations
-WHERE score < 1.0 OR score > 5.0;
+-- Verify reputation scores are within bounds (0.00 - 5.00)
+SELECT id, full_name, reputation_score FROM advisors
+WHERE reputation_score < 0 OR reputation_score > 5;
+
+SELECT id, company_name, reputation_score FROM pymes
+WHERE reputation_score < 0 OR reputation_score > 5;
+
+-- Verify needs scores sum to ~1.0 per PYME per version
+SELECT pyme_id, version, SUM(score) as total
+FROM pyme_needs_scores
+GROUP BY pyme_id, version
+HAVING ABS(SUM(score) - 1.0) > 0.01;
+
+-- Check for contracts with invalid commission for their tier
+SELECT id, duration_tier, duration_months, commission_percentage FROM contracts
+WHERE duration_tier = 'standard' AND commission_percentage != 3.00
+   OR duration_tier = 'medium'   AND commission_percentage != 5.00
+   OR duration_tier = 'high'     AND commission_percentage != 7.00;
+
+-- Verify soft-deleted users don't have active matches
+SELECT u.id, u.email FROM users u
+JOIN matches m ON (m.pyme_id IN (SELECT p.id FROM pymes p WHERE p.user_id = u.id)
+               OR m.advisor_id IN (SELECT a.id FROM advisors a WHERE a.user_id = u.id))
+WHERE u.deleted_at IS NOT NULL AND m.status = 'ACTIVE';
 ```
 
 ### CI/CD Validation
@@ -5346,7 +5551,9 @@ Add to `.github/workflows/backend-ci.yml`:
 
 ## 3.7 Caching Strategy (Redis)
 
-Redis caches frequently accessed data to reduce database load. All cache data is ephemeral—if Redis is lost, the application continues with database queries.
+> Note: The caching strategy described here is the target design. The repository does not currently fully implement Redis integration across the services; the text below documents the intended behavior and key patterns to implement.
+
+Redis caches frequently accessed data to reduce database load. All cache data is ephemeral — if Redis is lost, the application continues with database queries (Cache-Aside pattern).
 
 ### Cache Key Patterns
 
@@ -5354,23 +5561,23 @@ Redis caches frequently accessed data to reduce database load. All cache data is
 
 **Key Pattern:** `session:{user_id}`
 
-**TTL:** 10800 seconds (3 hours)
+**TTL:** 10800 seconds (3 hours — matches maximum JWT validity)
 
 **Use Case:** JWT validation and user context on every request
 
 ```json
 {
-  "user_id": "user-abc-123",
-  "email": "user@empresa.cr",
-  "account_type": "pyme",
+  "user_id": "user-pyme-1",
+  "email": "hilo@empresa.cr",
+  "account_type": "pyme_owner",
   "verified": true,
   "created_at": "2026-06-01T10:00:00Z"
 }
 ```
 
 **Invalidation:**
-- Manual on logout (session_cache_service.py)
-- Automatic after 3 hours
+- Manual on logout ([`session_cache_service.py`](backend/domains/user/services/session_cache_service.py))
+- Automatic after 3 hours (sliding TTL refreshed on each authenticated request)
 
 #### JWKS Cache (Auth0 Public Keys)
 
@@ -5379,22 +5586,6 @@ Redis caches frequently accessed data to reduce database load. All cache data is
 **TTL:** 10800 seconds (3 hours)
 
 **Use Case:** JWT signature validation without hitting Auth0 every request
-
-```json
-{
-  "keys": [
-    {
-      "kty": "RSA",
-      "use": "sig",
-      "kid": "abc123",
-      "n": "...",
-      "e": "AQAB",
-      "alg": "RS256"
-    }
-  ],
-  "cached_at": "2026-06-12T11:30:00Z"
-}
-```
 
 **Invalidation:**
 - Automatic after 3 hours
@@ -5406,22 +5597,21 @@ Redis caches frequently accessed data to reduce database load. All cache data is
 
 **TTL:** 86400 seconds (24 hours)
 
-**Use Case:** Frequently accessed during swipe operations (matching_card.tsx)
+**Use Case:** Frequently accessed during swipe operations in the matching interface
 
 ```json
 {
   "advisor_id": "adv-1",
   "full_name": "Mariana Solís",
-  "base_rate": 150000,
-  "reputation_score": 4.8,
-  "industries": ["Marketing Digital", "E-commerce"],
-  "specializations": [...]
+  "base_rate": 150000.00,
+  "reputation_score": 4.80,
+  "industries": ["Marketing Digital", "E-commerce"]
 }
 ```
 
 **Invalidation:**
-- Manual when profile updated (update_advisor_profile_controller.py)
-- Manual when reputation changes (reputation_service.py)
+- Manual when profile updated ([`update_advisor_profile_controller.py`](backend/domains/user/controllers/update_advisor_profile_controller.py))
+- Manual when reputation changes ([`reputation_service.py`](backend/domains/advisor/services/reputation_service.py))
 - Automatic after 24 hours
 
 #### Recommendation Cache (Pyme Domain)
@@ -5430,18 +5620,13 @@ Redis caches frequently accessed data to reduce database load. All cache data is
 
 **TTL:** 86400 seconds (24 hours)
 
-**Use Case:** Caches expensive AI-generated advisor recommendations
+**Use Case:** Caches pre-computed AI-generated advisor recommendations
 
 ```json
 {
-  "pyme_id": "pyme-123",
+  "pyme_id": "pyme-1",
   "recommendation_list": [
-    {
-      "advisor_id": "adv-1",
-      "name": "Mariana Solís",
-      "match_score": 0.92,
-      "base_rate": 150000
-    }
+    { "advisor_id": "adv-1", "name": "Mariana Solís", "score": 0.9200, "base_rate": 150000.00 }
   ],
   "generated_at": "2026-06-12T08:00:00Z"
 }
@@ -5449,7 +5634,7 @@ Redis caches frequently accessed data to reduce database load. All cache data is
 
 **Invalidation:**
 - Manual when advisor industry changes
-- Manual when PYME optimization areas updated
+- Manual when PYME needs assessment updated ([`submit_needs_assessment_controller.py`](backend/domains/pyme/controllers/submit_needs_assessment_controller.py))
 - Automatic after 24 hours
 
 ### Cache-Aside Pattern
@@ -5458,96 +5643,138 @@ All caches follow this pattern:
 
 1. Check Redis for key
 2. If hit: return immediately
-3. If miss: query database, cache result, return value
-4. On expiration: key deleted automatically
+3. If miss: query database, cache result with TTL, return value
+4. On mutation: explicitly invalidate related cache keys
 
-**Python Implementation (session_cache_service.py):**
+**Python Implementation** ([`session_cache_service.py`](backend/domains/user/services/session_cache_service.py)):
 
 ```python
 async def get_session(self, user_id: str):
     cache_key = f"session:{user_id}"
     cached = await self.redis.get(cache_key)
-    
+
     if cached:
         return json.loads(cached)  # Cache hit
-    
+
     # Cache miss — query database
     session = await self.session_repository.get(user_id)
-    
+
     if session:
         await self.redis.setex(
             cache_key,
             10800,  # 3 hours
             json.dumps(session.dict())
         )
-    
+
     return session
 ```
 
-### Redis Configuration
+### Cache Stampede Prevention
 
-From `config.py`:
+When a popular cache key expires (e.g., `recommendations:{pyme_id}` for a PYME with many active sessions), multiple concurrent requests may simultaneously hit the database to regenerate the same value. PymeBoost prevents this with a **mutex-based lock**:
 
 ```python
-REDIS_URL: str = ""  # redis://localhost:6379/0 (set in .env)
+async def get_with_lock(self, key: str, ttl: int, fetch_fn):
+    cached = await self.redis.get(key)
+    if cached:
+        return json.loads(cached)
+
+    lock_key = f"lock:{key}"
+    acquired = await self.redis.set(lock_key, "1", ex=10, nx=True)  # 10s lock
+
+    if acquired:
+        try:
+            value = await fetch_fn()
+            await self.redis.setex(key, ttl, json.dumps(value))
+            return value
+        finally:
+            await self.redis.delete(lock_key)
+    else:
+        # Another request is regenerating — wait briefly and retry
+        await asyncio.sleep(0.1)
+        return await self.get_with_lock(key, ttl, fetch_fn)
 ```
 
-**Expected format:** `redis://[user:password]@localhost:6379/0`
+This ensures only one request regenerates the cache while others wait, preventing N parallel database queries for the same data.
 
-For production: Redis instance with HA should be used (Cloud Memorystore on GCP recommended).
+### Eviction Policy
+
+**Policy:** `volatile-lru` — evicts the least-recently-used key among keys with an explicit TTL.
+
+All keys written to Redis have mandatory TTLs (enforced by the key patterns above). If a key without TTL were accidentally written, `volatile-lru` would never evict it. The mandatory-TTL rule in the codebase is the primary guard; the eviction policy is a secondary safety net.
+
+With 1 GB memory and ~500 concurrent sessions (~2 KB each ≈ 1 MB active data), eviction should not trigger in normal operation.
+
+### Redis Configuration
+
+From [`config.py`](backend/config.py):
+
+```python
+REDIS_URL: str = ""  # redis://[user:password]@host:6379/0
+```
+
+For production: Google Cloud Memorystore Standard tier with automatic failover (see §2.8 for full Redis instance configuration).
 
 ---
 
 ## 3.8 Database Seeding
 
+> Note: Database seeders are part of the intended workflow. The `backend/shared/database/seeders/` directory may contain scaffolding, but production-grade, idempotent seeding scripts could be incomplete or partial in the repository. The sections below describe the desired seeding behavior.
+
+### Approach
+
+PymeBoost uses **Python-based idempotent seeders** as the canonical seeding mechanism. The SQL seed data in section "Database Scripts → Seed Data" above serves as a human-readable reference and quick-start for local development (`psql < seed.sql`), but the production-grade seeders are Python scripts that generate UUID v4 IDs, handle relationships safely, and skip existing records.
+
 ### Seed Script Location
 
-**File:** `backend/shared/database/seeders/`
-
-All environments use the same seeding approach, with data size varying by environment:
-
-- **Development:** Full dataset (6 users, 3 PYMEs, 3 advisors, realistic matches)
-- **Staging:** Production-like subset (same structure, smaller scale)
-- **Testing:** Minimal data for test isolation
+**Directory:** [`backend/shared/database/seeders/`](backend/shared/database/seeders/)
 
 ### Usage
 
 ```bash
-# Seed development database with test data
+# Seed development database with full test data
 python -m backend.shared.database.seeders.seed_all --env development
 
-# Seed staging database
+# Seed staging database (production-like subset)
 python -m backend.shared.database.seeders.seed_all --env staging
 
-# Seed test database (minimal)
+# Seed test database (minimal, for test isolation)
 python -m backend.shared.database.seeders.seed_all --env test
 ```
 
-### Seed Data Includes
+### Seed Data by Environment
 
-**Users:** 3 PYMEs + 3 Advisors with Auth0 integration  
-**Industries:** 8 industry categories  
-**PYME Profiles:** Company names, industries, optimization areas  
-**Advisor Profiles:** Full names, base rates, specializations, reputation scores  
-**Matches:** Multiple PYME-Advisor pairs with different statuses  
-**Swipes:** Approval decisions  
-**Communications:** Chat sessions with sample messages  
-**Notifications:** User notification preferences  
+| Environment | Users | PYMEs | Advisors | Matches | Contracts | AI Data |
+|---|---|---|---|---|---|---|
+| **Development** | 6 | 3 | 3 | 3 | 1 active | Sample use cases + blocks |
+| **Staging** | 6 | 3 | 3 | 3 | 1 active | Sample use cases + blocks |
+| **Test** | 2 | 1 | 1 | 1 | 1 | Minimal |
 
 ### Idempotency
 
-All seed scripts are idempotent—safe to run multiple times. They:
-- Check for existing data before inserting
-- Use UUID generation for IDs
-- Skip if records already exist
+All seed scripts are idempotent — safe to run multiple times. They check for existing data before inserting, use deterministic IDs for reference data (industries, sub-industries, question catalog), and skip if records already exist.
+
+### AI Domain Seeding
+
+AI domain tables (`use_cases`, `document_blocks`, `recommendation_results`, `advisor_sub_industry_scores`) are seeded programmatically by running the PDF processing pipeline against sample use case PDFs stored in `backend/shared/database/seeders/fixtures/`. This ensures embeddings and classifications are generated by the actual pipeline rather than being hardcoded.
 
 ---
 
-## 3.9 Migration Strategy and Rollback
+## 3.9 Entity-Relationship Diagram
+
+![ER Diagram](docs/images/backend/er-diagram.png)
+
+---
+
+---
+
+## 3.10 Migration Strategy and Rollback
+
+> Note: The migration strategy below documents the intended Alembic workflow. The repository may not yet include a fully configured Alembic installation or a complete set of migration files — consider the commands and workflow here as the design to apply when migrations are added.
 
 ### Alembic Configuration
 
-Located at: `backend/shared/database/migrations/`
+Located at: [`backend/shared/database/migrations/`](backend/shared/database/migrations/)
 
 **Commands:**
 
@@ -5588,10 +5815,12 @@ Always review auto-generated migrations:
 
 ```python
 # Check that:
-# CREATE/ALTER statements are correct
-# Indexes are added for new columns
-# Foreign keys are explicit
-# Downgrade function is the exact inverse
+# - CREATE/ALTER statements are correct
+# - Indexes are added for new columns
+# - Foreign keys include ON DELETE policy
+# - CHECK constraints are present for status columns
+# - updated_at columns have trigger or application-level handling
+# - Downgrade function is the exact inverse
 ```
 
 #### 3. Test Migration
@@ -5645,10 +5874,7 @@ alembic current
 If migration affected data:
 
 1. **Backup production database** (GCP Cloud SQL automated backups)
-2. **Downgrade schema:**
-   ```bash
-   alembic downgrade -1
-   ```
+2. **Downgrade schema:** `alembic downgrade -1`
 3. **Restore data from backup** (point-in-time recovery via GCP)
 4. **Fix migration code** and reapply
 
@@ -5659,11 +5885,34 @@ If migration affected data:
 Examples:
 - `001_2026_06_12_create_user_domain.py`
 - `002_2026_06_12_create_advisor_domain.py`
-- `003_2026_06_13_add_advisor_promises.py`
+- `003_2026_06_13_add_promises_table.py`
+- `004_2026_06_14_add_project_subphases.py`
+
+### Safe Migration Patterns
+
+Migrations that may cause downtime and their safe alternatives:
+
+| Risky Operation | Safe Alternative |
+|---|---|
+| Adding `NOT NULL` column without default | Add with `DEFAULT` clause, then remove default later |
+| Renaming large tables | Create new table, migrate data, drop old |
+| Adding index on large table | Use `CREATE INDEX CONCURRENTLY` |
+| Dropping column | Add `deleted_at` to the column's model first, remove in next release |
+
+**Example: Safe NOT NULL column addition**
+
+```python
+def upgrade():
+    op.add_column('advisors', sa.Column('reputation_score', sa.Numeric(3,2), nullable=False, server_default='0.00'))
+    op.alter_column('advisors', 'reputation_score', server_default=None)
+
+def downgrade():
+    op.drop_column('advisors', 'reputation_score')
+```
 
 ### Database Connection Details
 
-**From config.py:**
+**From [`config.py`](backend/config.py):**
 
 ```python
 DATABASE_URL: str = ""  # postgresql://user:password@host:5432/pymeboost
@@ -5671,12 +5920,21 @@ DATABASE_POOL_SIZE: int = 5
 ```
 
 **Connection pooling:**
-- Pool size: 5 (default, configurable)
+- Pool size: 5 (default, configurable per environment)
 - Max overflow: 10
 - Pool timeout: 30 seconds
 - Pool recycle: 3600 seconds (1 hour)
 
-**Critical:** Keep `DATABASE_POOL_SIZE` low in development to catch connection leaks early.
+### Monitoring Post-Migration
+
+After production migration, monitor:
+
+- Database connection count (should remain stable)
+- Query latency (should not spike)
+- Error rate (should not increase)
+- Disk usage (should increase only by new data)
+
+Use Cloud SQL monitoring dashboard on GCP to verify.
 
 ### Testing Strategy for Migrations
 
@@ -5694,40 +5952,6 @@ bash backend/scripts/validate_database.sh
 
 # If passes, safe to deploy to production
 ```
-
-### Performance Considerations
-
-Migrations that may cause downtime:
-
-- Adding `NOT NULL` column without default (use `DEFAULT` clause)
-- Renaming large tables (use change tracking instead)
-- Full table rewrites during ALTER TABLE
-- Adding nullable columns
-- Adding indexes with `CONCURRENTLY`
-- Dropping unused indexes
-
-**Example: Safe NOT NULL column addition**
-
-```python
-# Good: Add with default, then remove default later
-def upgrade():
-    op.add_column('users', sa.Column('phone', sa.String, nullable=False, server_default=''))
-    op.alter_column('users', 'phone', server_default=None)
-
-def downgrade():
-    op.drop_column('users', 'phone')
-```
-
-### Monitoring Post-Migration
-
-After production migration, monitor:
-
-- Database connection count (should remain stable)
-- Query latency (should not spike)
-- Error rate (should not increase)
-- Disk usage (should increase only by new data)
-
-Use Cloud SQL monitoring dashboard on GCP to verify.
 
 ---
 
