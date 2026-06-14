@@ -4996,8 +4996,6 @@ The backend is organized **by domain**, not by technical layer. Each domain unde
 **Tests** — [backend/tests/](backend/tests/) — [unit](backend/tests/unit/) (per-domain) and [integration](backend/tests/integration/) suites
 
 ---
-<<<<<<< HEAD
-=======
 
 # Data Design
 
@@ -5790,4 +5788,3 @@ Each validation entry must follow this format:
 ---
 
 # MVP
->>>>>>> d88cb83ce6e5340106675b73b99f5c898627bd0f
