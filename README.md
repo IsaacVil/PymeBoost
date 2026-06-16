@@ -1076,7 +1076,7 @@ PymeBoost has four main user workflows that drive the platform. Each workflow sp
 
 **Key Interactions:**
 - Card animations (swipe, fade, slide)
-- Real-time compatibility score display
+- Real-time compatibility score display (1–5 scale; AI-generated from 70% sub-industry alignment + 30% advisor reputation)
 - Previous project showcase on each card
 - Estimated metrics improvement visible
 - One-tap messaging after approval
@@ -6001,76 +6001,32 @@ bash backend/scripts/validate_database.sh
 
 # Agents
 
-PymeBoost uses specialized AI agents as quality validators during development. Every agent follows the **RICO format** (Role, Instructions, Context, Output) and is run via **Claude Code**. All agents are grounded in this README — evaluations reference the architecture, layer rules, and design patterns documented here.
+PymeBoost uses specialized AI agents as quality validators during development. Every agent follows the **RICO format** (Role, Instructions, Context, Output) and is run via **Claude Code** slash commands. All agents are grounded in this README — evaluations reference the architecture, layer rules, and design patterns documented here.
 
-Agents are run before committing each feature. Findings and corrections are documented below under "Agent Validations".
+Agents are configured as Claude Code commands in [`.claude/commands/`](.claude/commands/) and run before committing each feature. Findings and corrections are documented below under "Agent Validations".
 
+---
 
 ## 4.1 Agent Catalog
 
-| Agent | File | Purpose | Applies to |
-|-------|------|---------|------------|
-| **SOLID Validator** | [.agents/solid-agent.md](.agents/solid-agent.md) | Detects violations of all 5 SOLID principles | Frontend + Backend |
-| **DRY Validator** | [.agents/dry-agent.md](.agents/dry-agent.md) | Detects duplicated logic, structure, types, and UI patterns | Frontend + Backend |
-| **Cohesion Validator** | [.agents/cohesion-agent.md](.agents/cohesion-agent.md) | Classifies cohesion level and detects low-cohesion modules | Frontend + Backend |
-| **Architecture Validator** | [.agents/architecture-agent.md](.agents/architecture-agent.md) | Validates code matches the documented architecture in this README | Frontend + Backend |
-| **Frontend Agent** | [.agents/frontend-agent.md](.agents/frontend-agent.md) | Generates and reviews React components, hooks, services, and stores | Frontend only |
-| **Backend Agent** | [.agents/backend-agent.md](.agents/backend-agent.md) | Generates and reviews FastAPI controllers, services, repositories, and schemas | Backend only |
-| **Database Agent** | [.agents/database-agent.md](.agents/database-agent.md) | Validates SQLAlchemy models, Alembic migrations, indexes, and seed data | Backend only |
-| **Testing Agent** | [.agents/testing-agent.md](.agents/testing-agent.md) | Generates and reviews Vitest, Playwright, and Pytest tests | Frontend + Backend |
+All agents accept a file path as `$ARGUMENTS` — pass it directly after the command name and the agent reads the file automatically. No copy-pasting code needed.
+
+| Agent | Command | Usage | Purpose | Applies to |
+|-------|---------|-------|---------|------------|
+| **SOLID Validator** | `/solid-validator` | `/solid-validator <path/to/file.ts>` | Detects violations of all 5 SOLID principles | Frontend + Backend |
+| **DRY Validator** | `/dry-validator` | `/dry-validator <path1.ts> <path2.ts>` | Detects duplicated logic, structure, types, and UI patterns | Frontend + Backend |
+| **Cohesion Validator** | `/cohesion-validator` | `/cohesion-validator <path/to/file.ts>` | Classifies cohesion level and detects low-cohesion modules | Frontend + Backend |
+| **Architecture Validator** | `/architecture-validator` | `/architecture-validator <path1.ts> <path2.ts>` | Validates code matches the documented architecture in this README | Frontend + Backend |
+| **Frontend Agent** | `/frontend-agent` | `/frontend-agent <path/to/file.tsx>` (review) or describe what to build (generate) | Generates and reviews React components, hooks, services, and stores | Frontend only |
+| **Backend Agent** | `/backend-agent` | `/backend-agent <path/to/file.py>` (review) or describe what to build (generate) | Generates and reviews FastAPI controllers, services, repositories, and schemas | Backend only |
+| **Database Agent** | `/database-agent` | `/database-agent <path/to/model.py>` (review) or describe new table (design) | Validates SQLAlchemy models, Alembic migrations, indexes, and seed data | Backend only |
+| **Testing Agent** | `/testing-agent` | `/testing-agent <path/to/source.ts>` (generate tests) or `<path/to/test.spec.ts>` (review tests) | Generates and reviews Vitest, Playwright, and Pytest tests | Frontend + Backend |
 
 ---
 
-## 4.2 How to Run an Agent
-
-All agents are run in Claude Code using this pattern:
-
-```
-Read .agents/[agent-name].md and [action] the following [code type] from the [feature/domain]:
-
-[paste code here]
-```
-
-For the full command reference per agent and use case, see [.agents/agents&mvpformat.md](.agents/agents&mvpformat.md).
-
----
-
-## 4.3 Skills
-
-Skills are specialized capabilities of Claude Code that complement the agents. Unlike agents, skills operate automatically over the current branch diff or the running app.
-
-### Installation
-
-The `frontend-design` skill must be installed once:
-
-```bash
-npx skills add https://github.com/anthropics/skills --skill frontend-design
-```
-
-All other skills are built into Claude Code — no installation needed.
-
-### Skill Catalog
-
-| Skill | Command | Purpose | When to use |
-|-------|---------|---------|-------------|
-| **Code Review** | `/code-review` | Scans the full branch diff for bugs and quality issues | After applying agent corrections |
-| **Code Review (fix)** | `/code-review --fix` | Same as above, applies fixes directly | When findings are clear and safe to auto-apply |
-| **Code Review (ultra)** | `/code-review ultra` | Deep multi-agent cloud review | Final review before demo |
-| **Simplify** | `/simplify` | Finds and applies reuse/simplification opportunities | After DRY agent detects duplication |
-| **Verify** | `/verify` | Runs the app and confirms a change works visually | After applying agent corrections |
-| **Run** | `/run` | Launches the project locally (Next.js + FastAPI) | Before demo, after backend changes |
-| **Security Review** | `/security-review` | Deep security scan of the diff | Before any PR touching auth, JWT, or contracts |
-| **Frontend Design** | `frontend-design` (external) | Reviews UI components for design quality and accessibility | After frontend-agent generates a component |
-
-For the full skill reference and recommended combinations per feature, see [.agents/agents&mvpformat.md](.agents/agents&mvpformat.md).
-
----
-
-## 4.4 Agent Validations
+## 4.2 Agent Validations
 
 Every time an agent is used during MVP development, findings and corrections are documented here. This section is organized by feature.
-
----
 
 ### Feature: Auth (Login / Register)
 

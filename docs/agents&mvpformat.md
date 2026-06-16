@@ -291,13 +291,13 @@ README.md documents execution in section MVP:
 
 ## Commands to Use Agents (During MVP)
 
-Agents are run via **Claude Code** (the CLI). Since we don't use VS Code Copilot Chat credits, all agent usage is done directly in Claude Code.
+Agents are run via **Claude Code** slash commands. They are configured in `.claude/commands/` and accept a file path directly — no copy-pasting code needed.
 
 ### How to run an agent in Claude Code
 
 1. Open Claude Code in your terminal or VS Code extension
-2. Use the command pattern below for the agent you want to run
-3. Claude Code reads the agent file and applies the RICO format (Role, Instructions, Context, Output)
+2. Type the slash command followed by the file path (see patterns below)
+3. Claude reads the file automatically via the `$ARGUMENTS` pattern and applies the RICO format
 4. Document findings and corrections in README.md under the "Agent Validations" section
 
 ---
@@ -308,27 +308,37 @@ Agents are run via **Claude Code** (the CLI). Since we don't use VS Code Copilot
 
 **SOLID Validator** — Detects violations of all 5 SOLID principles in FE or BE code
 ```
-Read .agents/solid-agent.md and analyze the following [component/hook/service/controller/repository] from the [feature/domain] feature for SOLID violations:
-
-[paste code here]
+/solid-validator <path/to/file.ts>
+```
+Example:
+```
+/solid-validator frontend/src/features/matching/hooks/useAdvisorMatching.ts
 ```
 
-**DRY Validator** — Detects duplicated logic, structure, types, or UI patterns
-```
-Read .agents/dry-agent.md and check the following code for DRY violations. These files are from the [feature/domain] feature:
+---
 
-File 1 — [filename]:
-[paste code]
-
-File 2 — [filename] (optional, for cross-file comparison):
-[paste code]
+**DRY Validator** — Detects duplicated logic across one or two files
 ```
+/dry-validator <path1.ts> <path2.ts>
+```
+Example (single file):
+```
+/dry-validator frontend/src/features/matching/services/matchingService.ts
+```
+Example (cross-file comparison):
+```
+/dry-validator frontend/src/features/matching/services/matchingService.ts frontend/src/features/messaging/services/messagingService.ts
+```
+
+---
 
 **Cohesion Validator** — Classifies and evaluates the cohesion level of a module
 ```
-Read .agents/cohesion-agent.md and evaluate the cohesion of the following [component/hook/service/controller/repository] from the [feature/domain] feature:
-
-[paste code here]
+/cohesion-validator <path/to/file.ts>
+```
+Example:
+```
+/cohesion-validator frontend/src/features/matching/hooks/useAdvisorMatching.ts
 ```
 
 ---
@@ -337,23 +347,15 @@ Read .agents/cohesion-agent.md and evaluate the cohesion of the following [compo
 
 **Architecture Validator** — Validates that code matches the documented architecture in README.md
 ```
-Read .agents/architecture-agent.md and validate the following [component/hook/service/controller/repository] from the [feature/domain] feature against the documented architecture:
-
-[paste code here]
+/architecture-validator <path/to/file.ts>
 ```
-
-For full feature validation (multiple files):
+Example (single file):
 ```
-Read .agents/architecture-agent.md and validate the full [feature/domain] feature. Here are all the files:
-
-Controller — [filename]:
-[paste code]
-
-Service — [filename]:
-[paste code]
-
-Repository — [filename]:
-[paste code]
+/architecture-validator frontend/src/features/matching/hooks/useAdvisorMatching.ts
+```
+Example (full feature — pass all files as arguments):
+```
+/architecture-validator frontend/src/features/matching/page.tsx frontend/src/features/matching/hooks/useAdvisorMatching.ts frontend/src/features/matching/services/matchingService.ts
 ```
 
 ---
@@ -361,66 +363,77 @@ Repository — [filename]:
 #### Technical Agents
 
 **Frontend Agent** — Generates or reviews React components, hooks, services, and stores
-```
-# Generate a new component/hook/service:
-Read .agents/frontend-agent.md and generate a [Primitive/Compound/Container/Hook/Service] for the [feature] feature. It should: [description of what it does]
 
-# Review existing code:
-Read .agents/frontend-agent.md and review the following [component/hook/service] from the [feature] feature:
-
-[paste code here]
+Review existing file (pass file path):
 ```
+/frontend-agent <path/to/file.tsx>
+```
+Example:
+```
+/frontend-agent frontend/src/features/matching/components/MatchingCard.tsx
+```
+
+Generate new code (describe what to build — no file path):
+```
+/frontend-agent generate a [Primitive/Compound/Container/Hook/Service] for the [feature] feature. It should: [description]
+```
+
+---
 
 **Backend Agent** — Generates or reviews FastAPI controllers, services, repositories, models, schemas, and events
-```
-# Generate new backend code:
-Read .agents/backend-agent.md and generate a [controller/service/repository/model/schema/event] for the [domain] domain. Use case: [description]
 
-# Review existing code:
-Read .agents/backend-agent.md and review the following [controller/service/repository] from the [domain] domain:
-
-[paste code here]
+Review existing file (pass file path):
 ```
+/backend-agent <path/to/file.py>
+```
+Example:
+```
+/backend-agent backend/domains/matching/services/matching_service.py
+```
+
+Generate new code (describe what to build — no file path):
+```
+/backend-agent generate a [controller/service/repository/model/schema/event] for the [domain] domain. Use case: [description]
+```
+
+---
 
 **Database Agent** — Validates SQLAlchemy models, Alembic migrations, indexes, and seed data
+
+Review existing file (pass file path):
 ```
-# Review a SQLAlchemy model:
-Read .agents/database-agent.md and review the following SQLAlchemy model from the [domain] domain:
-
-[paste code here]
-
-# Design a new table:
-Read .agents/database-agent.md and design the SQLAlchemy model and Alembic migration for a new table in the [domain] domain: [description of fields and relationships]
-
-# Review indexes:
-Read .agents/database-agent.md and validate that the following table has the correct indexes per section 2.22 of the README:
-
-[paste DDL or model code]
+/database-agent <path/to/model.py>
 ```
+Example:
+```
+/database-agent backend/domains/matching/models/match_model.py
+```
+
+Design a new table (describe — no file path):
+```
+/database-agent design the SQLAlchemy model and Alembic migration for a new table in the [domain] domain: [description of fields and relationships]
+```
+
+---
 
 **Testing Agent** — Generates or reviews tests (Vitest, Playwright, Pytest)
+
+Generate tests for a source file (pass source file path):
 ```
-# Generate frontend unit tests (Vitest):
-Read .agents/testing-agent.md and generate Vitest unit tests for the following [hook/validator/service] from the [feature] feature:
+/testing-agent <path/to/source.ts>
+```
+Example:
+```
+/testing-agent frontend/src/features/matching/hooks/useAdvisorMatching.ts
+```
 
-[paste source code here]
-
-# Generate backend unit tests (Pytest):
-Read .agents/testing-agent.md and generate Pytest unit tests for the following [controller/service/repository] from the [domain] domain:
-
-[paste source code here]
-
-# Generate Playwright E2E tests:
-Read .agents/testing-agent.md and generate Playwright E2E tests for the [workflow name] workflow (e.g., matching flow, contract negotiation)
-
-# Review existing tests:
-Read .agents/testing-agent.md and review the following test file for the [feature/domain]. Source code is also provided:
-
-Test file:
-[paste test code]
-
-Source file:
-[paste source code]
+Review an existing test file (pass test file path):
+```
+/testing-agent <path/to/test.spec.ts>
+```
+Example:
+```
+/testing-agent frontend/src/tests/features/matching.spec.ts
 ```
 
 ---
@@ -429,23 +442,23 @@ Source file:
 
 | Feature | Run these agents in order |
 |---------|--------------------------|
-| Auth (Login/Register) | `architecture-agent` → `solid-agent` → `frontend-agent` → `testing-agent` |
-| Matching (Advisor Cards) | `solid-agent` → `dry-agent` → `frontend-agent` → `backend-agent` → `testing-agent` |
-| Messaging (Chat) | `cohesion-agent` → `architecture-agent` → `frontend-agent` → `backend-agent` → `testing-agent` |
-| Contracts (Negotiation) | `solid-agent` → `architecture-agent` → `backend-agent` → `database-agent` → `testing-agent` |
-| Dashboard (Tracking) | `dry-agent` → `cohesion-agent` → `frontend-agent` → `testing-agent` |
-| Reports | `backend-agent` → `database-agent` → `testing-agent` |
+| Auth (Login/Register) | `/architecture-validator` → `/solid-validator` → `/frontend-agent` → `/testing-agent` |
+| Matching (Advisor Cards) | `/solid-validator` → `/dry-validator` → `/frontend-agent` → `/backend-agent` → `/testing-agent` |
+| Messaging (Chat) | `/cohesion-validator` → `/architecture-validator` → `/frontend-agent` → `/backend-agent` → `/testing-agent` |
+| Contracts (Negotiation) | `/solid-validator` → `/architecture-validator` → `/backend-agent` → `/database-agent` → `/testing-agent` |
+| Dashboard (Tracking) | `/dry-validator` → `/cohesion-validator` → `/frontend-agent` → `/testing-agent` |
+| Reports | `/backend-agent` → `/database-agent` → `/testing-agent` |
 
 ### Workflow per feature (using Claude Code)
 
 ```
 For each feature:
   1. Write the initial code (component, service, hook, controller, etc.)
-  2. Run: architecture-agent → verify layer rules
-  3. Run: solid-agent → verify design principles
-  4. Run: dry-agent or cohesion-agent → verify quality
-  5. Run: frontend-agent or backend-agent → generate/review
-  6. Run: testing-agent → generate tests
+  2. Run: /architecture-validator <file> → verify layer rules
+  3. Run: /solid-validator <file> → verify design principles
+  4. Run: /dry-validator <file> or /cohesion-validator <file> → verify quality
+  5. Run: /frontend-agent <file> or /backend-agent <file> → review generated code
+  6. Run: /testing-agent <file> → generate tests for the source file
   7. Apply all suggested corrections
   8. Document findings + corrections in README.md under "Agent Validations"
   9. Commit validated code
@@ -560,5 +573,298 @@ Installed via `npx skills add https://github.com/anthropics/skills --skill front
 | 4-5 | MVP Feature 5-6 | Dashboard + Reports (with validations) |
 | 5-6 | Testing | Critical tests + final documentation |
 | 6 | Demo | MVP running locally + presentation |
+
+---
+
+## Agent & Skill Smoke Tests
+
+Use these tests to verify that every agent and skill is working correctly before starting MVP development. Each test specifies the exact command to run and the file referenced.
+
+**How to run:** Type the command in Claude Code — the agent reads the file automatically via the `$ARGUMENTS` pattern. No copy-pasting code needed. A passing test produces structured output matching the expected format — if Claude gives a generic response or says "no code found", check that the file path is correct.
+
+---
+
+### Agents
+
+---
+
+#### `/solid-validator` — SOLID Validator
+
+**Type:** Review only
+
+**Command:**
+```
+/solid-validator frontend/src/features/matching/hooks/useAdvisorMatching.ts
+```
+
+The agent reads `useAdvisorMatching.ts` automatically and analyzes it against all 5 SOLID principles.
+
+**Expected output:** A report structured by S / O / L / I / D with ✅ / ⚠️ / ❌ status per principle, severity ratings, specific line references, and corrected code for any violations found.
+
+---
+
+#### `/dry-validator` — DRY Validator
+
+**Type:** Review only — pass two file paths for cross-file comparison
+
+**Command:**
+```
+/dry-validator frontend/src/features/matching/services/matchingService.ts frontend/src/features/messaging/services/messagingService.ts
+```
+
+The agent reads both files automatically via `$ARGUMENTS` and compares them for DRY violations.
+
+**Expected output:** A list of duplicated patterns found across both files, with a proposed shared abstraction and refactored code.
+
+---
+
+#### `/cohesion-validator` — Cohesion Validator
+
+**Type:** Review only
+
+**Command:**
+```
+/cohesion-validator frontend/src/features/matching/hooks/useAdvisorMatching.ts
+```
+
+The agent reads `useAdvisorMatching.ts` automatically and classifies its cohesion level.
+
+**Expected output:** A cohesion classification (Functional / Sequential / Communicational / Logical / Coincidental) with justification and specific findings for each responsibility detected in the module.
+
+---
+
+#### `/architecture-validator` — Architecture Validator
+
+**Type:** Review only — pass multiple file paths for full-feature validation
+
+**Command:**
+```
+/architecture-validator frontend/src/features/matching/page.tsx frontend/src/features/matching/hooks/useAdvisorMatching.ts frontend/src/features/matching/services/matchingService.ts
+```
+
+The agent reads all three files via `$ARGUMENTS` and validates the full matching feature layer by layer.
+
+**Expected output:** A layer-by-layer validation against the README architecture rules, flagging any violations (e.g. service calling fetch directly, hook importing from another feature, page containing business logic).
+
+---
+
+#### `/frontend-agent` — Frontend Agent
+
+**Type:** Generates code + Reviews existing code
+
+---
+
+**Test A — Generate (no file path — describe what to build):**
+
+**Command:**
+```
+/frontend-agent generate a Primitive component for the matching feature. It should display a single advisor card with: full name, specialization list, base rate (formatted as ₡ currency), and reputation score as stars. It receives all data via props — no API calls.
+```
+
+**Expected output:** A complete `.tsx` file following PymeBoost's design system (TailwindCSS tokens, Heroicons, Radix UI), TypeScript props interface, no internal state, no service calls, and a usage example.
+
+---
+
+**Test B — Review (pass file path):**
+
+**Command:**
+```
+/frontend-agent frontend/src/features/matching/components/MatchingCard.tsx
+```
+
+The agent reads `MatchingCard.tsx` automatically and reviews it as an existing file.
+
+**Expected output:** Architecture checklist (layer rules, cross-feature imports, API calls, Zod validation, TailwindCSS, naming, accessibility, TypeScript), design patterns matrix, and a numbered issues table with severity and fixes.
+
+---
+
+#### `/backend-agent` — Backend Agent
+
+**Type:** Generates code + Reviews existing code
+
+---
+
+**Test A — Generate (no file path — describe what to build):**
+
+**Command:**
+```
+/backend-agent generate a controller for the matching domain. Use case: create a swipe decision (approved or rejected) for a given pyme_id and advisor_id. The controller should validate input with Pydantic, delegate to MatchingService, and publish a MatchSwiped event on success.
+```
+
+**Expected output:** A complete FastAPI controller file with Pydantic request schema, dependency injection, service delegation, event publishing, and correct HTTP status codes. No business logic in the controller.
+
+---
+
+**Test B — Review (pass file path):**
+
+**Command:**
+```
+/backend-agent backend/domains/matching/services/matching_service.py
+```
+
+The agent reads `matching_service.py` automatically and reviews it against backend layer rules.
+
+**Expected output:** Layer rule checklist (no direct DB access, uses repositories, returns DTOs, publishes events), OWASP security checks, and a findings table with severity and corrections.
+
+---
+
+#### `/database-agent` — Database Agent
+
+**Type:** Designs new tables + Reviews existing models
+
+---
+
+**Test A — Design (no file path — describe what to build):**
+
+**Command:**
+```
+/database-agent design the SQLAlchemy model and Alembic migration for a new table in the matching domain: a match_expiration table that stores match_id (FK to matches), expires_at (TIMESTAMPTZ), and notified (Boolean, default false). Include the correct index for the background job that queries unnotified, expired matches.
+```
+
+**Expected output:** A complete SQLAlchemy model file, an Alembic migration with `upgrade()` and `downgrade()`, and the CREATE INDEX statement with justification.
+
+---
+
+**Test B — Review (pass file path):**
+
+**Command:**
+```
+/database-agent backend/domains/matching/models/match_model.py
+```
+
+The agent reads `match_model.py` automatically and validates it against the README schema spec.
+
+**Expected output:** Schema checklist against README section 2.18 (column types, nullability, ON DELETE behaviors, cross-domain FK rules), index validation against section 2.22, and a findings table.
+
+---
+
+#### `/testing-agent` — Testing Agent
+
+**Type:** Generates tests + Reviews existing tests
+
+---
+
+**Test A — Generate (pass source file path → agent generates tests for it):**
+
+**Command:**
+```
+/testing-agent frontend/src/features/matching/hooks/useAdvisorMatching.ts
+```
+
+The agent reads `useAdvisorMatching.ts` and generates the corresponding Vitest test file.
+
+**Expected output:** A complete Vitest test file with mocked dependencies (matchingService, notificationStore, TanStack Query), test cases for the happy path, error states, and edge cases (empty recommendations, failed swipe mutation).
+
+---
+
+**Test B — Review (pass test file path → agent reviews coverage and correctness):**
+
+**Command:**
+```
+/testing-agent frontend/src/tests/features/matching.spec.ts
+```
+
+The agent reads the test file and reviews it against the README testing strategy.
+
+**Expected output:** Coverage assessment, missing edge cases, mock correctness evaluation, and suggested additional test cases.
+
+---
+
+### Skills
+
+Skills run automatically over the project — no file needs to be open and no code needs to be pasted.
+
+---
+
+#### `/code-review`
+
+**When to test:** After making any code change in the branch.
+
+**Command:**
+```
+/code-review
+```
+
+**Expected output:** A findings list organized by file and line number, with severity (High / Med / Low) and specific corrections. If no changes are staged, it will say the diff is empty.
+
+---
+
+#### `/code-review --fix`
+
+**When to test:** After `/code-review` produces findings you want applied automatically.
+
+**Command:**
+```
+/code-review --fix
+```
+
+**Expected output:** The same findings as `/code-review`, but Claude applies the corrections directly to the files instead of just reporting them.
+
+---
+
+#### `/code-review ultra`
+
+**When to test:** Before a demo or PR merge. Takes longer — spawns multiple review agents in parallel.
+
+**Command:**
+```
+/code-review ultra
+```
+
+**Expected output:** A deeper multi-agent report covering correctness bugs, architecture violations, security issues, and simplification opportunities across the entire branch diff.
+
+---
+
+#### `/simplify`
+
+**When to test:** After `/dry-validator` finds duplication, or after any refactoring pass.
+
+**Command:**
+```
+/simplify
+```
+
+**Expected output:** A list of simplification opportunities (reuse, dead code, over-abstraction) with the fixes applied directly to the working tree.
+
+---
+
+#### `/security-review`
+
+**When to test:** Before any PR that touches auth, JWT validation, contracts, or messaging.
+
+**Command:**
+```
+/security-review
+```
+
+**Expected output:** OWASP-aligned findings for the current diff — injection risks, broken auth, insecure data exposure, missing input validation, hardcoded secrets.
+
+---
+
+#### `/verify`
+
+**When to test:** After applying agent corrections, to confirm nothing broke visually.
+
+**Prerequisite:** The app must be running locally (`npm run dev` for frontend, `uvicorn` for backend).
+
+**Command:**
+```
+/verify
+```
+
+**Expected output:** Claude launches a browser, navigates the affected feature, and reports whether the change works as expected or introduces a regression.
+
+---
+
+#### `/run`
+
+**When to test:** To confirm the project starts cleanly from scratch.
+
+**Command:**
+```
+/run
+```
+
+**Expected output:** Claude detects the project type (Next.js + FastAPI), runs the startup commands, and reports whether both servers are up and accessible.
 
 ---

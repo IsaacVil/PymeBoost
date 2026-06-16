@@ -78,7 +78,9 @@ You know where duplication is acceptable in PymeBoost (e.g., domain isolation in
 
 ## Context
 
-**Provide the source code to analyze.** Can be one file or multiple files at once (DRY violations often span multiple files):
+**File(s) to analyze:** `$ARGUMENTS`
+
+Read the file(s) at the path(s) above, then analyze them according to the instructions below. Can be one file or multiple files at once (DRY violations often span multiple files):
 
 - **Frontend examples:** Two or more React components, multiple feature services, multiple Zod schemas, multiple hooks with similar logic
 - **Backend examples:** Multiple controllers with similar patterns, multiple repositories with repeated queries, multiple Pydantic schemas for the same entity

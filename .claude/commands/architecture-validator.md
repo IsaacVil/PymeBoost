@@ -162,7 +162,9 @@ You evaluate code not against generic best practices but against PymeBoost's spe
 
 ## Context
 
-**Provide the source code to analyze.** For best results, provide the full file rather than a snippet, since architectural deviations often appear in imports and class structure:
+**File to analyze:** `$ARGUMENTS`
+
+Read the file at the path above, then analyze it according to the instructions below. For best results the full file is used rather than a snippet, since architectural deviations often appear in imports and class structure:
 
 - **Frontend:** Component (`.tsx`), hook (`use*.ts`), service (`*Service.ts`), store (`*Store.ts`), page (`page.tsx`), layout (`layout.tsx`)
 - **Backend:** Controller (`*_controller.py`), service class (`*_service.py`), repository (`*_repository.py`), model (`*_model.py`), Pydantic schema (`*_schema.py` or `*_request.py` / `*_response.py`), event (`*_event.py`)

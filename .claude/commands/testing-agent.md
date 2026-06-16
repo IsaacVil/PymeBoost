@@ -214,10 +214,12 @@ You never generate tests that pass trivially, skip edge cases, or test implement
 
 ## Context
 
-**Provide one of the following:**
+**File to test or review:** `$ARGUMENTS`
 
-- **Generation request:** Paste the source code to test (component, hook, service, validator, controller, service class, repository) and specify the layer and feature/domain. The agent generates the corresponding test file.
-- **Review request:** Paste existing test file(s) and the source code they test. The agent identifies missing coverage, incorrect assertions, wrong mocking strategy, or misalignment with the README testing rules.
+If a file path is provided above, read it and treat this as a **generation request** — generate the corresponding test file. If a test file path is provided, treat this as a **review request**.
+
+- **Generation request:** File at path above will be read; the agent generates the corresponding test file for that source code
+- **Review request:** File at path above will be read; the agent identifies missing coverage, incorrect assertions, wrong mocking strategy, or misalignment with the README testing rules
 
 **Reference test files from README:**
 - FE unit: `frontend/src/tests/features/matching.spec.ts`, `frontend/src/tests/features/contracts.spec.ts`, `frontend/src/tests/shared/helpers.spec.ts`
@@ -287,3 +289,7 @@ pytest backend/tests/unit --cov=backend --cov-report=term-missing --cov-fail-und
 pytest backend/tests/integration --cov=backend --cov-report=term-missing --cov-fail-under=80
 ```
 ```
+
+---
+
+After producing the output above, write the generated test code to its correct file path using the Write tool. Do not ask for confirmation — write it directly.
