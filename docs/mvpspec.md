@@ -17,7 +17,10 @@
 |------|----------|---------------|
 | **Estructura del código** | Construir sobre el esqueleto existente (`backend/domains/`, `frontend/src/features/`), **no** una carpeta `/mvp` aparte | El esqueleto **es** la arquitectura documentada (README §1.2, §2.2, §2.16); los 8 agentes están hardcodeados a esos paths. Una carpeta paralela rompería la alineación y los comandos. |
 | **Base de datos local** | **PostgreSQL en Docker** | Fiel al README (Cloud SQL = Postgres). Portable para la demo en cualquier máquina. |
-| **Autenticación** | **Mock JWT propio** + usuarios seed | Cero dependencia de Auth0/servicio externo; corre 100% local; soporta roles PYME/Asesor. Desviación de Auth0 documentada en §2.3. |
+| **Autenticación** | **Mock JWT propio** con **password real (bcrypt)** + flujo register/login | Cero dependencia de Auth0/servicio externo; corre 100% local; soporta roles PYME/Asesor. Requiere extensión de schema (credenciales) ya que el diseño original delegaba auth en Auth0. Desviación documentada en §2.3. |
+| **Motor Postgres** | Imagen **`pgvector/pgvector:pg16`** en Docker | El schema usa `vector(32)` (`PB_NeedsAssessments.needsVector`); la imagen trae la extensión `pgvector` para que `creationScript.sql` corra **sin modificarse**, aunque la IA esté mockeada. |
+| **Datos demo** | Nuevo **`seed_dev.sql`** (transaccional) tras catálogos | El `seed.sql` actual solo cubre catálogos; las tablas transaccionales requieren datos demo (usuarios, advisors, matches) para login y demostración. |
+| **Convenciones locales** | BE `:8000`, FE `:3000`, CORS → `localhost:3000`, scoring de IA determinista | Defaults para integración FE↔BE local. |
 | **Schema / migraciones** | **SQL scripts existentes** (`creationScript.sql` → `seed.sql`) | Ya existen y están alineados con el DBML. Evita doble fuente de verdad mientras los modelos son stubs. Alembic (README §3.3/§3.10) queda como envoltura opcional posterior. |
 | **Alcance** | Las **6 features core** completas | Auth, Matching, Messaging, Contracts, Dashboard, Reports — según `agents&mvpformat.md`. |
 | **IA** | **Mock local** (stub determinista) | Sin acceso a embeddings/LLM/pgvector reales; permitido por el enunciado. |
@@ -56,8 +59,10 @@ divergir.
 
 ### 2.3 Desviaciones explícitas respecto al README
 
-1. **Auth0 → mock JWT**: el flujo OAuth/JWKS se sustituye por emisión y validación
-   local de JWT. El contrato (claims, roles, guard) se mantiene equivalente.
+1. **Auth0 → mock JWT con bcrypt**: el flujo OAuth/JWKS se sustituye por emisión y
+   validación local de JWT (HS256). Se **extiende el schema** con almacenamiento de
+   credenciales (hash bcrypt) porque el diseño original delegaba auth en Auth0. El
+   contrato (claims, roles, guard) se mantiene equivalente.
 2. **Pub/Sub → event bus in-process**: los eventos de dominio se publican en memoria;
    sin broker externo.
 3. **GCS / KMS / Redis cloud → equivalentes locales/opcionales**.
@@ -82,13 +87,15 @@ Objetivo: dejar el andamio **corriendo en local** (sin features todavía). En or
 - [ ] `backend/.env.example`: perfil local completo (no existe hoy).
 
 ### WS-2 · Data layer local
-- [ ] `docker-compose.yml` con Postgres + volumen + montaje del init script.
-- [ ] Script `db init` que corre `database/scripts/creationScript.sql` → `seed.sql`.
+- [ ] `docker-compose.yml` con imagen `pgvector/pgvector:pg16` + volumen + montaje de init scripts.
+- [ ] Init order: `creationScript.sql` → `seed.sql` (catálogos) → `seed_dev.sql` (demo transaccional).
+- [ ] Crear `seed_dev.sql` con usuarios/advisors/matches demo (incluye credenciales bcrypt).
 - [ ] Verificar que `creationScript.sql` está alineado con el DBML actual.
 
-### WS-3 · Auth mock JWT
-- [ ] `shared/auth/jwt_validator.py`: validar JWT local (HS256, `JWT_SECRET`).
-- [ ] Emisor de tokens local + login mock contra usuarios seed.
+### WS-3 · Auth mock JWT (bcrypt)
+- [ ] Extender schema: almacenamiento de credenciales (hash bcrypt) — desviación documentada (§2.3).
+- [ ] Flujo `register` + `login` que verifica password con bcrypt y emite JWT (HS256, `JWT_SECRET`).
+- [ ] `shared/auth/jwt_validator.py`: validar JWT local.
 - [ ] `permission_checker.py`: guard por rol (PYME / Asesor).
 
 ### WS-4 · Frontend ejecutable
