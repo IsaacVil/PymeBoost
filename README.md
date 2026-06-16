@@ -5491,193 +5491,187 @@ PymeBoost indexing strategy optimizes for the most frequent queries defined by t
 
 ### Index Specification by Domain
 
+#### Catalogue & Shared
+
+```sql
+-- Sub-industry lookups by parent industry
+CREATE INDEX "idx_subindustries_industry" ON "PB_SubIndustries"("industryId");
+
+-- Measures by metric value type
+CREATE INDEX "idx_measures_valuetype" ON "PB_Measures"("metricValueTypeId");
+```
+
 #### User Domain
 
 ```sql
--- Fast email lookups for authentication (login every request)
-CREATE INDEX idx_users_email ON users(email);
+-- Fast session retrieval by auth0Id, pyme, advisor and status
+CREATE INDEX "idx_sessions_auth0"   ON "PB_Sessions"("auth0Id");
+CREATE INDEX "idx_sessions_pyme"    ON "PB_Sessions"("pymeId");
+CREATE INDEX "idx_sessions_advisor" ON "PB_Sessions"("advisorId");
+CREATE INDEX "idx_sessions_status"  ON "PB_Sessions"("sessionStatusId");
 
--- Fast session retrieval by user (JWT validation on every request)
-CREATE INDEX idx_sessions_user_id ON sessions(user_id);
-
--- Clean up expired sessions (background job)
-CREATE INDEX idx_sessions_expires_at ON sessions(expires_at)
-  WHERE expires_at > NOW();
+-- Pyme roles and advisor roles
+CREATE INDEX "idx_pymeRoles_role"    ON "PB_PymeRoles"("roleId");
+CREATE INDEX "idx_advisorRoles_role" ON "PB_AdvisorRoles"("roleId");
 ```
 
 #### Pyme Domain
 
 ```sql
--- Fast PYME lookup by user (one-to-one relationship)
-CREATE INDEX idx_pymes_user_id ON pymes(user_id);
+-- Fast PYME filtering by size, industry and status
+CREATE INDEX "idx_pymes_companySize" ON "PB_Pymes"("companySizeId");
+CREATE INDEX "idx_pymes_industry"    ON "PB_Pymes"("industryId");
+CREATE INDEX "idx_pymes_status"      ON "PB_Pymes"("pymeStatusId");
 
--- Fast industry filtering (used in matching pre-filter)
-CREATE INDEX idx_pymes_industry_id ON pymes(industry_id);
-
--- Retrieve optimization areas per PYME
-CREATE INDEX idx_optimization_areas_pyme_id ON optimization_areas(pyme_id);
-
--- Needs assessment scores per PYME (latest version)
-CREATE INDEX idx_pyme_needs_scores_pyme_id ON pyme_needs_scores(pyme_id, version DESC);
-
--- Sub-industry lookups by parent industry
-CREATE INDEX idx_sub_industries_industry_id ON sub_industries(industry_id);
+-- Questions and needs assessments
+CREATE INDEX "idx_questions_active"                  ON "PB_QuestionCatalog"("isActive");
+CREATE INDEX "idx_questionSubIndustries_subindustry" ON "PB_QuestionSubIndustries"("subIndustryId");
+CREATE UNIQUE INDEX "uq_needs_activePerPyme"         ON "PB_NeedsAssessments"("pymeId") WHERE "isActive";
+CREATE INDEX "idx_answers_assessment"                ON "PB_NeedsAssessmentAnswers"("needsAssessmentId");
 ```
 
 #### Advisor Domain
 
 ```sql
--- Fast advisor lookup by user
-CREATE INDEX idx_advisors_user_id ON advisors(user_id);
+-- Fast advisor filtering by status
+CREATE INDEX "idx_advisors_status" ON "PB_Advisors"("advisorStatusId");
 
--- Filter advisors by specialization industry (discovery service)
-CREATE INDEX idx_specializations_advisor_id ON specializations(advisor_id);
-CREATE INDEX idx_specializations_industry ON specializations(industry);
+-- Experiences and certifications
+CREATE INDEX "idx_advisorExperiences_advisor"    ON "PB_AdvisorExperiences"("advisorId");
+CREATE INDEX "idx_advisorCertifications_advisor" ON "PB_AdvisorCertifications"("advisorId");
 
--- Promises per advisor (max 3 active, frequently queried)
-CREATE INDEX idx_promises_advisor_id ON promises(advisor_id);
+-- Industry and sub-industry scores
+CREATE INDEX "idx_advisorIndustries_industry"      ON "PB_AdvisorIndustries"("industryId");
+CREATE INDEX "idx_advisorSubScores_subindustry"    ON "PB_AdvisorSubIndustryScores"("subIndustryId");
 
--- Promise sub-industry scores for relevance ranking (dot product with PYME needs vector)
-CREATE INDEX idx_promise_subindustry_scores_promise_id     ON promise_subindustry_scores(promise_id);
-CREATE INDEX idx_promise_subindustry_scores_subindustry_id ON promise_subindustry_scores(subindustry_id);
+-- Promises per advisor
+CREATE INDEX "idx_promises_advisor" ON "PB_Promises"("advisorId");
+CREATE INDEX "idx_promises_measure" ON "PB_Promises"("measureId");
+
+-- Promise sub-industry scores for relevance ranking
+CREATE INDEX "idx_promiseSubScores_promise"     ON "PB_PromiseSubIndustryScores"("promiseId");
+CREATE INDEX "idx_promiseSubScores_subindustry" ON "PB_PromiseSubIndustryScores"("subIndustryId");
 ```
 
 #### Matching Domain
 
 ```sql
--- Fast match retrieval for a PYME
-CREATE INDEX idx_matches_pyme_id ON matches(pyme_id);
+-- Fast match retrieval for a PYME and advisor
+CREATE INDEX "idx_matches_pyme"    ON "PB_Matches"("pymeId");
+CREATE INDEX "idx_matches_advisor" ON "PB_Matches"("advisorId");
+CREATE INDEX "idx_matches_status"  ON "PB_Matches"("matchStatusId");
 
--- Fast match retrieval for an advisor
-CREATE INDEX idx_matches_advisor_id ON matches(advisor_id);
-
--- Filter matches by status (active, finalized, cancelled)
-CREATE INDEX idx_matches_status ON matches(status);
-
--- Prevent duplicate swipes (also enforced by UNIQUE constraint)
-CREATE UNIQUE INDEX idx_swipes_unique_pair ON swipes(pyme_id, advisor_id);
+-- Match status history
+CREATE INDEX "idx_matchStatus_match" ON "PB_MatchStatusHistory"("matchId");
 ```
 
 #### Communication Domain
 
 ```sql
--- Fast chat session lookup for a match
-CREATE INDEX idx_chat_sessions_match_id ON chat_sessions(match_id);
+-- Fast message retrieval by session ordered by time
+CREATE INDEX "idx_messages_session" ON "PB_Messages"("chatSessionId", "createdAt");
 
--- Fast message retrieval by session (pagination, ordered by time)
-CREATE INDEX idx_messages_session_id ON messages(session_id, sent_at DESC);
+-- Message status history
+CREATE INDEX "idx_messageStatus_message" ON "PB_MessageStatusHistory"("messageId");
 
--- Count unread messages (notification badge)
-CREATE INDEX idx_messages_session_read_status ON messages(session_id, read)
-  WHERE read = FALSE;
+-- Blocked message attempts by session
+CREATE INDEX "idx_blocked_session" ON "PB_BlockedMessageAttempts"("chatSessionId");
 ```
 
 #### Contract Domain
 
 ```sql
--- Fast contract lookup for a match
-CREATE INDEX idx_contracts_match_id ON contracts(match_id);
+-- Contract versions by contract and status
+CREATE INDEX "idx_cv_contract" ON "PB_ContractVersions"("contractId");
+CREATE INDEX "idx_cv_status"   ON "PB_ContractVersions"("contractVersionStatusId");
 
--- Filter contracts by status (used in dashboards)
-CREATE INDEX idx_contracts_status ON contracts(status);
-
--- Retrieve metrics for a contract
-CREATE INDEX idx_contract_metrics_contract_id ON contract_metrics(contract_id);
-
--- Retrieve phases for a contract (ordered)
-CREATE INDEX idx_contract_phases_contract_id ON contract_phases(contract_id, phase_order);
-
--- Retrieve negotiations for a contract
-CREATE INDEX idx_negotiations_contract_id ON negotiations(contract_id);
+-- Contract metrics and roadmap phases
+CREATE INDEX "idx_contractMetrics_version"   ON "PB_ContractMetrics"("contractVersionId");
+CREATE INDEX "idx_roadmap_version"           ON "PB_ContractRoadmapPhases"("contractVersionId");
+CREATE INDEX "idx_phaseMetricTargets_phase"  ON "PB_PhaseMetricTargets"("phaseId");
+CREATE INDEX "idx_subphases_phase"           ON "PB_ContractSubPhases"("phaseId");
 ```
 
 #### Project Domain
 
 ```sql
--- Fast project lookup for a contract (one-to-one)
-CREATE UNIQUE INDEX idx_projects_contract_id ON projects(contract_id);
+-- Fast project filtering by status
+CREATE INDEX "idx_projects_status" ON "PB_Projects"("projectStatusId");
 
--- Fast phase retrieval by project (ordered timeline)
-CREATE INDEX idx_project_phases_project_id ON project_phases(project_id, phase_order);
-
--- Fast subphase retrieval by phase (ordered)
-CREATE INDEX idx_project_subphases_phase_id ON project_subphases(phase_id, sub_order);
-
--- Metric readings per subphase
-CREATE INDEX idx_subphase_metric_readings_subphase ON subphase_metric_readings(subphase_id);
-
--- Phase metric targets per phase
-CREATE INDEX idx_phase_metric_targets_phase ON phase_metric_targets(phase_id);
-
--- Health history per project (time-ordered)
-CREATE INDEX idx_project_health_project_id ON project_health_history(project_id, recorded_at DESC);
-
--- Documents per project
-CREATE INDEX idx_documents_project_id ON documents(project_id);
-CREATE INDEX idx_documents_status ON documents(status) WHERE status = 'PENDING';
+-- Health history and KPI validations per project
+CREATE INDEX "idx_health_project" ON "PB_ProjectHealthHistory"("projectId", "recordedAt");
+CREATE INDEX "idx_kpi_project"    ON "PB_ProjectKpiValidations"("projectId");
 ```
 
 #### AI Domain
 
 ```sql
+-- Documents by media file, type and status
+CREATE INDEX "idx_documents_mediafile" ON "PB_Documents"("mediafileId");
+CREATE INDEX "idx_documents_type"      ON "PB_Documents"("documentTypeId");
+CREATE INDEX "idx_documents_status"    ON "PB_Documents"("documentStatusId");
+
 -- Use cases per advisor
-CREATE INDEX idx_use_cases_advisor_id ON use_cases(advisor_id);
-CREATE INDEX idx_use_cases_status ON use_cases(status) WHERE status = 'PENDING';
+CREATE INDEX "idx_useCases_advisor"  ON "PB_UseCases"("advisorId");
+CREATE INDEX "idx_useCases_industry" ON "PB_UseCases"("industryId");
+CREATE INDEX "idx_useCases_status"   ON "PB_UseCases"("useCaseStatusId");
 
--- Document blocks per use case and advisor
-CREATE INDEX idx_document_blocks_use_case_id ON document_blocks(use_case_id);
-CREATE INDEX idx_document_blocks_advisor_id ON document_blocks(advisor_id);
+-- Document blocks per use case and category
+CREATE INDEX "idx_blocks_useCase"  ON "PB_DocumentBlocks"("useCaseId");
+CREATE INDEX "idx_blocks_category" ON "PB_DocumentBlocks"("thematicCategoryId");
+CREATE INDEX "idx_blocks_industry" ON "PB_DocumentBlocks"("industryId");
 
--- Thematic category filtering for similar project retrieval
-CREATE INDEX idx_document_blocks_category ON document_blocks(advisor_id, thematic_category);
+-- pgvector HNSW indexes for embedding similarity search
+CREATE INDEX "idx_blocks_embedding_hnsw"
+    ON "PB_DocumentBlocks" USING hnsw ("embedding" vector_cosine_ops);
+CREATE INDEX "idx_industries_embedding_hnsw"
+    ON "PB_Industries" USING hnsw ("representativeEmbedding" vector_cosine_ops);
+CREATE INDEX "idx_subindustries_embedding_hnsw"
+    ON "PB_SubIndustries" USING hnsw ("representativeEmbedding" vector_cosine_ops);
 
--- pgvector index for embedding similarity search (IVFFlat)
--- Create after initial data load; lists = sqrt(row_count)
-CREATE INDEX idx_document_blocks_embedding ON document_blocks
-  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-
--- Recommendation results per PYME (sorted by score)
-CREATE INDEX idx_recommendation_results_pyme ON recommendation_results(pyme_id, score DESC);
-
--- Advisor sub-industry scores per advisor
-CREATE INDEX idx_advisor_sub_industry_scores ON advisor_sub_industry_scores(advisor_id);
+-- Recommendation sets and items
+CREATE UNIQUE INDEX "uq_recommendation_activePerPyme"
+    ON "PB_RecommendationSets"("pymeId") WHERE "isActive";
+CREATE INDEX "idx_recItems_advisor" ON "PB_RecommendationItems"("advisorId");
 ```
 
 #### Review Domain
 
 ```sql
--- Retrieve all reviews where this PYME was involved (reputation + history)
-CREATE INDEX idx_reviews_pyme ON "PB_Reviews"("pymeId");
-
--- Retrieve all reviews where this advisor was involved (reputation + history)
-CREATE INDEX idx_reviews_advisor ON "PB_Reviews"("advisorId");
-
--- Filter reviews by who wrote them (pyme vs advisor)
-CREATE INDEX idx_reviews_reviewer_account_type ON "PB_Reviews"("reviewerAccountTypeId");
-
--- Retrieve reviews for a project
-CREATE INDEX idx_reviews_project ON "PB_Reviews"("projectId");
+-- Retrieve reviews by pyme, advisor and project
+CREATE INDEX "idx_reviews_pyme"    ON "PB_Reviews"("pymeId");
+CREATE INDEX "idx_reviews_advisor" ON "PB_Reviews"("advisorId");
 ```
 
 #### Notification Domain
 
 ```sql
--- Fast notification retrieval for a user (feed pagination)
-CREATE INDEX idx_notifications_user_id ON notifications(user_id, created_at DESC);
+-- Fast notification retrieval by pyme, advisor and type
+CREATE INDEX "idx_notifications_pyme"    ON "PB_Notifications"("recipientPymeId");
+CREATE INDEX "idx_notifications_advisor" ON "PB_Notifications"("recipientAdvisorId");
+CREATE INDEX "idx_notifications_type"    ON "PB_Notifications"("notificationTypeId");
 
--- Count unread notifications (badge)
-CREATE INDEX idx_notifications_read_status ON notifications(user_id, read)
-  WHERE read = FALSE;
+-- Notification deliveries and status history
+CREATE INDEX "idx_deliveries_notification" ON "PB_NotificationDeliveries"("notificationId");
+CREATE INDEX "idx_deliveryStatus_delivery" ON "PB_NotificationDeliveryStatusHistory"("deliveryId");
 ```
 
 #### Event Domain
 
 ```sql
--- Filter events by type (audit queries, event replay)
-CREATE INDEX idx_domain_events_event_type ON domain_events(event_type);
+-- Filter events by type, aggregate and time
+CREATE INDEX "idx_events_type"      ON "PB_DomainEvents"("eventTypeId");
+CREATE INDEX "idx_events_aggregate" ON "PB_DomainEvents"("aggregateType", "aggregateId");
+CREATE INDEX "idx_events_occurred"  ON "PB_DomainEvents"("occurredAt");
+```
 
--- Time-range queries for audit (ordered by occurrence)
-CREATE INDEX idx_domain_events_occurred_at ON domain_events(occurred_at DESC);
+#### Media Domain
+
+```sql
+-- Media file lookups by type, user and deletion status
+CREATE INDEX "idx_mediafiles_type"    ON "PV_MediaFiles"("mediatypeid");
+CREATE INDEX "idx_mediafiles_userid"  ON "PV_MediaFiles"("userid");
+CREATE INDEX "idx_mediafiles_deleted" ON "PV_MediaFiles"("deleted");
 ```
 
 ### Index Maintenance
@@ -5696,8 +5690,8 @@ SELECT indexname, pg_size_pretty(pg_relation_size(indexrelid)) AS size
 FROM pg_stat_user_indexes
 ORDER BY pg_relation_size(indexrelid) DESC;
 
--- Reindex pgvector index after large data loads
-REINDEX INDEX idx_document_blocks_embedding;
+-- Reindex pgvector HNSW index after large data loads
+REINDEX INDEX "idx_blocks_embedding_hnsw";
 ```
 
 ---
@@ -5728,17 +5722,17 @@ psql $DATABASE_URL
 
 # Analyze matching query
 EXPLAIN ANALYZE
-SELECT m.id, m.pyme_id, m.advisor_id, m.status
-FROM matches m
-WHERE m.pyme_id = 'pyme-1' AND m.status IN ('ACTIVE', 'FINALIZED')
-ORDER BY m.created_at DESC;
+SELECT m."id", m."pymeId", m."advisorId", m."matchStatusId"
+FROM "PB_Matches" m
+WHERE m."pymeId" = 'pyme-1'
+ORDER BY m."createdAt" DESC;
 
 # Analyze pgvector similarity search
 EXPLAIN ANALYZE
-SELECT id, content_text, embedding <=> '[0.1, 0.2, ...]'::vector AS distance
-FROM document_blocks
-WHERE advisor_id = 'adv-1' AND thematic_category = 'initial_situation'
-ORDER BY embedding <=> '[0.1, 0.2, ...]'::vector
+SELECT "id", "content", "embedding" <=> '[0.1, 0.2, ...]'::vector AS distance
+FROM "PB_DocumentBlocks"
+WHERE "advisorId" = 'adv-1' AND "thematicCategoryId" = 'initial_situation'
+ORDER BY "embedding" <=> '[0.1, 0.2, ...]'::vector
 LIMIT 5;
 
 # Check for Index Scan (good) vs Seq Scan (bad)
@@ -5749,40 +5743,40 @@ LIMIT 5;
 Run after every migration to ensure data integrity:
 
 ```sql
--- Check for orphaned matches (pyme_id or advisor_id no longer exists)
-SELECT m.id FROM matches m
-WHERE NOT EXISTS (SELECT 1 FROM pymes p WHERE p.id = m.pyme_id AND p.deleted_at IS NULL);
+-- Check for orphaned matches (pymeId or advisorId no longer exists)
+SELECT m."id" FROM "PB_Matches" m
+WHERE NOT EXISTS (SELECT 1 FROM "PB_Pymes" p WHERE p."id" = m."pymeId")
+   OR NOT EXISTS (SELECT 1 FROM "PB_Advisors" a WHERE a."id" = m."advisorId");
 
--- Check for duplicate swipes (should be caught by UNIQUE constraint)
-SELECT pyme_id, advisor_id, COUNT(*) as cnt
-FROM swipes
-GROUP BY pyme_id, advisor_id
+-- Verify advisor reputation scores are within bounds (0.00 - 5.00)
+SELECT "id", "fullName", "reputationScore" FROM "PB_Advisors"
+WHERE "reputationScore" < 0 OR "reputationScore" > 5;
+
+-- Verify pyme reputation scores are within bounds (0.00 - 5.00)
+SELECT "id", "companyName", "reputationScore" FROM "PB_Pymes"
+WHERE "reputationScore" < 0 OR "reputationScore" > 5;
+
+-- Verify needs assessment scores sum to ~1.0 per PYME per version
+SELECT "pymeId", "versionNumber", SUM("normalizedScore") as total
+FROM "PB_NeedsAssessmentSubIndustries" nas
+JOIN "PB_NeedsAssessments" na ON na."id" = nas."needsAssessmentId"
+GROUP BY "pymeId", "versionNumber"
+HAVING ABS(SUM("normalizedScore") - 1.0) > 0.01;
+
+-- Check for contracts with no associated contract version
+SELECT c."id" FROM "PB_Contracts" c
+WHERE c."currentVersionId" IS NULL;
+
+-- Verify active recommendation sets per PYME (should be at most 1)
+SELECT "pymeId", COUNT(*) as active_sets
+FROM "PB_RecommendationSets"
+WHERE "isActive" = TRUE
+GROUP BY "pymeId"
 HAVING COUNT(*) > 1;
 
--- Verify reputation scores are within bounds (0.00 - 5.00)
-SELECT id, full_name, reputation_score FROM advisors
-WHERE reputation_score < 0 OR reputation_score > 5;
-
-SELECT id, company_name, reputation_score FROM pymes
-WHERE reputation_score < 0 OR reputation_score > 5;
-
--- Verify needs scores sum to ~1.0 per PYME per version
-SELECT pyme_id, version, SUM(score) as total
-FROM pyme_needs_scores
-GROUP BY pyme_id, version
-HAVING ABS(SUM(score) - 1.0) > 0.01;
-
--- Check for contracts with invalid commission for their tier
-SELECT id, duration_tier, duration_months, commission_percentage FROM contracts
-WHERE duration_tier = 'standard' AND commission_percentage != 3.00
-   OR duration_tier = 'medium'   AND commission_percentage != 5.00
-   OR duration_tier = 'high'     AND commission_percentage != 7.00;
-
--- Verify soft-deleted users don't have active matches
-SELECT u.id, u.email FROM users u
-JOIN matches m ON (m.pyme_id IN (SELECT p.id FROM pymes p WHERE p.user_id = u.id)
-               OR m.advisor_id IN (SELECT a.id FROM advisors a WHERE a.user_id = u.id))
-WHERE u.deleted_at IS NOT NULL AND m.status = 'ACTIVE';
+-- Check for document blocks without embeddings
+SELECT "id", "contentHash" FROM "PB_DocumentBlocks"
+WHERE "embedding" IS NULL;
 ```
 
 ### CI/CD Validation
@@ -5800,6 +5794,7 @@ Add to `.github/workflows/backend-ci.yml`:
     fi
 ```
 
+---
 ---
 
 ## 3.7 Caching Strategy (Redis)
@@ -6009,7 +6004,7 @@ All seed scripts are idempotent — safe to run multiple times. They check for e
 
 ### AI Domain Seeding
 
-AI domain tables (`use_cases`, `document_blocks`, `recommendation_results`, `advisor_sub_industry_scores`) are seeded programmatically by running the PDF processing pipeline against sample use case PDFs stored in `backend/shared/database/seeders/fixtures/`. This ensures embeddings and classifications are generated by the actual pipeline rather than being hardcoded.
+AI domain tables (`PB_UseCases`, `PB_DocumentBlocks`, `PB_RecommendationItems`, `PB_AdvisorSubIndustryScores`) are seeded programmatically by running the PDF processing pipeline against sample use case PDFs stored in `backend/shared/database/seeders/fixtures/`. This ensures embeddings and classifications are generated by the actual pipeline rather than being hardcoded.
 
 ---
 
