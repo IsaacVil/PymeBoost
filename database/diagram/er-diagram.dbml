@@ -101,6 +101,13 @@ Table PB_UseCaseStatus {
   description varchar(255)
 }
 
+Table PB_PromiseVerificationStatus {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'pending | accepted | rejected']
+  name        varchar(100)[not null]
+  description varchar(255)
+}
+
 Table PB_MatchStatus {
   id          uuid        [pk, default: `gen_random_uuid()`]
   code        varchar(50) [not null, unique, note: 'waiting_swipe | match | not_swiped | unmatch | finalized']
@@ -127,6 +134,18 @@ Table PB_MetricValueTypes {
   code        varchar(50) [not null, unique, note: 'number | percentage']
   name        varchar(100)[not null]
   description varchar(255)
+}
+
+Table PB_Measures {
+  id                uuid        [pk, default: `gen_random_uuid()`]
+  code              varchar(50) [not null, unique, note: 'revenue | customer_retention | operating_cost | profit_margin | market_share | customer_satisfaction | employee_productivity | conversion_rate | inventory_turnover | debt_reduction']
+  name              varchar(100)[not null]
+  description       varchar(255)
+  metricValueTypeId uuid        [not null, ref: > PB_MetricValueTypes.id, note: 'Define si el valor prometido es number o percentage']
+  isActive          boolean     [not null, default: true]
+  createdAt         timestamptz [not null, default: `now()`]
+
+  note: 'Catálogo de métricas de negocio que un advisor puede prometer mejorar. La unidad (número absoluto vs. porcentaje) viene de metricValueTypeId.'
 }
 
 Table PB_ProjectStatus {
@@ -316,26 +335,34 @@ Table PB_Sessions {
 // ── DOMINIO ADVISOR ──────────────────────────────────────────────────────────
 
 Table PB_Promises {
-  id          uuid        [pk, default: `gen_random_uuid()`]
-  advisorId   uuid        [not null, ref: > PB_Advisors.id]
-  promiseText text        [not null]
-  isActive    boolean     [not null, default: true]
-  createdAt   timestamptz [not null, default: `now()`]
-  updatedAt   timestamptz [not null, default: `now()`]
+  id                     uuid         [pk, default: `gen_random_uuid()`]
+  advisorId              uuid         [not null, ref: > PB_Advisors.id]
+  measureId              uuid         [not null, ref: > PB_Measures.id]
+  promisedValue          decimal(14,4)[not null, note: 'Valor de la métrica que el advisor promete alcanzar; su interpretación (número o %) viene de PB_Measures.metricValueTypeId']
+  explanationText        text         [not null, note: 'Explicación en lenguaje del cliente de lo que promete lograr']
+  timeWindowDays         integer      [not null, note: 'Ventana de tiempo en días para cumplir la promesa']
+  feePercentage          decimal(7,4) [not null, note: '% del valor económico aportado que será el fee del advisor']
+  verificationStatusId   uuid         [not null, ref: > PB_PromiseVerificationStatus.id, note: 'Inicia en pending; el AI verification workflow lo actualiza a accepted o rejected']
+  verificationScore      decimal(7,4) [note: '% de vericidad calculado por la IA comparando promisedValue contra use cases pasados (0–100). NULL mientras pending.']
+  isActive               boolean      [not null, default: true]
+  createdAt              timestamptz  [not null, default: `now()`]
+  updatedAt              timestamptz  [not null, default: `now()`]
 
-  note: 'Max 3 promesas activas por advisor — regla en servicio'
+  note: 'Max 3 promesas activas por advisor — regla en servicio. Solo las promesas con verificationStatus = accepted se muestran en el perfil y se usan en el algoritmo de recomendación.'
 }
 
-Table PB_PromiseIndustryScores {
-  id         uuid        [pk, default: `gen_random_uuid()`]
-  promiseId  uuid        [not null, ref: > PB_Promises.id]
-  industryId uuid        [not null, ref: > PB_Industries.id]
-  score      decimal(7,4)[not null]
-  createdAt  timestamptz [not null, default: `now()`]
+Table PB_PromiseSubIndustryScores {
+  id            uuid        [pk, default: `gen_random_uuid()`]
+  promiseId     uuid        [not null, ref: > PB_Promises.id]
+  subIndustryId uuid        [not null, ref: > PB_SubIndustries.id]
+  score         decimal(7,4)[not null, note: 'Similitud coseno entre el embedding de explanationText y el embedding representativo de la subindustria']
+  createdAt     timestamptz [not null, default: `now()`]
 
   indexes {
-    (promiseId, industryId) [unique]
+    (promiseId, subIndustryId) [unique]
   }
+
+  note: 'Permite ordenar las promesas del advisor por relevancia para la PYME usando el producto punto contra su needsVector'
 }
 
 // ── DOMINIO PYME ─────────────────────────────────────────────────────────────

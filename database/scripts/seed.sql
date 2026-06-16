@@ -267,6 +267,11 @@ INSERT INTO "PB_UseCaseStatus" ("code", "name", "description") VALUES
     ('processed',  'Procesado',  'Bloques extraídos, embeddings generados, score actualizado en PB_AdvisorSubIndustryScores'),
     ('failed',     'Fallido',    'El procesamiento del PDF falló; use case inactivo');
 
+INSERT INTO "PB_PromiseVerificationStatus" ("code", "name", "description") VALUES
+    ('pending',  'Pendiente',  'Promesa recién creada o editada; la verificación IA aún no ha concluido'),
+    ('accepted', 'Aceptada',   'La IA verificó ≥ 90 % de vericidad contra use cases pasados; visible en el perfil'),
+    ('rejected', 'Rechazada',  'La IA encontró < 90 % de vericidad; la promesa no se muestra en el perfil ni se usa en recomendaciones');
+
 -- ============================================================================
 -- 5. MATCHING
 -- ============================================================================
@@ -301,6 +306,18 @@ INSERT INTO "PB_ContractVersionStatus" ("code", "name", "description") VALUES
 INSERT INTO "PB_MetricValueTypes" ("code", "name", "description") VALUES
     ('number',     'Número',     'Valor absoluto (unidades, monto en colones, cantidad de clientes, etc.)'),
     ('percentage', 'Porcentaje', 'Valor relativo expresado como porcentaje (0–100)');
+
+INSERT INTO "PB_Measures" ("code", "name", "description", "metricValueTypeId") VALUES
+    ('revenue',               'Ingresos',                         'Incremento en los ingresos totales de la empresa',                              (SELECT "id" FROM "PB_MetricValueTypes" WHERE "code" = 'percentage')),
+    ('profit_margin',         'Margen de Ganancia',               'Mejora en el margen de ganancia neta o bruta',                                  (SELECT "id" FROM "PB_MetricValueTypes" WHERE "code" = 'percentage')),
+    ('operating_cost',        'Costos Operativos',                'Reducción en los costos de operación',                                          (SELECT "id" FROM "PB_MetricValueTypes" WHERE "code" = 'percentage')),
+    ('customer_retention',    'Retención de Clientes',            'Mejora en la tasa de retención de clientes existentes',                         (SELECT "id" FROM "PB_MetricValueTypes" WHERE "code" = 'percentage')),
+    ('conversion_rate',       'Tasa de Conversión',               'Incremento en la tasa de conversión de prospectos a clientes',                  (SELECT "id" FROM "PB_MetricValueTypes" WHERE "code" = 'percentage')),
+    ('customer_satisfaction', 'Satisfacción del Cliente',         'Mejora en el índice de satisfacción del cliente (NPS o equivalente)',           (SELECT "id" FROM "PB_MetricValueTypes" WHERE "code" = 'percentage')),
+    ('employee_productivity', 'Productividad del Personal',       'Incremento en la productividad medida por output por empleado',                 (SELECT "id" FROM "PB_MetricValueTypes" WHERE "code" = 'percentage')),
+    ('inventory_turnover',    'Rotación de Inventario',           'Mejora en la rotación de inventario expresada en ciclos por período',           (SELECT "id" FROM "PB_MetricValueTypes" WHERE "code" = 'number')),
+    ('market_share',          'Participación de Mercado',         'Incremento en la cuota de mercado dentro del segmento objetivo',                (SELECT "id" FROM "PB_MetricValueTypes" WHERE "code" = 'percentage')),
+    ('debt_reduction',        'Reducción de Deuda',               'Disminución en el nivel de deuda financiera de la empresa',                     (SELECT "id" FROM "PB_MetricValueTypes" WHERE "code" = 'percentage'));
 
 -- ============================================================================
 -- 8. PROYECTOS
@@ -383,7 +400,9 @@ INSERT INTO "PB_EventTypes" ("code", "name", "description") VALUES
     ('AdvisorIndustryUpdated',     'Advisor Industry Updated',      'El advisor actualizó sus industrias de especialización'),
     ('UseCaseUploaded',            'Use Case Uploaded',             'El advisor subió uno o más PDFs de use cases; dispara el pipeline de procesamiento IA'),
     ('AdvisorUseCaseProcessed',    'Advisor Use Case Processed',    'El pipeline de IA terminó de procesar un use case (éxito o fallo)'),
-    ('PromiseTextUpdated',         'Promise Text Updated',          'El advisor creó o modificó una de sus promesas de éxito; dispara clasificación temática'),
+    ('PromiseUpdated',               'Promise Updated',                 'El advisor creó o modificó una de sus promesas de éxito; dispara clasificación por subindustria en el dominio IA'),
+    ('PromiseVerificationRequested', 'Promise Verification Requested',  'Emitido tras clasificar la promesa por subindustria; dispara el workflow de verificación de vericidad en el dominio IA'),
+    ('PromiseVerified',              'Promise Verified',                'El workflow de verificación IA resolvió la promesa como accepted o rejected'),
     ('SmeNeedsAssessmentUpdated',  'SME Needs Assessment Updated',  'La PYME completó o actualizó su evaluación de necesidades; invalida caché de recomendaciones'),
     ('RecommendationRequested',    'Recommendation Requested',      'La PYME solicitó recomendaciones on-demand desde la interfaz'),
     ('RecommendationReady',        'Recommendation Ready',          'El algoritmo generó un nuevo conjunto de recomendaciones para la PYME'),

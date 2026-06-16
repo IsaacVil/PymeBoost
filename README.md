@@ -3788,12 +3788,15 @@ Describes how recommendations are computed for a single SME. Called by both the 
 
 1. The SME's profile is loaded: industry (categorical), company size (categorical), and needs vector (sub-industry distribution from the Business Needs Assessment).
 2. Industry and company size are used as categorical pre-filters, narrowing the candidate advisor pool before scoring.
-3. Each advisor's pre-computed sub-industry score vector (`PB_AdvisorSubIndustryScores`) is retrieved. This vector is maintained incrementally as advisors upload use cases — no pgvector search is needed at recommendation time.
-4. Each advisor is ranked using a composite score:
-   - Sub-industry alignment: dot product between the SME's needs vector and the advisor's sub-industry score vector.
-   - Reputation score (retrieved from Advisor Domain via synchronous query).
+3. For each candidate advisor, two pre-computed vectors are retrieved:
+   - **Use-case sub-industry vector** (`PB_AdvisorSubIndustryScores`): built incrementally as the advisor uploads use cases. Reflects demonstrated past expertise.
+   - **Promise sub-industry scores** (`PB_PromiseSubIndustryScores`): the cosine similarity of each active promise's `explanationText` embedding against every sub-industry. For each advisor, the per-sub-industry maximum across all active promises is used, producing a single promise relevance vector.
+4. Each advisor is ranked using a three-signal composite score:
+   - **Use-case alignment**: dot product between the SME's needs vector and the advisor's use-case sub-industry score vector — measures demonstrated expertise overlap.
+   - **Promise alignment**: dot product between the SME's needs vector and the advisor's promise relevance vector.
+   - **Reputation score**: the advisor's running average rating (from `PB_Advisors.reputationScore`).
 5. The top N advisors are selected with their full profiles: name, industries, certifications, base rate, and reputation score.
-6. The ranked list is persisted in the database associated with the PYME's profile.
+6. The ranked list is persisted in `PB_RecommendationItems` associated with the PYME's active `PB_RecommendationSet`.
 7. The Redis cache entry for this PYME is updated with the new results and a TTL of 24 hours.
 
 ---
@@ -3845,17 +3848,50 @@ Triggered synchronously via HTTP when an SME browses an advisor's profile or aft
 
 ---
 
-#### Promise Industry Classification
+#### Promise Sub-Industry Classification
 
 Implementation: [backend/domains/ai/services/promise_classification_service.py](backend/domains/ai/services/promise_classification_service.py)
 
-Triggered by the `PromiseTextUpdated` Pub/Sub event, published whenever an advisor adds or edits a promise. Classifies the free-form promise text against the predefined industry catalog using embeddings and cosine similarity.
+Triggered **asynchronously** by the `PromiseUpdated` Pub/Sub event, published whenever an advisor adds or edits a promise. Classifies the promise against every active sub-industry using the `explanationText` embedding and cosine similarity, so that promises can be ranked against any PYME's needs vector at display time.
 
-1. The AI Domain receives the `PromiseTextUpdated` event containing the `promise_id` and `promise_text`.
-2. An embedding is generated for the `promise_text`.
-3. The industry catalog is retrieved from the database. Each industry entry has a pre-computed representative embedding stored alongside it.
-4. The cosine similarity between the promise embedding and each industry embedding is computed.
-5. All similarity scores are stored in `PB_PromiseIndustryScores` as `industry_id → score` pairs, replacing any previous scores for this promise.
+1. The AI Domain receives the `PromiseUpdated` event containing the `promise_id` and `explanation_text`.
+2. An embedding is generated from the `explanation_text` (the client-facing natural language description of the promise).
+3. All active sub-industry entries are retrieved from `PB_SubIndustries`. Each entry has a pre-computed `representativeEmbedding` (vector(768)).
+4. The cosine similarity between the promise embedding and each sub-industry embedding is computed.
+5. All similarity scores are stored in `PB_PromiseSubIndustryScores` as `subIndustryId → score` pairs, replacing any previous scores for this promise.
+6. A `PromiseVerificationRequested` event is published to Pub/Sub with the `promise_id`, handing off to the `Promise Verification` workflow. The classification workflow ends here.
+
+---
+
+#### Promise Verification
+
+Implementation: [backend/domains/ai/services/promise_verification_service.py](backend/domains/ai/services/promise_verification_service.py)
+
+Triggered **asynchronously** by the `PromiseVerificationRequested` Pub/Sub event, emitted at the end of the `Promise Sub-Industry Classification` workflow. Compares the advisor's promise against their past use case results to determine a veracity score. If the score reaches 90 % or above, the promise is accepted and becomes visible; otherwise it is rejected and never shown.
+
+**Veracity computation:**
+
+1. The AI Domain receives the `PromiseVerificationRequested` event containing the `promise_id`.
+2. The promise record is loaded from `PB_Promises`: `measureId`, `promisedValue`, `advisorId`, and the freshly computed sub-industry scores from `PB_PromiseSubIndustryScores`.
+3. The advisor's processed use cases (`PB_UseCases` where `useCaseStatusId = processed`) are retrieved and ranked by relevance to the promise. Relevance is the cosine similarity between the promise embedding and each use case's most representative block embedding in `PB_DocumentBlocks`.
+4. The top-K most relevant use cases (K = 5) are selected.
+5. From those use cases, entries where `metricUsed` semantically matches the promise's measure (resolved via the `PB_Measures.code` → `metricUsed` mapping) are filtered. Each matching use case has `metricBefore` and `metricAfter` values.
+6. For each matching use case the actual improvement percentage is computed:
+   ```
+   actual_pct = (metricAfter - metricBefore) / metricBefore × 100
+   ```
+7. A per-case veracity ratio is computed, weighted by the use case relevance score:
+   ```
+   veracity_per_case = min(actual_pct / promisedValue, 1.0) × 100
+   ```
+8. The overall `verificationScore` is the weighted average of `veracity_per_case` across all matching cases, using the relevance score from step 3 as weight. If no matching use cases are found, `verificationScore = 0`.
+9. The outcome is determined:
+   - `verificationScore ≥ 90` → `verificationStatus = accepted`
+   - `verificationScore < 90` → `verificationStatus = rejected`
+10. `PB_Promises.verificationStatusId` and `verificationScore` are updated in the database.
+11. A `PromiseVerified` event is published with `promise_id`, `verification_status`, and `verification_score`.
+
+> The entire flow — from the advisor saving a promise to the final `accepted` / `rejected` verdict — is **fully asynchronous** via Pub/Sub. The advisor's API response returns immediately after persisting the promise; classification and verification happen in the background and do not block the request.
 
 ---
 
@@ -3991,33 +4027,40 @@ Serves pre-computed recommendations at request time. No computation happens here
 
 Implementation: [backend/domains/advisor/controllers/success_metric_promises_controller.py](backend/domains/advisor/controllers/success_metric_promises_controller.py)
 
-1. The advisor sends a POST request with the promise text.
+Each promise is backed by a structured entry in `PB_Promises` that references a measurable business metric from the `PB_Measures` catalog. The advisor specifies what they will improve, by how much, in what timeframe, and what share of the economic value generated will be their fee.
+
+**Request payload:**
+
+| Field | Type | Description |
+|---|---|---|
+| `measure_id` | UUID | Reference to `PB_Measures` — the business metric being targeted (e.g., revenue, customer retention) |
+| `promised_value` | decimal | Target value for the metric; interpretation (absolute number or percentage) is defined by the measure's `metricValueTypeId` (e.g., 20 for a 20 % revenue increase) |
+| `explanation_text` | text | Client-facing description of what the advisor commits to achieve, written in plain business language |
+| `time_window_days` | integer | Number of days within which the promised value will be reached |
+| `fee_percentage` | decimal | Percentage of the economic value delivered that will be charged as the advisor's fee |
+
+1. The advisor sends a POST request with the structured promise payload.
 2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
 3. Google Cloud API Gateway routes the request to Cloud Run.
 4. FastAPI validates the JWT using Auth0 JWKS and extracts the `advisor_id`.
 5. The system checks that the advisor does not already have 3 active promises. If they do, the request is rejected.
-6. The promise text is stored as a new record associated with the `advisor_id`, with a generated `promise_id`. Industry scores are populated asynchronously once classification completes.
-7. A `PromiseTextUpdated` event is published to Pub/Sub with the `promise_id` and `promise_text`, triggering the `Promise Industry Classification` workflow in the AI Domain.
-
-**Display on profile card:**
-
-When an SME views an advisor's profile, the active promises are retrieved from the database ordered by their score for the SME's industry (`PB_PromiseIndustryScores ORDER BY score DESC`); the rest follow in creation order.
+6. The promise is stored in `PB_Promises` linked to the advisor and the selected `PB_Measures` entry. Sub-industry scores are populated asynchronously once classification completes.
+7. A `PromiseUpdated` event is published to Pub/Sub with the `promise_id` and `explanation_text`, triggering the `Promise Sub-Industry Classification` workflow in the AI Domain.
 
 #### Advisor Success Metric Promises (Edit a promise)
 
 Implementation: [backend/domains/advisor/controllers/success_metric_promises_controller.py](backend/domains/advisor/controllers/success_metric_promises_controller.py)
 
-1. The advisor sends a PATCH request with the `promise_id` and the updated text.
+1. The advisor sends a PATCH request with the `promise_id` and any combination of updated fields (`measure_id`, `promised_value`, `explanation_text`, `time_window_days`, `fee_percentage`).
 2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
 3. Google Cloud API Gateway routes the request to Cloud Run.
 4. FastAPI validates the JWT and confirms the `promise_id` belongs to the requesting advisor.
-5. Only the text of that specific promise is updated. All other promises remain unchanged.
-6. The industry scores for this promise are cleared and a `PromiseTextUpdated` event is published to Pub/Sub, triggering reclassification in the AI Domain.
+5. Only the supplied fields of that specific promise are updated. All other promises remain unchanged.
+6. The sub-industry scores for this promise are cleared from `PB_PromiseSubIndustryScores` and a `PromiseUpdated` event is published to Pub/Sub with the updated `explanation_text`, triggering reclassification in the AI Domain.
 
 #### Advisor Success Metric Promises (Delete a promise)
 
 Implementation: [backend/domains/advisor/controllers/success_metric_promises_controller.py](backend/domains/advisor/controllers/success_metric_promises_controller.py)
-
 
 1. The advisor sends a DELETE request with the `promise_id`.
 2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
@@ -4079,9 +4122,9 @@ Returns the PYME's current list of advisor candidates enriched with profile data
 
    **b. Top 1 similar project** — the `Advisor Similar Project Retrieval` workflow is called for this advisor passing the PYME's industry and needs vector. Only the single highest-scoring use case is returned: company context, initial situation, key actions, and before/after metrics.
 
-   **c. Most relevant promise** — the advisor's active promises are read from the database sorted by their score for the PYME's industry in `PB_PromiseIndustryScores`. The first entry in that sorted list is selected.
+   **c. Most relevant promise** — each active promise's relevance is computed as the dot product between its sub-industry score vector (`PB_PromiseSubIndustryScores`) and the PYME's needs vector. The promise with the highest score is selected, including the referenced `PB_Measures` record for display.
 
-9. The enriched candidate list is returned. Each card entry contains: `advisor_id`, `name`, `industries`, `rating`, `top_project` (summary), and `top_promise` (text).
+9. The enriched candidate list is returned. Each card entry contains: `advisor_id`, `name`, `industries`, `rating`, `top_project` (summary), and `top_promise` (measure name, promised value, explanation text, time window in days, fee percentage).
 
 ---
 
@@ -4608,16 +4651,16 @@ Workflow (Event Domain):
 
 ---
 
-#### PromiseTextUpdated Event
+#### PromiseUpdated Event
 
-Payload: `promise_id`, `promise_text`
+Payload: `promise_id`, `explanation_text`
 
-This event is emitted when an advisor adds or edits a success metric promise, triggering AI classification. It is delivered over Pub/Sub.
+This event is emitted when an advisor adds or edits a success metric promise, triggering AI sub-industry classification. It is delivered over Pub/Sub.
 
 Published by: `Add / Edit Promise` use case (Advisor Domain) over Pub/Sub, once the promise has been persisted.
 
 Consumed by:
-- AI Domain — triggers the `Promise Industry Classification` workflow on `promise_text`.
+- AI Domain — triggers the `Promise Sub-Industry Classification` workflow on `explanation_text`.
 
 Workflow (Event Domain):
 1. The Event Audit Service intercepts the event and persists it to `domain_events` before any consumer runs.
@@ -4969,12 +5012,21 @@ PymeBoost's AI-driven features rely on specific algorithms chosen for their fit 
 
 #### Advisor Recommendation Scoring
 
-The recommendation engine uses a **composite dot-product scoring model** rather than a collaborative filtering approach. This decision is grounded in the platform's cold-start reality: new SMEs have no interaction history, so collaborative filtering would produce empty recommendations. Instead, the system builds a content-based profile from two signals:
+The recommendation engine uses a **composite dot-product scoring model** rather than a collaborative filtering approach. This decision is grounded in the platform's cold-start reality: new SMEs have no interaction history, so collaborative filtering would produce empty recommendations. Instead, the system builds a content-based profile from three signals:
 
-- **Sub-industry alignment (dot product):** The SME's needs vector (from the Business Needs Assessment) is compared against each advisor's sub-industry score vector (built incrementally from use case PDF processing). The dot product measures how well the advisor's demonstrated expertise overlaps with what the SME needs. This is a O(d) operation where d is the number of sub-industries — fast enough to score hundreds of advisors in milliseconds.
-- **Reputation score (weighted addition):** The advisor's running average rating is added as a secondary signal. Reputation is weighted lower than sub-industry alignment because a highly rated advisor in an irrelevant industry is less useful than a moderately rated advisor in the right one.
+- **Use-case alignment (dot product):** The SME's needs vector (from the Business Needs Assessment) is compared against each advisor's sub-industry score vector (built incrementally from use case PDF processing). The dot product measures how well the advisor's **demonstrated past expertise** overlaps with what the SME needs. This is an O(d) operation where d is the number of sub-industries — fast enough to score hundreds of advisors in milliseconds.
+- **Promise alignment (dot product):** The SME's needs vector is also compared against the advisor's promise relevance vector. The promise relevance vector is built per-sub-industry by taking the maximum cosine similarity score across the advisor's active promises (from `PB_PromiseSubIndustryScores`), giving a single vector that captures the strongest commitment the advisor has made in each area. This signal rewards advisors whose stated commitments directly target the SME's specific pain points, complementing the use-case signal which reflects what the advisor has done rather than what they commit to do.
+- **Reputation score (weighted addition):** The advisor's running average rating is added as a tertiary signal. Reputation is weighted lower than both alignment signals because a highly rated advisor in an irrelevant domain is less useful than a well-matched but newer advisor.
 
-The composite formula is: `score = α × dot(sme_needs, advisor_sub_industry) + β × reputation_score`, where α = 0.7 and β = 0.3. These weights were chosen to prioritize domain fit over general reputation.
+The composite formula is:
+
+```
+score = α × dot(sme_needs, advisor_use_case_vector)
+      + β × dot(sme_needs, advisor_promise_vector)
+      + γ × reputation_score
+```
+
+where **α = 0.55**, **β = 0.25**, **γ = 0.20**. Use-case alignment carries the most weight because it is grounded in verified past results extracted from PDF case studies. Promise alignment carries a significant secondary weight to surface advisors who explicitly commit to the PYME's needs even when their use-case history is thinner. Reputation acts as a tiebreaker and quality floor.
 
 #### Embedding Model & Similarity
 
@@ -5287,7 +5339,7 @@ Per the DDD architecture (§2.2), domains do not share database tables and do no
 Examples in this schema:
 - `specializations.industry` stores the industry name as a string (Advisor Domain referencing Pyme Domain's `industries` catalog). No FK because it crosses domain boundaries.
 - `projects.pyme_id` and `projects.advisor_id` are denormalized from the match record for fast ownership checks. No FK to `pymes` or `advisors` because the Project Domain doesn't own those entities.
-- `promise_industry_scores.industry_id` references `industries.id` by value (Advisor Domain → Pyme Domain).
+- `PB_PromiseSubIndustryScores.subIndustryId` references `PB_SubIndustries.id` by value (Advisor Domain → Pyme Domain). `PB_Promises.measureId` references the within-domain catalog `PB_Measures` using a proper FK (same domain).
 - `recommendation_results.pyme_id` and `recommendation_results.advisor_id` reference entities in other domains without FK constraints.
 
 Within the same domain, foreign keys are enforced normally (e.g., `contract_metrics.contract_id` → `contracts.id`).
@@ -5310,6 +5362,9 @@ Each database table maps to a SQLAlchemy model file in the backend:
 | `advisors` | [`backend/domains/advisor/models/advisor_model.py`](backend/domains/advisor/models/advisor_model.py) |
 | `specializations` | [`backend/domains/advisor/models/specialization_model.py`](backend/domains/advisor/models/specialization_model.py) |
 | `reputations` | [`backend/domains/advisor/models/reputation_model.py`](backend/domains/advisor/models/reputation_model.py) |
+| `PB_Measures` | [`backend/domains/advisor/models/measure_model.py`](backend/domains/advisor/models/measure_model.py) |
+| `PB_Promises` | [`backend/domains/advisor/models/promise_model.py`](backend/domains/advisor/models/promise_model.py) |
+| `PB_PromiseSubIndustryScores` | [`backend/domains/advisor/models/promise_subindustry_score_model.py`](backend/domains/advisor/models/promise_subindustry_score_model.py) |
 | `matches` | [`backend/domains/matching/models/match_model.py`](backend/domains/matching/models/match_model.py) |
 | `swipes` | [`backend/domains/matching/models/swipe_model.py`](backend/domains/matching/models/swipe_model.py) |
 | `chat_sessions` | [`backend/domains/communication/models/chat_session_model.py`](backend/domains/communication/models/chat_session_model.py) |
@@ -5487,8 +5542,9 @@ CREATE INDEX idx_specializations_industry ON specializations(industry);
 -- Promises per advisor (max 3 active, frequently queried)
 CREATE INDEX idx_promises_advisor_id ON promises(advisor_id);
 
--- Promise industry scores for ordering (display-time sort)
-CREATE INDEX idx_promise_industry_scores_promise_id ON promise_industry_scores(promise_id);
+-- Promise sub-industry scores for relevance ranking (dot product with PYME needs vector)
+CREATE INDEX idx_promise_subindustry_scores_promise_id     ON promise_subindustry_scores(promise_id);
+CREATE INDEX idx_promise_subindustry_scores_subindustry_id ON promise_subindustry_scores(subindustry_id);
 ```
 
 #### Matching Domain

@@ -183,6 +183,87 @@ UPDATE "PB_Contracts"
    SET "currentVersionId" = '66666666-6666-6666-6666-666666666601'
  WHERE "id" = '55555555-5555-5555-5555-555555555501';
 
+-- ----------------------------------------------------------------------------
+-- 7. Promesas de éxito de los advisors
+--    Ana López  → 3 promesas: 2 accepted, 1 pending (simula verificación en curso)
+--    Roberto    → 2 promesas: 1 accepted, 1 rejected (simula rechazo por baja vericidad)
+--    Luis       → 2 promesas: ambas accepted
+-- ----------------------------------------------------------------------------
+INSERT INTO "PB_Promises" (
+    "advisorId", "measureId", "promisedValue", "explanationText",
+    "timeWindowDays", "feePercentage", "verificationStatusId", "verificationScore", "isActive"
+) VALUES
+-- Ana López - promesa 1: ingresos (accepted, 95 % veracity)
+(
+    '22222222-2222-2222-2222-222222222201',
+    (SELECT "id" FROM "PB_Measures" WHERE "code" = 'revenue'),
+    20.00,
+    'Diseñamos juntos una estrategia de marca y canales digitales que incrementará tus ingresos mensuales al menos un 20% en los primeros 6 meses.',
+    180, 12.0000,
+    (SELECT "id" FROM "PB_PromiseVerificationStatus" WHERE "code" = 'accepted'),
+    95.00, TRUE
+),
+-- Ana López - promesa 2: retención de clientes (accepted, 92 % veracity)
+(
+    '22222222-2222-2222-2222-222222222201',
+    (SELECT "id" FROM "PB_Measures" WHERE "code" = 'customer_retention'),
+    15.00,
+    'Implementamos un programa de fidelización sencillo que aumentará en 15 puntos porcentuales la retención de clientes recurrentes.',
+    120, 10.0000,
+    (SELECT "id" FROM "PB_PromiseVerificationStatus" WHERE "code" = 'accepted'),
+    92.00, TRUE
+),
+-- Ana López - promesa 3: tasa de conversión (pending — verificación aún en curso)
+(
+    '22222222-2222-2222-2222-222222222201',
+    (SELECT "id" FROM "PB_Measures" WHERE "code" = 'conversion_rate'),
+    25.00,
+    'Optimizamos tu embudo de ventas digital para que 1 de cada 4 prospectos adicionales se convierta en cliente pagante.',
+    90, 8.0000,
+    (SELECT "id" FROM "PB_PromiseVerificationStatus" WHERE "code" = 'pending'),
+    NULL, TRUE
+),
+-- Roberto Mora - promesa 1: margen de ganancia (accepted, 91 % veracity)
+(
+    '22222222-2222-2222-2222-222222222202',
+    (SELECT "id" FROM "PB_Measures" WHERE "code" = 'profit_margin'),
+    10.00,
+    'Revisamos tu estructura de costos y precios para mejorar tu margen de ganancia neta en 10 puntos porcentuales dentro de 4 meses.',
+    120, 15.0000,
+    (SELECT "id" FROM "PB_PromiseVerificationStatus" WHERE "code" = 'accepted'),
+    91.00, TRUE
+),
+-- Roberto Mora - promesa 2: costos operativos (rejected — vericidad 74 %, < 90 %)
+(
+    '22222222-2222-2222-2222-222222222202',
+    (SELECT "id" FROM "PB_Measures" WHERE "code" = 'operating_cost'),
+    18.00,
+    'Identificamos ineficiencias en tus procesos administrativos y de compras para reducir los costos operativos en un 18%.',
+    150, 12.0000,
+    (SELECT "id" FROM "PB_PromiseVerificationStatus" WHERE "code" = 'rejected'),
+    74.00, TRUE
+),
+-- Luis Vargas - promesa 1: productividad del personal (accepted, 98 % veracity)
+(
+    '22222222-2222-2222-2222-222222222203',
+    (SELECT "id" FROM "PB_Measures" WHERE "code" = 'employee_productivity'),
+    30.00,
+    'Automatizamos tareas repetitivas con herramientas digitales para que tu equipo produzca un 30% más sin contratar personal adicional.',
+    90, 10.0000,
+    (SELECT "id" FROM "PB_PromiseVerificationStatus" WHERE "code" = 'accepted'),
+    98.00, TRUE
+),
+-- Luis Vargas - promesa 2: ingresos vía canal digital (accepted, 93 % veracity)
+(
+    '22222222-2222-2222-2222-222222222203',
+    (SELECT "id" FROM "PB_Measures" WHERE "code" = 'revenue'),
+    25.00,
+    'Abrimos o mejoramos tu canal de ventas digital para que genere al menos el 25% más de ingresos en los próximos 6 meses.',
+    180, 12.0000,
+    (SELECT "id" FROM "PB_PromiseVerificationStatus" WHERE "code" = 'accepted'),
+    93.00, TRUE
+);
+
 -- ============================================================================
 -- FIN DEL SEED DE DESARROLLO
 -- ============================================================================

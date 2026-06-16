@@ -163,6 +163,14 @@ CREATE TABLE "PB_UseCaseStatus" (
     "description" shorttext_t
 );
 
+-- Estado de verificacion de una promesa (pending | accepted | rejected) -----
+CREATE TABLE "PB_PromiseVerificationStatus" (
+    "id"          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "code"        code_t      NOT NULL UNIQUE,  -- pending, accepted, rejected
+    "name"        name_t      NOT NULL,
+    "description" shorttext_t
+);
+
 -- Estado del match (modelo unificado swipe + match) -------------------------
 CREATE TABLE "PB_MatchStatus" (
     "id"          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -195,6 +203,20 @@ CREATE TABLE "PB_MetricValueTypes" (
     "name"        name_t      NOT NULL,
     "description" shorttext_t
 );
+
+-- Catalogo de metricas de negocio que un advisor puede prometer mejorar -----
+-- La interpretacion del valor (numero absoluto vs. porcentaje) viene de
+-- metricValueTypeId; no se almacena una columna "unit" separada.
+CREATE TABLE "PB_Measures" (
+    "id"                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "code"              code_t      NOT NULL UNIQUE,  -- revenue, customer_retention, operating_cost, profit_margin, ...
+    "name"              name_t      NOT NULL,
+    "description"       shorttext_t,
+    "metricValueTypeId" UUID        NOT NULL REFERENCES "PB_MetricValueTypes"("id"),
+    "isActive"          BOOLEAN     NOT NULL DEFAULT TRUE,
+    "createdAt"         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX "idx_measures_valuetype" ON "PB_Measures"("metricValueTypeId");
 
 -- Estado del proyecto -------------------------------------------------------
 CREATE TABLE "PB_ProjectStatus" (
@@ -419,29 +441,43 @@ CREATE INDEX "idx_sessions_status"  ON "PB_Sessions"("sessionStatusId");
 -- 3. DOMINIO ADVISOR — promesas de exito + reputacion historica
 -- ============================================================================
 
--- Promesas (max. 3 activas por advisor — regla en servicio) -----------------
+-- Promesas de éxito (max. 3 activas por advisor — regla en servicio) --------
+-- verificationStatusId inicia en 'pending'; el AI verification workflow lo
+-- actualiza a 'accepted' o 'rejected' tras comparar la promesa con use cases.
+-- Solo las promesas con status 'accepted' se muestran en el perfil y se usan
+-- en el algoritmo de recomendacion.
 CREATE TABLE "PB_Promises" (
-    "id"          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "advisorId"   UUID        NOT NULL REFERENCES "PB_Advisors"("id") ON DELETE CASCADE,
-    "promiseText" TEXT        NOT NULL,
-    "isActive"    BOOLEAN     NOT NULL DEFAULT TRUE,
-    "createdAt"   TIMESTAMPTZ NOT NULL DEFAULT now(),
-    "updatedAt"   TIMESTAMPTZ NOT NULL DEFAULT now()
+    "id"                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "advisorId"            UUID          NOT NULL REFERENCES "PB_Advisors"("id") ON DELETE CASCADE,
+    "measureId"            UUID          NOT NULL REFERENCES "PB_Measures"("id"),
+    "promisedValue"        NUMERIC(14,4) NOT NULL,
+    "explanationText"      TEXT          NOT NULL,
+    "timeWindowDays"       INTEGER       NOT NULL,
+    "feePercentage"        pct_t         NOT NULL,
+    "verificationStatusId" UUID          NOT NULL REFERENCES "PB_PromiseVerificationStatus"("id"),
+    "verificationScore"    NUMERIC(7,4),  -- NULL mientras pending; 0-100 una vez verificada
+    "isActive"             BOOLEAN       NOT NULL DEFAULT TRUE,
+    "createdAt"            TIMESTAMPTZ   NOT NULL DEFAULT now(),
+    "updatedAt"            TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
 CREATE INDEX "idx_promises_advisor" ON "PB_Promises"("advisorId");
+CREATE INDEX "idx_promises_measure" ON "PB_Promises"("measureId");
 CREATE TRIGGER trg_promises_updated BEFORE UPDATE ON "PB_Promises"
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- Distribucion completa industria->score de la clasificacion de la promesa ---
-CREATE TABLE "PB_PromiseIndustryScores" (
-    "id"         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "promiseId"  UUID        NOT NULL REFERENCES "PB_Promises"("id") ON DELETE CASCADE,
-    "industryId" UUID        NOT NULL REFERENCES "PB_Industries"("id"),
-    "score"      pct_t       NOT NULL,
-    "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE ("promiseId","industryId")
+-- Similitud coseno de la promesa contra cada subindustria (clasificacion IA) -
+-- Permite ordenar promesas por relevancia para la PYME via producto punto
+-- entre este vector de scores y el needsVector de la PYME.
+CREATE TABLE "PB_PromiseSubIndustryScores" (
+    "id"            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "promiseId"     UUID        NOT NULL REFERENCES "PB_Promises"("id") ON DELETE CASCADE,
+    "subIndustryId" UUID        NOT NULL REFERENCES "PB_SubIndustries"("id"),
+    "score"         pct_t       NOT NULL,
+    "createdAt"     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE ("promiseId","subIndustryId")
 );
-CREATE INDEX "idx_promiseScores_promise" ON "PB_PromiseIndustryScores"("promiseId");
+CREATE INDEX "idx_promiseSubScores_promise"     ON "PB_PromiseSubIndustryScores"("promiseId");
+CREATE INDEX "idx_promiseSubScores_subindustry" ON "PB_PromiseSubIndustryScores"("subIndustryId");
 
 
 
