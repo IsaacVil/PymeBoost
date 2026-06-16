@@ -1,16 +1,20 @@
 import { apiClient } from "@/lib/apiClient";
-import { AuthResponse } from "../types/auth";
+import { AuthCredentials, AuthResponse, CreateAdvisorPayload, CreateSmePayload } from "../types/auth";
 
+// Auth API (local profile, mock JWT). Endpoints implemented in the User domain
+// (backend/domains/user/controllers/*). apiClient injects the Bearer token.
 export const authService = {
-  // Exchange Auth0 code for backend session
-  exchangeCode: (code: string) =>
-    apiClient.request<AuthResponse>("/auth/callback", { method: "POST", body: { code } }),
+  login: (credentials: AuthCredentials) =>
+    apiClient.request<AuthResponse>("/api/auth/login", { method: "POST", body: credentials }),
 
-  // Refresh token when nearing expiration
-  refreshToken: (refreshToken: string) =>
-    apiClient.request<AuthResponse>("/auth/refresh", { method: "POST", body: { refreshToken } }),
+  registerPyme: (payload: CreateSmePayload) =>
+    apiClient.request<AuthResponse>("/api/sme/accounts", { method: "POST", body: payload }),
 
-  // Logout and invalidate session on backend
-  logout: () =>
-    apiClient.request<void>("/auth/logout", { method: "POST" }),
+  registerAdvisor: (payload: CreateAdvisorPayload) =>
+    apiClient.request<AuthResponse>("/api/advisor/accounts", { method: "POST", body: payload }),
+
+  me: () => apiClient.request<{ subjectId: string; accountType: string; email: string }>(
+    "/api/auth/me",
+    { method: "GET" },
+  ),
 };

@@ -1,51 +1,77 @@
 "use client";
-import { DashboardLayout } from "@/shared/components/layouts/DashboardLayout";
-import { Card } from "@/shared/components/ui/Card";
-import { Input } from "@/shared/components/ui/Input";
-import { Button } from "@/shared/components/ui/Button";
-import { Badge } from "@/shared/components/ui/Badge";
+import { useState } from "react";
 
-const mockConversations = [
-  { id: "m1", advisor: "Ana García", lastMessage: "I reviewed the process map, let's discuss.", time: "2m ago", unread: 2 },
-  { id: "m2", advisor: "Luis Torres", lastMessage: "The proposal looks good to me.", time: "1h ago", unread: 0 },
-];
+import { DashboardLayout } from "@/shared/components/layouts/DashboardLayout";
+import { Avatar } from "@/shared/components/ui/Avatar";
+import { useAuthStore } from "@/store/authStore";
+import { ChatView } from "./components/ChatView";
+import { CONVERSATIONS, Conversation } from "./data/conversations";
 
 export default function MessagingPage() {
+  const role = useAuthStore((s) => s.session.role) === "ADVISOR" ? "advisor" : "pyme";
+  const [conversations, setConversations] = useState<Conversation[]>(CONVERSATIONS);
+  const [activeId, setActiveId] = useState<string>(CONVERSATIONS[0]?.id ?? "");
+
+  const active = conversations.find((c) => c.id === activeId) ?? conversations[0];
+
+  const updateMatch = (id: string, updater: (m: Conversation) => Conversation) =>
+    setConversations((prev) => prev.map((m) => (m.id === id ? updater(m) : m)));
+
+  const unmatch = (id: string) => {
+    setConversations((prev) => prev.filter((m) => m.id !== id));
+    setActiveId((cur) => (cur === id ? "" : cur));
+  };
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-zinc-900">Messages</h1>
-
-        <div className="flex gap-6 h-[calc(100vh-14rem)]">
-          {/* Conversation list */}
-          <aside className="w-72 space-y-2 overflow-y-auto">
-            {mockConversations.map((c) => (
-              <Card key={c.id} className="cursor-pointer hover:border-teal-500/50 transition-colors p-4">
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-zinc-900">{c.advisor}</p>
-                  {c.unread > 0 && <Badge status="active" label={String(c.unread)} />}
-                </div>
-                <p className="text-sm text-zinc-500 truncate mt-1">{c.lastMessage}</p>
-                <p className="text-xs text-zinc-400 mt-1">{c.time}</p>
-              </Card>
-            ))}
-          </aside>
-
-          {/* Chat area */}
-          <div className="flex-1 flex flex-col bg-zinc-50 border-2 border-zinc-800 rounded-lg">
-            <div className="p-4 border-b-2 border-zinc-800">
-              <p className="font-semibold text-zinc-900">Ana García</p>
-              <p className="text-xs text-zinc-500">Process Optimization Advisor</p>
-            </div>
-            <div className="flex-1 p-4 overflow-y-auto space-y-3">
-              {/* TODO: render MessageList component */}
-              <p className="text-zinc-400 text-sm text-center">Start of conversation</p>
-            </div>
-            <div className="p-4 border-t-2 border-zinc-800 flex gap-3">
-              <Input placeholder="Write a message…" className="flex-1" />
-              <Button size="sm">Send</Button>
-            </div>
+      <h1 className="display" style={{ fontSize: 32, marginBottom: 16 }}>Mensajes</h1>
+      <div style={{ display: "grid", gridTemplateColumns: "288px 1fr", height: "calc(100vh - 12rem)", border: "var(--bd) solid var(--ink)", borderRadius: "var(--r-lg)", overflow: "hidden", boxShadow: "var(--sh-card)" }}>
+        {/* conversation list */}
+        <div style={{ borderRight: "var(--bd) solid var(--ink)", overflowY: "auto", background: "var(--paper)" }}>
+          <div style={{ padding: "15px 16px 8px" }}>
+            <div className="eyebrow">Chats activos</div>
           </div>
+          {conversations.map((m) => {
+            const last = [...m.messages].reverse().find((x) => x.text || x.kind) ?? ({} as (typeof m.messages)[number]);
+            const preview = last.text || (last.kind === "proposal" ? "📄 Propuesta de contrato" : last.kind === "married" ? "💍 Contrato activo" : "Nuevo match — saludá 👋");
+            return (
+              <button
+                key={m.id}
+                onClick={() => setActiveId(m.id)}
+                style={{ width: "100%", textAlign: "left", display: "flex", gap: 11, padding: "12px 16px", cursor: "pointer", background: m.id === active?.id ? "var(--surface)" : "transparent", border: "none", borderBottom: "1.5px solid rgba(33,27,18,.08)", borderLeft: `3px solid ${m.id === active?.id ? "var(--accent)" : "transparent"}` }}
+              >
+                <Avatar text={m.advisor.monogram} accent={m.advisor.accent} size={42} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.advisor.name}</span>
+                    {m.married ? (
+                      <span title="Activo" style={{ color: "var(--success)", fontSize: 12 }}>●</span>
+                    ) : (
+                      <span className="font-mono" style={{ fontSize: 9.5, color: "var(--ink-faint)", whiteSpace: "nowrap" }}>{m.status}</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }}>{preview}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* thread */}
+        <div style={{ overflow: "hidden" }}>
+          {active ? (
+            <ChatView
+              key={active.id}
+              match={active}
+              role={role}
+              onUpdate={(updater) => updateMatch(active.id, updater)}
+              onUnmatch={unmatch}
+            />
+          ) : (
+            <div className="font-mono" style={{ display: "grid", placeItems: "center", height: "100%", color: "var(--ink-soft)" }}>
+              Seleccioná un chat
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>

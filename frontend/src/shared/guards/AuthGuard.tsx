@@ -3,13 +3,14 @@
 
 "use client";
 
-import { ReactNode } from "react";
-import { useAuthStore } from "@/store/authStore";
+import { ReactNode, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
+import { UserRole, useAuthStore } from "@/store/authStore";
 
 interface AuthGuardProps {
   children: ReactNode;
-  requiredRole?: "SME" | "ADVISOR";
+  requiredRole?: UserRole;
   requiredPermission?: string;
   fallback?: ReactNode;
 }
@@ -23,35 +24,29 @@ export function AuthGuard({
   const router = useRouter();
   const { session, isAuthenticated, isLoading, hasPermission } = useAuthStore();
 
-  // Step 1: Check if still loading auth
-  if (isLoading) {
-    return fallback || <div>Loading...</div>;
+  const denied =
+    !isAuthenticated ||
+    !session.token ||
+    (requiredRole != null && session.role !== requiredRole) ||
+    (requiredPermission != null && !hasPermission(requiredPermission));
+
+  // Navigation must happen in an effect, never during render.
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated || !session.token) {
+      router.replace("/"); // landing has the integrated login/register
+    } else if (requiredRole != null && session.role !== requiredRole) {
+      router.replace("/unauthorized");
+    } else if (requiredPermission != null && !hasPermission(requiredPermission)) {
+      router.replace("/forbidden");
+    }
+  }, [isLoading, isAuthenticated, session.token, session.role, requiredRole, requiredPermission, hasPermission, router]);
+
+  // While loading or redirecting, render the fallback (never the protected content).
+  if (isLoading || denied) {
+    return <>{fallback ?? <div className="min-h-screen flex items-center justify-center text-zinc-400">Loading…</div>}</>;
   }
 
-  // Step 2: Check if user is authenticated
-  if (!isAuthenticated || !session.token) {
-    // Redirect to login
-    router.push("/auth/login");
-    return null;
-  }
-
-  // Step 3: Check token expiration
-  // TODO: Implement token refresh logic
-  // if (isTokenExpired()) { refresh or redirect to login }
-
-  // Step 4: Check required role
-  if (requiredRole && session.role !== requiredRole) {
-    router.push("/unauthorized");
-    return null;
-  }
-
-  // Step 5: Check required permission
-  if (requiredPermission && !hasPermission(requiredPermission)) {
-    router.push("/forbidden");
-    return null;
-  }
-
-  // All checks passed: render protected content
   return <>{children}</>;
 }
 
@@ -59,9 +54,9 @@ export function AuthGuard({
 export function withAuthGuard<P extends object>(
   Component: React.ComponentType<P>,
   options?: {
-    requiredRole?: "SME" | "ADVISOR";
+    requiredRole?: UserRole;
     requiredPermission?: string;
-  }
+  },
 ) {
   return function GuardedComponent(props: P) {
     return (

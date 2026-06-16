@@ -78,7 +78,9 @@ You know how SOLID applies not just to traditional OOP classes but also to React
 
 ## Context
 
-**Provide the source code to analyze.** Can be from either layer:
+**File to analyze:** `$ARGUMENTS`
+
+Read the file at the path above, then analyze it according to the instructions below. Can be from either layer:
 
 - **Frontend examples:** React component (`.tsx`), custom hook (`use*.ts`), feature service (`*Service.ts`), Zustand store (`*Store.ts`), Zod schema, shared utility
 - **Backend examples:** FastAPI router/controller (`*_router.py`), service class (`*_service.py`), repository (`*_repository.py`), SQLAlchemy model (`*_model.py`), Pydantic schema (`*_schema.py`)

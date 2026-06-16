@@ -1,0 +1,5 @@
+# Development/test toolchain (not shipped to the production image — README §2.17).
+-r requirements.txt
+pytest==8.3.3
+pytest-cov==6.0.0
+httpx==0.28.1

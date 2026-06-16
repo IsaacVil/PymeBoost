@@ -338,7 +338,6 @@ No issues were detected related to navigation, visual comprehension, accessibili
 
 **Design criterion:** Provide just-in-time guidance at points of complexity without disrupting the flow for experienced users. Tooltips are non-intrusive and only appear on hover or first visit, preserving a clean interface for returning users.
 
-
 ---
 
 # Frontend
@@ -757,72 +756,77 @@ Components are designed for desktop experience first; gracefully adapt to smalle
 
 ## 1.4 Visual Design System & Branding
 
+The design language is **"paper & ink" retro / neo-brutalist** — a warm paper
+background with a subtle dotted texture, ink-colored borders, hard offset shadows,
+and a monospace accent for metadata. This matches the usability-tested prototype in
+[prototype/](prototype/).
+
+**Implementation note (Tailwind v4):** the tokens below are defined in
+[frontend/src/app/globals.css](frontend/src/app/globals.css) via `@theme`, which
+remaps the standard Tailwind color/shadow/font tokens the components use
+(`teal-500`, `stone-100`, `zinc-*`, `shadow-sm`, …). Components keep using familiar
+Tailwind classes; the `@theme` mapping gives them the retro palette globally.
+
 ### Color Palette
 
-| Color | Hex | Tailwind | Usage |
-|-------|-----|----------|-------|
-| Primary Teal | #17B6B0 | `teal-500` | CTAs, highlights, active states |
-| Primary Teal Dark | #12918C | `teal-600` | Hover states |
-| Background Cream | #F5F1E8 | `stone-100` | Main background |
-| Surface White | #FCFCFA | `zinc-50` | Cards, panels |
-| Soft Cyan Surface | #DFF4F3 | `cyan-100` | Highlight sections |
-| Dark Text | #161616 | `zinc-900` | Primary text |
-| Muted Text | #6B6B6B | `zinc-500` | Secondary text |
-| Border Dark | #262626 | `zinc-800` | Borders, dividers |
-| Success Green | #20B15A | `green-600` | Success states |
-| Warning Orange | #F59E0B | `amber-500` | Pending states |
-| Danger Red | #DC2626 | `red-600` | Error/cancelled states |
-| Gold Accent | #D97706 | `amber-600` | Ratings, premium indicators |
+| Color | Hex | Tailwind token | Usage |
+|-------|-----|----------------|-------|
+| Primary Blue | #3B82F6 | `teal-500` | CTAs, highlights, active states |
+| Primary Blue Deep | #1E5FD6 | `teal-600` | Hover states |
+| Secondary Violet | #8B5CF6 | `violet-500` | Secondary accent |
+| Paper | #FAF5EC | `stone-100` | Main background (dotted texture) |
+| Surface White | #FFFFFF | `zinc-50` | Cards, panels |
+| Paper-2 | #F3ECDD | `zinc-100` | Hover / subtle fills |
+| Ink | #211B12 | `zinc-900` / `zinc-800` | Primary text + borders/lines |
+| Ink Soft | #6B6253 | `zinc-500` | Secondary text |
+| Ink Faint | #9C9384 | `zinc-400` | Tertiary text |
+| Success Green | #16A34A | `green-600` | Success states |
+| Warning Orange | #D97706 | `amber-500` | Pending / ratings |
+| Danger Red | #DC2626 | `red-600` | Error / cancelled states |
 
 ### Typography
 
-| Element | Font | Size | Weight |
-|---------|------|------|--------|
-| H1 | Righteous | 48px | 700 |
-| H2 | Righteous | 32px | 700 |
-| H3 | Righteous | 24px | 600 |
-| Body | Sans Serif | 16px | 400 |
-| Small | Sans Serif | 14px | 400 |
-| Mono | JetBrains Mono | 12px | 500 |
+| Element | Font | Notes |
+|---------|------|-------|
+| Brand wordmark | Macondo (display) | "PymeBoost" logo only |
+| Headings (H1–H4) | Space Grotesk | weight 600, tight tracking |
+| Body / Small | Space Grotesk | weight 400 |
+| Buttons | JetBrains Mono | semibold, wide tracking |
+| Mono / eyebrow / metadata | JetBrains Mono | uppercase, letter-spaced |
 
-### Spacing
+Fonts are loaded with `next/font/google` in
+[layout.tsx](frontend/src/app/layout.tsx) (`--font-space-grotesk`, `--font-jetbrains`,
+`--font-macondo`).
 
-- Padding: `p-4` (16px), `p-6` (24px), `p-8` (32px)
-- Margin: `m-4`, `m-6`, `m-8`
-- Gap: `gap-4`, `gap-6`, `gap-8`
+### Spacing & Radius
+
+- Padding: `p-4` (16px), `p-6` (24px), `p-8` (32px); Gap: `gap-4`, `gap-6`, `gap-8`
+- Radius: `rounded-md` (12px) controls, `rounded-lg` (16px) cards
 
 ### Components
 
-**Buttons:**
-- Primary: `bg-teal-500 text-white hover:bg-teal-600 rounded-md px-4 py-2`
-- Secondary: `bg-zinc-50 text-zinc-900 border-2 border-zinc-800 rounded-md px-4 py-2`
+**Buttons** (ink border + hard shadow that "presses in" on click; mono label):
+- Primary: `bg-teal-500 text-white border-2 border-zinc-800 shadow-sm font-mono active:translate-x-[2px] active:translate-y-[2px] active:shadow-none`
+- Secondary: `bg-zinc-50 text-zinc-900 border-2 border-zinc-800 shadow-sm font-mono`
 
-**Cards:**
-- `bg-zinc-50 border-2 border-zinc-800 rounded-lg p-6 shadow-sm`
+**Cards:** `bg-zinc-50 border-2 border-zinc-800 rounded-lg p-6 shadow-sm` (hard offset shadow)
 
-**Inputs:**
-- `bg-white border-2 border-zinc-800 text-zinc-900 px-3 py-2 rounded-md focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500`
+**Badges (pills):** `rounded-full border font-mono text-[11px] uppercase tracking-wider`
 
-**Modals:**
-- `bg-zinc-50 rounded-lg p-8 border-2 border-zinc-800 with bg-black/50 overlay`
+**Inputs:** `bg-white border-2 border-zinc-800 text-zinc-900 px-3 py-2 rounded-md focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500`
 
-### Icons & Images
-
-- Icon library: Heroicons (24px)
-- Avatars: 64px (matching/contracts), 48px (chat)
+**Modals:** `bg-zinc-50 rounded-lg p-8 border-2 border-zinc-800` with `bg-black/50` overlay
 
 ### Standards
 
-- Teal primary color for actions and active states
-- Cream/light backgrounds with dark outlined cards
+- Blue primary for actions and active states; ink for text and borders
+- Paper backgrounds with ink-outlined surfaces and **hard offset shadows** (`shadow-sm`)
 - Thick visible borders (`border-2 border-zinc-800`)
-- Rounded industrial-style components
-- WCAG AA contrast (4.5:1 minimum)
-- Focus states: `focus:ring-2 focus:ring-teal-500`
+- WCAG AA contrast (4.5:1 minimum); focus states `focus:ring-2 focus:ring-teal-500`
 - Semantic HTML and full keyboard navigation
-- No hardcoded colors; use Tailwind only
-- Monospace labels for metadata, tags, and section headers
-- Subtle retro-dashboard aesthetic with spacious layouts
+- No hardcoded colors — use the remapped Tailwind tokens only
+- Monospace (JetBrains Mono) for labels, tags, buttons, and section eyebrows
+- Retro "paper & ink" aesthetic with spacious layouts
 
 ---
 
@@ -1076,7 +1080,7 @@ PymeBoost has four main user workflows that drive the platform. Each workflow sp
 
 **Key Interactions:**
 - Card animations (swipe, fade, slide)
-- Real-time compatibility score display
+- Real-time compatibility score display (1–5 scale; AI-generated from 70% sub-industry alignment + 30% advisor reputation)
 - Previous project showcase on each card
 - Estimated metrics improvement visible
 - One-tap messaging after approval
@@ -6157,76 +6161,32 @@ bash backend/scripts/validate_database.sh
 
 # Agents
 
-PymeBoost uses specialized AI agents as quality validators during development. Every agent follows the **RICO format** (Role, Instructions, Context, Output) and is run via **Claude Code**. All agents are grounded in this README — evaluations reference the architecture, layer rules, and design patterns documented here.
+PymeBoost uses specialized AI agents as quality validators during development. Every agent follows the **RICO format** (Role, Instructions, Context, Output) and is run via **Claude Code** slash commands. All agents are grounded in this README — evaluations reference the architecture, layer rules, and design patterns documented here.
 
-Agents are run before committing each feature. Findings and corrections are documented below under "Agent Validations".
+Agents are configured as Claude Code commands in [`.claude/commands/`](.claude/commands/) and run before committing each feature. Findings and corrections are documented below under "Agent Validations".
 
+---
 
 ## 4.1 Agent Catalog
 
-| Agent | File | Purpose | Applies to |
-|-------|------|---------|------------|
-| **SOLID Validator** | [.agents/solid-agent.md](.agents/solid-agent.md) | Detects violations of all 5 SOLID principles | Frontend + Backend |
-| **DRY Validator** | [.agents/dry-agent.md](.agents/dry-agent.md) | Detects duplicated logic, structure, types, and UI patterns | Frontend + Backend |
-| **Cohesion Validator** | [.agents/cohesion-agent.md](.agents/cohesion-agent.md) | Classifies cohesion level and detects low-cohesion modules | Frontend + Backend |
-| **Architecture Validator** | [.agents/architecture-agent.md](.agents/architecture-agent.md) | Validates code matches the documented architecture in this README | Frontend + Backend |
-| **Frontend Agent** | [.agents/frontend-agent.md](.agents/frontend-agent.md) | Generates and reviews React components, hooks, services, and stores | Frontend only |
-| **Backend Agent** | [.agents/backend-agent.md](.agents/backend-agent.md) | Generates and reviews FastAPI controllers, services, repositories, and schemas | Backend only |
-| **Database Agent** | [.agents/database-agent.md](.agents/database-agent.md) | Validates SQLAlchemy models, Alembic migrations, indexes, and seed data | Backend only |
-| **Testing Agent** | [.agents/testing-agent.md](.agents/testing-agent.md) | Generates and reviews Vitest, Playwright, and Pytest tests | Frontend + Backend |
+All agents accept a file path as `$ARGUMENTS` — pass it directly after the command name and the agent reads the file automatically. No copy-pasting code needed.
+
+| Agent | Command | Usage | Purpose | Applies to |
+|-------|---------|-------|---------|------------|
+| **SOLID Validator** | `/solid-validator` | `/solid-validator <path/to/file.ts>` | Detects violations of all 5 SOLID principles | Frontend + Backend |
+| **DRY Validator** | `/dry-validator` | `/dry-validator <path1.ts> <path2.ts>` | Detects duplicated logic, structure, types, and UI patterns | Frontend + Backend |
+| **Cohesion Validator** | `/cohesion-validator` | `/cohesion-validator <path/to/file.ts>` | Classifies cohesion level and detects low-cohesion modules | Frontend + Backend |
+| **Architecture Validator** | `/architecture-validator` | `/architecture-validator <path1.ts> <path2.ts>` | Validates code matches the documented architecture in this README | Frontend + Backend |
+| **Frontend Agent** | `/frontend-agent` | `/frontend-agent <path/to/file.tsx>` (review) or describe what to build (generate) | Generates and reviews React components, hooks, services, and stores | Frontend only |
+| **Backend Agent** | `/backend-agent` | `/backend-agent <path/to/file.py>` (review) or describe what to build (generate) | Generates and reviews FastAPI controllers, services, repositories, and schemas | Backend only |
+| **Database Agent** | `/database-agent` | `/database-agent <path/to/model.py>` (review) or describe new table (design) | Validates SQLAlchemy models, Alembic migrations, indexes, and seed data | Backend only |
+| **Testing Agent** | `/testing-agent` | `/testing-agent <path/to/source.ts>` (generate tests) or `<path/to/test.spec.ts>` (review tests) | Generates and reviews Vitest, Playwright, and Pytest tests | Frontend + Backend |
 
 ---
 
-## 4.2 How to Run an Agent
-
-All agents are run in Claude Code using this pattern:
-
-```
-Read .agents/[agent-name].md and [action] the following [code type] from the [feature/domain]:
-
-[paste code here]
-```
-
-For the full command reference per agent and use case, see [.agents/agents&mvpformat.md](.agents/agents&mvpformat.md).
-
----
-
-## 4.3 Skills
-
-Skills are specialized capabilities of Claude Code that complement the agents. Unlike agents, skills operate automatically over the current branch diff or the running app.
-
-### Installation
-
-The `frontend-design` skill must be installed once:
-
-```bash
-npx skills add https://github.com/anthropics/skills --skill frontend-design
-```
-
-All other skills are built into Claude Code — no installation needed.
-
-### Skill Catalog
-
-| Skill | Command | Purpose | When to use |
-|-------|---------|---------|-------------|
-| **Code Review** | `/code-review` | Scans the full branch diff for bugs and quality issues | After applying agent corrections |
-| **Code Review (fix)** | `/code-review --fix` | Same as above, applies fixes directly | When findings are clear and safe to auto-apply |
-| **Code Review (ultra)** | `/code-review ultra` | Deep multi-agent cloud review | Final review before demo |
-| **Simplify** | `/simplify` | Finds and applies reuse/simplification opportunities | After DRY agent detects duplication |
-| **Verify** | `/verify` | Runs the app and confirms a change works visually | After applying agent corrections |
-| **Run** | `/run` | Launches the project locally (Next.js + FastAPI) | Before demo, after backend changes |
-| **Security Review** | `/security-review` | Deep security scan of the diff | Before any PR touching auth, JWT, or contracts |
-| **Frontend Design** | `frontend-design` (external) | Reviews UI components for design quality and accessibility | After frontend-agent generates a component |
-
-For the full skill reference and recommended combinations per feature, see [.agents/agents&mvpformat.md](.agents/agents&mvpformat.md).
-
----
-
-## 4.4 Agent Validations
+## 4.2 Agent Validations
 
 Every time an agent is used during MVP development, findings and corrections are documented here. This section is organized by feature.
-
----
 
 ### Feature: Auth (Login / Register)
 
@@ -6279,3 +6239,140 @@ Each validation entry must follow this format:
 ---
 
 # MVP
+
+This section documents the **Minimum Viable Product**: a functional, locally-runnable
+slice of PymeBoost that resolves the core problem statement (discover → connect →
+negotiate → formalize → track the SME–advisor relationship). It follows the architecture
+documented in this README. The full operational spec lives in
+[docs/mvpspec.md](docs/mvpspec.md).
+
+## MVP — Local Profile
+
+The MVP runs **only in a local environment**. The cloud design documented in this README
+(GCP Secret Manager, Cloud SQL, Pub/Sub, Memorystore, KMS, LangGraph, Auth0) is preserved
+in the codebase but mapped to local equivalents using the **same environment-variable
+names**, so design and implementation stay aligned. Documented deviations:
+
+| Design (cloud) | MVP (local) |
+| --- | --- |
+| Auth0 (JWT/JWKS) | **Mock JWT** (HS256, `JWT_SECRET`) + **bcrypt** credentials in `PB_AuthCredentials` |
+| Cloud SQL (Postgres) | **Postgres 16 + pgvector** in Docker |
+| Pub/Sub | In-process `EventBus` (`backend/shared/events/`) |
+| Memorystore (Redis), GCS, KMS | Optional / local filesystem / no-op |
+| LangGraph / pgvector AI | **Mock AI** (deterministic, local) |
+
+## MVP Scope
+
+**Core features:** Auth & Registration · Matching (Tinder-style advisor discovery) ·
+Messaging (chat) · Contracts (Negotiate Tariff + Marry the Prospect) · Dashboard (tracking)
+· Reports (per-phase).
+
+**Supporting (minimal):** in-app notifications · basic profiles · seed data · in-process
+domain events · mock AI.
+
+**Out of scope:** real MEIC validation · real AI (embeddings/LLM/pgvector search) · payments
+· multiple simultaneous contracts · WebSockets · email/push · advanced roles/admin · i18n ·
+cloud deployment. See [docs/mvpspec.md](docs/mvpspec.md) §5 for the full scope and user journeys.
+
+## Running the MVP Locally
+
+### Prerequisites / Dependencies
+- **Docker** (Desktop) — for the Postgres + pgvector database.
+- **Python 3.12+** — backend (FastAPI). Runtime deps in
+  [backend/requirements.txt](backend/requirements.txt); test tooling in
+  [backend/requirements-dev.txt](backend/requirements-dev.txt).
+- **Node.js 22 LTS** — frontend (Next.js). Deps in [frontend/package.json](frontend/package.json).
+
+### 1. Database / Data Layer
+Postgres 16 + pgvector via Docker. Init scripts run automatically in order on first start
+(`creationScript.sql` → `seed.sql` (catalogs) → `auth_local.sql` (local auth table) →
+`seed_dev.sql` (demo data)).
+
+```bash
+docker compose up -d        # start DB and initialize schema + seed
+docker compose down         # stop (keeps data)
+docker compose down -v      # stop and WIPE data (forces re-init/re-seed)
+```
+
+**Data initialization:** schema + catalog seed + demo data are loaded automatically by the
+container on first boot — no manual step required. The data layer source files live in
+[database/scripts/](database/scripts/).
+
+### 2. Backend (FastAPI)
+Run from the **repo root** so the `backend` package resolves:
+
+```bash
+cd backend && python -m venv .venv                       # once
+.venv/Scripts/python -m pip install -r requirements.txt   # Windows
+# (Linux/macOS: source .venv/bin/activate && pip install -r requirements.txt)
+cd .. && backend/.venv/Scripts/python -m uvicorn backend.main:app --reload --port 8000
+```
+
+Verify: `http://localhost:8000/health` → `200 {"status":"ok","database":"up",...}` ·
+OpenAPI docs at `http://localhost:8000/docs`.
+
+### 3. Frontend (Next.js)
+```bash
+cd frontend
+npm install                 # once
+npm run dev                 # → http://localhost:3000
+```
+
+### Environment Variables
+
+**Backend** — copy [backend/.env.example](backend/.env.example) to `backend/.env` (defaults
+target the local profile, so it runs without edits):
+
+| Variable | Local default | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | `postgresql://pymeboost:pymeboost@localhost:5432/pymeboost` | DB connection |
+| `USE_MOCKS` | `true` | Enable local mock adapters (AI/auth/storage) |
+| `JWT_SECRET` / `JWT_ALGORITHM` / `JWT_EXPIRE_MINUTES` | `dev-only-change-me` / `HS256` / `180` | Local JWT |
+| `CORS_ORIGINS` | `http://localhost:3000` | Allowed frontend origin |
+| `AUTH0_DOMAIN`, `REDIS_URL`, `GCS_BUCKET_NAME`, … | empty | Cloud vars (optional in local) |
+
+**Frontend** — copy [frontend/.env.example](frontend/.env.example) to `frontend/.env.local`:
+
+| Variable | Local default | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Backend base URL |
+
+### Seed / Demo Credentials
+Demo accounts are preloaded by `seed_dev.sql`. All use password **`DemoPass123!`**:
+- PYME: `maria@cafedelvalle.cr`, `carlos@techsoluciones.cr`
+- Advisor: `ana@asesores.cr`, `roberto@asesores.cr`, `luis@asesores.cr`
+
+## Agent Validations
+
+Per the agent workflow ([docs/agents&mvpformat.md](docs/agents&mvpformat.md)), each feature
+built in Fase 2 is validated with the specialized agents (`/architecture-validator`,
+`/solid-validator`, `/dry-validator`/`/cohesion-validator`, `/frontend-agent`/`/backend-agent`,
+`/testing-agent`). Findings and applied corrections are documented here per feature.
+
+> _Fase 1 (executable scaffold) complete: data layer, backend, auth, and frontend run
+> locally. Feature-level agent validations are recorded below as Fase 2 progresses._
+
+### Auth (Fase 2A — frontend wiring + real login)
+
+| Agent / check | Finding | Applied correction |
+| --- | --- | --- |
+| Architecture | `AuthGuard` redirected to `/auth/login`, a non-existent route (route group `(auth)` serves `/login`) | Redirect fixed to `/login`; same fix applied to the landing CTA and `useAuth.signOut` |
+| Frontend (React) | `AuthGuard` called `router.push` during render (illegal side-effect, React warnings) | Navigation moved into a `useEffect`; render only shows the fallback while loading/redirecting |
+| SOLID (DIP) | `apiClient` read the JWT from `localStorage` directly, duplicating the auth source of truth | `apiClient` now reads the token from the `authStore` singleton; the store persists to `localStorage` |
+| Frontend (consistency) | Login screen was a static Auth0 placeholder with no real form | Built `LoginForm`/`RegisterForm` (React Hook Form + Zod) wired to the backend; verified end-to-end in a real browser |
+
+### Matching — discovery / recommendations (Fase 2B)
+
+Generated with the **`backend-agent`** skill (controller → service → repository → DTO,
+local profile with mock AI). Endpoint: `GET /api/matching/recommendations/{pyme_id}`.
+
+| Agent / check | Finding | Applied correction / decision |
+| --- | --- | --- |
+| Backend Agent (layers) | Stub `discovery_service`/`repository` had no real implementation | Implemented faithful layers: controller delegates to `DiscoveryService`, which uses `DiscoveryRepository` (ORM) + `MockMatchingAI`; returns DTOs, never raw ORM models |
+| Backend Agent (Guard) | Endpoint must validate JWT + ownership | Protected via `get_current_principal`; only the owning PYME (`account_type=="pyme"` and `subject_id==pyme_id`) can read its recommendations (403 otherwise) |
+| Backend Agent (ACL) — **open deviation** | Matching reads `PB_Advisors` (advisor domain) by importing its ORM model — README mandates cross-domain via REST + ACL translator | **Accepted for the local MVP** and documented in `discovery_repository.py`; flagged to refactor to ACL/REST in a fuller build |
+| AI scope | No real AI (pgvector/LLM) available | `MockMatchingAI` produces deterministic compatibility/objective/gain per advisor (per docs/mvpspec.md `USE_MOCKS`) |
+| Encoding | Advisor names with accents arrived mojibake over the API | Set `client_encoding=utf8` on the SQLAlchemy engine; verified "Luis Vargas Núñez" renders correctly in the browser |
+
+> Next 2B slices: matching **swipe** (write → `PB_Matches`), then Messaging and Dashboard
+> backends, each with `/backend-agent`, `/database-agent`, `/testing-agent`, `/security-review`.

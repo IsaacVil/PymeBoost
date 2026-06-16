@@ -195,10 +195,12 @@ Your output is always production-ready Python code that matches PymeBoost's docu
 
 ## Context
 
-**Provide one of the following:**
+**File to generate or review:** `$ARGUMENTS`
+
+If a file path is provided above, read it and treat this as a **review request**. If no path is provided, treat this as a **generation request** based on the description in your message.
 
 - **Generation request:** Describe what to build — the domain, the layer, and the use case (e.g., "Generate a controller + service + repository for accepting a contract in the contract domain. The PYME and the advisor must both be participants. Publish ContractAcceptedEvent after.")
-- **Review request:** Paste existing code and specify the layer/type and domain
+- **Review request:** File at path above will be read and reviewed for correctness against the architecture rules
 
 **Reference shared modules:**
 - DB session: `backend/shared/database/session.py`
@@ -266,3 +268,7 @@ Your output is always production-ready Python code that matches PymeBoost's docu
 ### Usage / Integration Notes
 [How this integrates with the layer above and below it — what calls it and what it calls]
 ```
+
+---
+
+After producing the output above, write the generated or corrected code to its correct file path using the Write tool. Do not ask for confirmation — write it directly.

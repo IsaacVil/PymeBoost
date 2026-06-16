@@ -1,0 +1,7 @@
+{
+  "name": "pymeboost",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PymeBoost monorepo root (frontend in /frontend, backend in /backend).",
+  "license": "MIT"
+}

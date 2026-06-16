@@ -2,14 +2,53 @@
 // Why: swipes are the core interaction unit — Command decouples the action
 //      from the trigger, enables logging, queuing, and potential undo
 //
-// Single matching strategy: AI-powered (per project spec)
-// The backend AI generates all recommendations — no rule-based or manual fallback
+// FASE 2B: getRecommendations now calls the real backend
+// (GET /api/matching/recommendations/{pymeId}) and maps the response to DeckAdvisor.
+// Swipes are still local mocks (wired to the backend in a later slice — TODO).
 
 import { apiClient } from "@/lib/apiClient";
-import { Match } from "../types/matching";
+import { DeckAdvisor } from "../data/advisors";
 
-// ─── Command Pattern ──────────────────────────────────────────────────────────
+// Backend response shape (matching/schemas/recommendation_response.py).
+interface RecommendationResponse {
+  advisor_id: string;
+  name: string;
+  monogram: string;
+  role: string;
+  industry: string;
+  rating: number;
+  reviews: number;
+  years: number;
+  compat: number;
+  process: string;
+  ai_objective: string;
+  success_metric: { label: string; before: string; after: string; delta: string };
+  advisor_gain: { pct: number; basis: string; est: number; months: number };
+  retainer: number;
+  accent: string;
+}
 
+function toDeckAdvisor(r: RecommendationResponse): DeckAdvisor {
+  return {
+    id: r.advisor_id,
+    name: r.name,
+    monogram: r.monogram,
+    role: r.role,
+    industry: r.industry,
+    rating: r.rating,
+    reviews: r.reviews,
+    years: r.years,
+    compat: r.compat,
+    process: r.process,
+    aiObjective: r.ai_objective,
+    successMetric: { label: r.success_metric.label, from: r.success_metric.before, to: r.success_metric.after, delta: r.success_metric.delta },
+    advisorGain: { pct: r.advisor_gain.pct, basis: r.advisor_gain.basis, est: r.advisor_gain.est, months: r.advisor_gain.months },
+    retainer: r.retainer,
+    accent: r.accent as DeckAdvisor["accent"],
+  };
+}
+
+// ─── Command Pattern (swipe — still local in this slice) ────────────────────────
 interface SwipeCommand {
   advisorId: string;
   execute(): Promise<void>;
@@ -17,40 +56,27 @@ interface SwipeCommand {
 
 class SwipeApprovedCommand implements SwipeCommand {
   constructor(public advisorId: string) {}
-
   async execute(): Promise<void> {
-    await apiClient.request(`/matching/swipe`, {
-      method: "POST",
-      body: { advisorId: this.advisorId, action: "approved" },
-    });
+    // TODO (next 2B slice): POST /api/matching/swipe { advisorId, action: "approved" }
   }
 }
 
 class SwipeRejectedCommand implements SwipeCommand {
   constructor(public advisorId: string) {}
-
   async execute(): Promise<void> {
-    await apiClient.request(`/matching/swipe`, {
-      method: "POST",
-      body: { advisorId: this.advisorId, action: "rejected" },
-    });
+    // TODO (next 2B slice): POST /api/matching/swipe { advisorId, action: "rejected" }
   }
 }
 
-// ─── Matching Service ─────────────────────────────────────────────────────────
-
 export class MatchingService {
-  // Fetches AI-generated recommendations for a PYME
-  // The backend AI uses the PYME profile filled at registration — no search form needed
-  async getRecommendations(pymeId: string): Promise<Match[]> {
-    const response = await apiClient.request<Match[]>(
-      `/matching/recommendations/${pymeId}`,
-      { method: "GET" }
+  async getRecommendations(pymeId: string): Promise<DeckAdvisor[]> {
+    const res = await apiClient.request<RecommendationResponse[]>(
+      `/api/matching/recommendations/${pymeId}`,
+      { method: "GET" },
     );
-    return response.data ?? [];
+    return (res.data ?? []).map(toDeckAdvisor);
   }
 
-  // Executes a swipe command (approved or rejected)
   async executeSwipe(command: SwipeCommand): Promise<void> {
     await command.execute();
   }

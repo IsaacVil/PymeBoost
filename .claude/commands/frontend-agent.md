@@ -175,10 +175,12 @@ Your output is always production-ready code that matches PymeBoost's documented 
 
 ## Context
 
-**Provide one of the following:**
+**File to generate or review:** `$ARGUMENTS`
+
+If a file path is provided above, read it and treat this as a **review request**. If no path is provided, treat this as a **generation request** based on the description in your message.
 
 - **Generation request:** Describe what to build — the feature, the layer (primitive / compound / container / hook / service), and what it should do (e.g., "Generate a primitive component for displaying an advisor card in the matching feature, showing name, specialization, compatibility score, and approve/reject buttons")
-- **Review request:** Paste the existing code and specify what layer/type it is and which feature it belongs to
+- **Review request:** File at path above will be read and reviewed for correctness against the architecture rules
 
 **Reference files from the README:**
 - `apiClient`: `frontend/src/lib/apiClient.ts`
@@ -237,3 +239,7 @@ Your output is always production-ready code that matches PymeBoost's documented 
 ### Usage Example
 [How to use this component/hook from the parent layer]
 ```
+
+---
+
+After producing the output above, write the generated or corrected code to its correct file path using the Write tool. Do not ask for confirmation — write it directly.

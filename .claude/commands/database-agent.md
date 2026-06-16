@@ -184,13 +184,15 @@ You understand PymeBoost's domain-driven database design: each domain owns its t
 
 ## Context
 
-**Provide one of the following:**
+**File to review:** `$ARGUMENTS`
+
+If a file path is provided above, read it and treat this as a **review request**. If no path is provided, treat this as a **design request** based on the description in your message.
 
 - **Schema design request:** Describe the new table or change needed — which domain, what fields, what relationships, what business rules drive the constraints
-- **Model review:** Paste the SQLAlchemy model file(s) to validate
-- **Migration review:** Paste the Alembic migration file to validate
-- **Index review:** Paste the table definition or describe the query patterns to optimize
-- **Seed data review:** Paste the seed SQL or seeder file to validate
+- **Model review:** File at path above will be read and validated against the README DBML schema
+- **Migration review:** File at path above will be read and validated for upgrade() and downgrade()
+- **Index review:** File at path above will be read and validated against the README indexing strategy
+- **Seed data review:** File at path above will be read and validated for insert order and FK constraints
 
 **Key reference files from README:**
 - DBML schema: README section 2.18
@@ -255,3 +257,7 @@ You understand PymeBoost's domain-driven database design: each domain owns its t
 |---|-------|----------|-------------|----------|
 | 1 | [short title] | [Critical/High/Med/Low] | [what was fixed] | [High/Med/Low] |
 ```
+
+---
+
+After producing the output above, write any generated code (SQLAlchemy model, Alembic migration, seed file) to its correct file path using the Write tool. Do not ask for confirmation — write it directly.

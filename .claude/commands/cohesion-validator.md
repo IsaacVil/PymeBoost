@@ -68,7 +68,9 @@ High cohesion means a module, class, component, or function is dedicated to a si
 
 ## Context
 
-**Provide the source code to analyze.** Can be from either layer:
+**File to analyze:** `$ARGUMENTS`
+
+Read the file at the path above, then analyze it according to the instructions below. Can be from either layer:
 
 - **Frontend examples:** React component (`.tsx`), custom hook (`use*.ts`), feature service (`*Service.ts`), Zustand store (`*Store.ts`), shared utility
 - **Backend examples:** FastAPI router (`*_router.py`), service class (`*_service.py`), repository (`*_repository.py`), SQLAlchemy model, Pydantic schema
