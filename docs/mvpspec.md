@@ -94,6 +94,17 @@ navegable (login real, resto con mock data); Fase 2B = cablear backend por featu
     (archivos/ruta conservados, no se usan). Labels del menú traducidos al español.
   - 🎉 **Port visual del prototipo COMPLETO**: Landing · Matching (swipe) · Messaging+Contratos · Dashboard.
 
+### Flujo Advisor (Journey 2) — role-aware
+- ✅ Las 3 pantallas son **role-aware** (leen `session.role`):
+  - **Descubrir** → Advisor ve **"Oportunidades"** (grid de PYMEs, sin swipe); PYME ve el deck.
+  - **Mensajes** → conversaciones del advisor; el advisor **responde la propuesta** (Aceptar / Re-negociar /
+    Rechazar) y NO puede "Marry the Prospect" (exclusivo PYME). `ChatView` con `pendingIdx` + `decideProposal`.
+  - **Mi Contrato** → "Proyecto Activo · {PYME}" (contraparte = PYME).
+- Registro Advisor fiel al prototipo (datos personales + enriquecimiento IA + use cases + pago) con rol real.
+- Usuarios demo advisor del seed: `ana@asesores.cr` / `luis@asesores.cr` (`DemoPass123!`), en el hint del login.
+- Fix: messaging cargaba conversaciones según el rol con `useState` (capturaba rol pre-hidratación) →
+  movido a `useEffect([role])`.
+
 ### Fase 2B — cablear backend por feature (en curso)
 - ✅ **Matching · discovery/recomendaciones** — primer slice real (generado con `backend-agent`):
   `GET /api/matching/recommendations/{pyme_id}` (controller→service→repository→DTO) lee advisors
@@ -101,7 +112,21 @@ navegable (login real, resto con mock data); Fase 2B = cablear backend por featu
   Frontend `matchingService.getRecommendations` cableado al endpoint; el deck muestra datos reales.
   Hallazgos/decisiones documentados en README → "Agent Validations". Fix: `client_encoding=utf8` en el engine.
   Ruta `/contracts` eliminada (flujo de contratos vive en Messaging + Dashboard).
-- ⏳ Próximo: matching **swipe** (escritura → `PB_Matches`), luego Messaging y Dashboard backends.
+- ✅ **Matching · swipe** — `POST /api/matching/swipe` (upsert `PB_Matches`, `match`/`not_swiped`,
+  idempotente). Generado con `backend-agent`, validado con `architecture-validator`. `EventBus` in-process
+  (Observer) publica `MatchSwiped`/`MatchCreated` tras persistir. Guard JWT+ownership. Frontend `onDecision`
+  → `matchingService.swipe`. Verificado: 201/idempotente/403. Hallazgos en README → Agent Validations.
+- ✅ **Messaging (communication)** — `GET/POST /api/communication/chats/{match_id}/messages`.
+  Generado con `backend-agent`, validado con `architecture-validator`. `ContactScanner` (Strategy)
+  bloquea contacto externo (400); ownership en el service (`ForbiddenException`→403); `MessageSent`
+  publicado tras persistir. `ForbiddenException` agregada + handler 403 en `main.py`. Verificado:
+  GET 200 (4 msgs) / POST 201 / email 400 / chat ajeno 403. Backend-only (frontend se cablea luego).
+- ✅ **Dashboard · contract read** — `GET /api/contracts/match/{match_id}` (contract domain).
+  Generado con `backend-agent`; `ContractModel`+`ContractVersionModel`, repo ORM, service con
+  ownership (`ForbiddenException`→403), `ContractResponse` DTO. Verificado: 200 (negotiating,
+  ₡800k/₡150k/5%/objetivo) / chat ajeno 403. El tracking de proyecto (fases/KPIs) sigue mock
+  (requiere seed de proyecto activo).
+- 🎉 **Fase 2B (lecturas/escrituras core) cubierta**: Matching (discovery+swipe), Messaging, Contract.
 
 ### (Pendiente histórico) Próximo paso del port visual
 - ▶️ **Continuar port visual: Messaging + contratos** (prototype/app/messaging.jsx) — chat con

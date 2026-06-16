@@ -94,6 +94,29 @@ export function ChatView({ match, role, onUpdate, onUnmatch }: ChatViewProps) {
     notify({ type: "success", title: `¡Contrato activo con ${match.advisor.name.split(" ")[0]}! 💍`, message: "", duration: 3000 });
   };
 
+  // Advisor responds to the PYME's pending proposal (cannot Marry — that's PYME-only).
+  const pendingIdx =
+    role === "advisor"
+      ? match.messages.findIndex((m) => m.kind === "proposal" && m.from === "them" && !m.decided)
+      : -1;
+
+  const decideProposal = (decision: "accepted" | "rejected") => {
+    onUpdate((m) => {
+      const msgs = m.messages.map((msg, i) => (i === pendingIdx ? { ...msg, decided: decision } : msg));
+      return {
+        ...m,
+        status: decision === "accepted" ? "Propuesta aceptada" : "Propuesta rechazada",
+        contract: decision === "accepted" ? (m.messages[pendingIdx]?.contract ?? m.contract) : m.contract,
+        messages: [...msgs, { from: "system", kind: "advisor-decision", decision, t: now() }],
+      };
+    });
+    notify(
+      decision === "accepted"
+        ? { type: "success", title: "Propuesta aceptada · la PYME puede formalizar", message: "✓", duration: 3000 }
+        : { type: "error", title: "Propuesta rechazada", message: "✕", duration: 3000 },
+    );
+  };
+
   const showNegotiate = !match.married;
 
   return (
@@ -130,6 +153,19 @@ export function ChatView({ match, role, onUpdate, onUnmatch }: ChatViewProps) {
           <MessageBubble key={i} m={m} mine={m.from === "me"} onViewDetails={(c) => setViewProposal(c)} />
         ))}
       </div>
+
+      {/* Advisor action bar: pending proposal from the PYME */}
+      {!match.married && role === "advisor" && pendingIdx >= 0 && (
+        <div style={{ padding: "12px 18px", borderTop: "var(--bd) solid var(--ink)", background: "color-mix(in srgb, var(--accent) 6%, var(--surface))", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 140 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700 }}>Propuesta de contrato recibida</div>
+            <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-soft)", marginTop: 2 }}>Revisá los términos y decidí.</div>
+          </div>
+          <Button size="sm" onClick={() => decideProposal("accepted")}>✓ Aceptar</Button>
+          <Button variant="secondary" size="sm" onClick={() => setShowContract(true)}>Re-negociar</Button>
+          <Button variant="danger" size="sm" onClick={() => decideProposal("rejected")}>✕ Rechazar</Button>
+        </div>
+      )}
 
       {/* Marry CTA (PYME, after advisor accepted) */}
       {!match.married && match.status === "Propuesta aceptada" && role === "pyme" && (

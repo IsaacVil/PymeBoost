@@ -77,6 +77,14 @@ export class MatchingService {
     return (res.data ?? []).map(toDeckAdvisor);
   }
 
+  // Fase 2B: persist the swipe decision in PB_Matches (right → match, left → not_swiped).
+  async swipe(pymeId: string, advisorId: string, approved: boolean): Promise<void> {
+    await apiClient.request("/api/matching/swipe", {
+      method: "POST",
+      body: { pyme_id: pymeId, advisor_id: advisorId, approved },
+    });
+  }
+
   async executeSwipe(command: SwipeCommand): Promise<void> {
     await command.execute();
   }

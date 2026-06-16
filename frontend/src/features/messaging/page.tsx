@@ -1,16 +1,25 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { DashboardLayout } from "@/shared/components/layouts/DashboardLayout";
 import { Avatar } from "@/shared/components/ui/Avatar";
 import { useAuthStore } from "@/store/authStore";
 import { ChatView } from "./components/ChatView";
 import { CONVERSATIONS, Conversation } from "./data/conversations";
+import { ADVISOR_CONVERSATIONS } from "./data/advisorConversations";
 
 export default function MessagingPage() {
   const role = useAuthStore((s) => s.session.role) === "ADVISOR" ? "advisor" : "pyme";
-  const [conversations, setConversations] = useState<Conversation[]>(CONVERSATIONS);
-  const [activeId, setActiveId] = useState<string>(CONVERSATIONS[0]?.id ?? "");
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeId, setActiveId] = useState<string>("");
+
+  // Load the conversation set for the resolved role (auth store hydrates async,
+  // so we sync here instead of capturing role once in useState).
+  useEffect(() => {
+    const list = role === "advisor" ? ADVISOR_CONVERSATIONS : CONVERSATIONS;
+    setConversations(list);
+    setActiveId(list[0]?.id ?? "");
+  }, [role]);
 
   const active = conversations.find((c) => c.id === activeId) ?? conversations[0];
 

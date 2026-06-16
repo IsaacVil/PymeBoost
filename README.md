@@ -6374,5 +6374,58 @@ local profile with mock AI). Endpoint: `GET /api/matching/recommendations/{pyme_
 | AI scope | No real AI (pgvector/LLM) available | `MockMatchingAI` produces deterministic compatibility/objective/gain per advisor (per docs/mvpspec.md `USE_MOCKS`) |
 | Encoding | Advisor names with accents arrived mojibake over the API | Set `client_encoding=utf8` on the SQLAlchemy engine; verified "Luis Vargas Núñez" renders correctly in the browser |
 
-> Next 2B slices: matching **swipe** (write → `PB_Matches`), then Messaging and Dashboard
-> backends, each with `/backend-agent`, `/database-agent`, `/testing-agent`, `/security-review`.
+### Matching — swipe decision (Fase 2B)
+
+Generated with the **`backend-agent`** skill, then validated with the
+**`architecture-validator`** skill. Endpoint: `POST /api/matching/swipe`
+(`{pyme_id, advisor_id, approved}` → upsert `PB_Matches`, status `match`/`not_swiped`,
+idempotent on `UNIQUE(pymeId, advisorId)`).
+
+| Agent / check | Finding | Applied correction / decision |
+| --- | --- | --- |
+| Backend Agent (Observer) | State change other domains care about (match created) | `MatchingService` publishes `MatchSwiped` (+ `MatchCreated` when approved) **after** `db.commit()` via a minimal in-process `EventBus` (replaces Pub/Sub locally) |
+| Backend Agent (Guard) | Swipe must be JWT-protected + owned by the PYME | `get_current_principal` + ownership (`account_type=="pyme"`, `subject_id==pyme_id`) → 403 otherwise. Verified end-to-end |
+| Architecture Validator (layers/events/DTO) | 4-layer flow, events-after-persistence, DTO-not-model, ORM-only | ✅ Compliant — confirmed by the validator |
+| Architecture Validator (cross-domain) | discovery reads `PB_Advisors` via the advisor ORM model | **Accepted for MVP** (same open deviation as discovery); refactor to ACL/REST later |
+| Architecture Validator (DI) | services/repos instantiated directly instead of FastAPI `Depends` | **Accepted for MVP** simplicity; README prescribes `Depends` injection — flagged to migrate if hardened |
+| Architecture Validator (ownership location) | ownership checked in the controller, README places it in the service | Low severity — kept as a controller guard for the MVP |
+
+Verified end-to-end: approved → 201 `status:match`; repeat (same pair) → idempotent
+update to `not_swiped`; foreign `pyme_id` → 403. Frontend deck `onDecision` now POSTs
+the swipe via `matchingService.swipe`.
+
+### Messaging (communication domain, Fase 2B)
+
+Generated with the **`backend-agent`** skill, validated with the
+**`architecture-validator`** skill. Endpoints: `GET/POST
+/api/communication/chats/{match_id}/messages`.
+
+| Agent / check | Finding | Applied correction / decision |
+| --- | --- | --- |
+| Backend Agent (Strategy) | On-platform rule: block external contact sharing in chat (README §1.8) | `ContactScanner` (Strategy) in the service blocks emails/phones/social/links → `DomainException` (400). Verified |
+| Backend Agent (Observer) | Notify other domains a message was sent | `MessageSent` published **after** `db.commit()` via the in-process event bus |
+| Architecture Validator (ownership) | Participant-only access; README places ownership in the service | ✅ Ownership enforced in `MessageService._assert_participant` → new `ForbiddenException` (403). Confirmed compliant (improves on matching, which checked in the controller) |
+| Architecture Validator (cross-domain) | participant check reads `PB_Matches` (matching) via its ORM model | **Accepted for MVP** (same open deviation); refactor to ACL/REST later |
+| Architecture Validator (repo raw SQL) | catalog code→id resolved with `text()` instead of ORM | **Accepted** — same documented catalog-lookup pattern as the user domain |
+| Architecture Validator (DI) | services/repos instantiated directly vs `Depends` | **Accepted for MVP**; flagged to migrate if hardened |
+
+Verified end-to-end: GET → 200 (4 messages, sender/type derived correctly); POST clean →
+201; POST with an email → 400 blocked; foreign chat → 403. Backend only this slice —
+frontend messaging is wired to real chats in a later step.
+
+### Dashboard — contract read (contract domain, Fase 2B)
+
+Generated with the **`backend-agent`** skill; follows the same architecture validated
+for matching/communication. Endpoint: `GET /api/contracts/match/{match_id}` → the
+contract's current-version terms (status, budget, retainer, commission, dates, objective)
+that power the dashboard "Mi Contrato" banner/financials.
+
+| Agent / check | Finding | Applied correction / decision |
+| --- | --- | --- |
+| Backend Agent (layers/DTO) | Stub contract domain; read needed for the dashboard | `ContractModel` + `ContractVersionModel` on shared Base; `ContractRepository` (ORM) + `ContractService` returns `ContractResponse` DTO |
+| Backend Agent (Guard/ownership) | Participant-only read | `get_current_principal` + ownership in the service (`ForbiddenException`→403) |
+| Accepted deviations (same as prior slices) | cross-domain `PB_Matches` read; status code via `text()`; direct instantiation vs `Depends` | Accepted for MVP; documented; refactor to ACL/REST + DI when hardened |
+
+Verified end-to-end: GET → 200 (negotiating, ₡800k budget, ₡150k retainer, 5% commission,
+objective); foreign match → 403. Project tracking (phases/KPIs/deliverables — project domain)
+remains mock in the dashboard; wiring it needs seeded active-project data (next step).
