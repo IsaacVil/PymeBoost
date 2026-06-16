@@ -5354,22 +5354,22 @@ Each database table maps to a SQLAlchemy model file in the backend:
 |---|---|
 | `users` | [`backend/domains/user/models/user_model.py`](backend/domains/user/models/user_model.py) |
 | `sessions` | [`backend/domains/user/models/session_model.py`](backend/domains/user/models/session_model.py) |
-| `pymes` | [`backend/domains/pyme/models/pyme_model.py`](backend/domains/pyme/models/pyme_model.py) |
+| `PB_AuthCredentials` | [`backend/domains/user/models/auth_credential_model.py`](backend/domains/user/models/auth_credential_model.py) |
+| `PB_Pymes` | [`backend/domains/pyme/models/pyme_model.py`](backend/domains/pyme/models/pyme_model.py) |
 | `industries` | [`backend/domains/pyme/models/industry_model.py`](backend/domains/pyme/models/industry_model.py) |
 | `optimization_areas` | [`backend/domains/pyme/models/optimization_area_model.py`](backend/domains/pyme/models/optimization_area_model.py) |
 | `question_catalog` | [`backend/domains/pyme/models/question_catalog_model.py`](backend/domains/pyme/models/question_catalog_model.py) |
 | `needs_vectors` | [`backend/domains/pyme/models/needs_vector_model.py`](backend/domains/pyme/models/needs_vector_model.py) |
-| `advisors` | [`backend/domains/advisor/models/advisor_model.py`](backend/domains/advisor/models/advisor_model.py) |
+| `PB_Advisors` | [`backend/domains/advisor/models/advisor_model.py`](backend/domains/advisor/models/advisor_model.py) |
 | `specializations` | [`backend/domains/advisor/models/specialization_model.py`](backend/domains/advisor/models/specialization_model.py) |
 | `reputations` | [`backend/domains/advisor/models/reputation_model.py`](backend/domains/advisor/models/reputation_model.py) |
-| `PB_Measures` | [`backend/domains/advisor/models/measure_model.py`](backend/domains/advisor/models/measure_model.py) |
-| `PB_Promises` | [`backend/domains/advisor/models/promise_model.py`](backend/domains/advisor/models/promise_model.py) |
-| `PB_PromiseSubIndustryScores` | [`backend/domains/advisor/models/promise_subindustry_score_model.py`](backend/domains/advisor/models/promise_subindustry_score_model.py) |
-| `matches` | [`backend/domains/matching/models/match_model.py`](backend/domains/matching/models/match_model.py) |
+| `PB_Matches` | [`backend/domains/matching/models/match_model.py`](backend/domains/matching/models/match_model.py) |
+| `PB_MatchStatus` | [`backend/domains/matching/models/match_status_model.py`](backend/domains/matching/models/match_status_model.py) |
 | `swipes` | [`backend/domains/matching/models/swipe_model.py`](backend/domains/matching/models/swipe_model.py) |
-| `chat_sessions` | [`backend/domains/communication/models/chat_session_model.py`](backend/domains/communication/models/chat_session_model.py) |
-| `messages` | [`backend/domains/communication/models/message_model.py`](backend/domains/communication/models/message_model.py) |
-| `contracts` | [`backend/domains/contract/models/contract_model.py`](backend/domains/contract/models/contract_model.py) |
+| `PB_ChatSessions` | [`backend/domains/communication/models/chat_session_model.py`](backend/domains/communication/models/chat_session_model.py) |
+| `PB_Messages` | [`backend/domains/communication/models/message_model.py`](backend/domains/communication/models/message_model.py) |
+| `PB_Contracts` | [`backend/domains/contract/models/contract_model.py`](backend/domains/contract/models/contract_model.py) |
+| `PB_ContractVersions` | [`backend/domains/contract/models/contract_version_model.py`](backend/domains/contract/models/contract_version_model.py) |
 | `negotiations` | [`backend/domains/contract/models/negotiation_model.py`](backend/domains/contract/models/negotiation_model.py) |
 | `projects` | [`backend/domains/project/models/project_model.py`](backend/domains/project/models/project_model.py) |
 | `project_health` | [`backend/domains/project/models/project_health_model.py`](backend/domains/project/models/project_health_model.py) |
@@ -5381,11 +5381,6 @@ Each database table maps to a SQLAlchemy model file in the backend:
 | `use_cases` | [`backend/domains/ai/models/use_case_model.py`](backend/domains/ai/models/use_case_model.py) |
 | `recommendation_results` | [`backend/domains/ai/models/recommendation_result_model.py`](backend/domains/ai/models/recommendation_result_model.py) |
 | `domain_events` | [`backend/domains/event/models/domain_event_model.py`](backend/domains/event/models/domain_event_model.py) |
-| `PV_MediaTypes` | [`backend/shared/media/models/media_type_model.py`](backend/shared/media/models/media_type_model.py) |
-| `PV_MediaFiles` | [`backend/shared/media/models/media_file_model.py`](backend/shared/media/models/media_file_model.py) |
-
-
-
 
 
 ## 3.3 Database Migrations
