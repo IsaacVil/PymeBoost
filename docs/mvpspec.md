@@ -94,7 +94,16 @@ navegable (login real, resto con mock data); Fase 2B = cablear backend por featu
     (archivos/ruta conservados, no se usan). Labels del menú traducidos al español.
   - 🎉 **Port visual del prototipo COMPLETO**: Landing · Matching (swipe) · Messaging+Contratos · Dashboard.
 
-### Próximo paso inmediato
+### Fase 2B — cablear backend por feature (en curso)
+- ✅ **Matching · discovery/recomendaciones** — primer slice real (generado con `backend-agent`):
+  `GET /api/matching/recommendations/{pyme_id}` (controller→service→repository→DTO) lee advisors
+  reales de `PB_Advisors` + `MockMatchingAI` (sin IA real); protegido por JWT + ownership.
+  Frontend `matchingService.getRecommendations` cableado al endpoint; el deck muestra datos reales.
+  Hallazgos/decisiones documentados en README → "Agent Validations". Fix: `client_encoding=utf8` en el engine.
+  Ruta `/contracts` eliminada (flujo de contratos vive en Messaging + Dashboard).
+- ⏳ Próximo: matching **swipe** (escritura → `PB_Matches`), luego Messaging y Dashboard backends.
+
+### (Pendiente histórico) Próximo paso del port visual
 - ▶️ **Continuar port visual: Messaging + contratos** (prototype/app/messaging.jsx) — chat con
   propuestas de contrato embebidas, Negotiate Contract y Marry the Prospect. Luego Dashboard y Reports.
   Después, **Fase 2B — cablear backend por feature** (empezando por Matching): rellenar dominio

@@ -19,4 +19,5 @@ def get_engine() -> Engine:
         pool_size=settings.DATABASE_POOL_SIZE,
         pool_pre_ping=True,
         future=True,
+        connect_args={"client_encoding": "utf8"},
     )

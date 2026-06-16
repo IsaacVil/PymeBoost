@@ -1,9 +1,13 @@
 "use client";
+import { useQuery } from "@tanstack/react-query";
+
 import { DashboardLayout } from "@/shared/components/layouts/DashboardLayout";
 import { Avatar } from "@/shared/components/ui/Avatar";
+import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
 import { SwipeDeck } from "./components/SwipeDeck";
-import { ADVISORS, DeckAdvisor } from "./data/advisors";
+import { DeckAdvisor } from "./data/advisors";
+import { matchingService } from "./services/matchingService";
 
 // PYME demo context (Fase 2A mock — ported from prototype/app/data.jsx).
 const PYME = {
@@ -22,6 +26,13 @@ const HOW_IT_WORKS: [string, string][] = [
 
 export default function MatchingPage() {
   const { publish: notify } = useNotificationStore();
+  const pymeId = useAuthStore((s) => s.session.userId) ?? "";
+
+  const { data: advisors = [], isLoading } = useQuery({
+    queryKey: ["recommendations", pymeId],
+    queryFn: () => matchingService.getRecommendations(pymeId),
+    enabled: !!pymeId,
+  });
 
   const onDecision = (dir: "left" | "right", advisor: DeckAdvisor) => {
     if (dir === "right") {
@@ -45,7 +56,11 @@ export default function MatchingPage() {
               Descubrí tu advisor
             </h2>
           </div>
-          <SwipeDeck advisors={ADVISORS} onDecision={onDecision} />
+          {isLoading ? (
+            <p className="font-mono" style={{ color: "var(--ink-soft)" }}>Buscando tus mejores matches…</p>
+          ) : (
+            <SwipeDeck advisors={advisors} onDecision={onDecision} />
+          )}
         </div>
 
         {/* Side panels */}

@@ -14,6 +14,9 @@ from backend.domains.user.controllers.create_sme_account_controller import (
     router as create_sme_router,
 )
 from backend.domains.user.controllers.login_controller import router as login_router
+from backend.domains.matching.controllers.get_recommendations_controller import (
+    router as matching_recommendations_router,
+)
 
 router = APIRouter()
 router.include_router(health_router)
@@ -22,5 +25,8 @@ router.include_router(health_router)
 router.include_router(login_router)
 router.include_router(create_sme_router)
 router.include_router(create_advisor_router)
+
+# --- Matching domain ---
+router.include_router(matching_recommendations_router)
 
 # More domain controllers are mounted here as features land (Fase 2).

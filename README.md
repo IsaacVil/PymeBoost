@@ -6205,5 +6205,18 @@ built in Fase 2 is validated with the specialized agents (`/architecture-validat
 | SOLID (DIP) | `apiClient` read the JWT from `localStorage` directly, duplicating the auth source of truth | `apiClient` now reads the token from the `authStore` singleton; the store persists to `localStorage` |
 | Frontend (consistency) | Login screen was a static Auth0 placeholder with no real form | Built `LoginForm`/`RegisterForm` (React Hook Form + Zod) wired to the backend; verified end-to-end in a real browser |
 
-> Matching/Messaging/Contracts/Dashboard/Reports rows are added as Fase 2B wires each
-> backend with `/backend-agent`, `/database-agent`, `/testing-agent` and `/security-review`.
+### Matching — discovery / recommendations (Fase 2B)
+
+Generated with the **`backend-agent`** skill (controller → service → repository → DTO,
+local profile with mock AI). Endpoint: `GET /api/matching/recommendations/{pyme_id}`.
+
+| Agent / check | Finding | Applied correction / decision |
+| --- | --- | --- |
+| Backend Agent (layers) | Stub `discovery_service`/`repository` had no real implementation | Implemented faithful layers: controller delegates to `DiscoveryService`, which uses `DiscoveryRepository` (ORM) + `MockMatchingAI`; returns DTOs, never raw ORM models |
+| Backend Agent (Guard) | Endpoint must validate JWT + ownership | Protected via `get_current_principal`; only the owning PYME (`account_type=="pyme"` and `subject_id==pyme_id`) can read its recommendations (403 otherwise) |
+| Backend Agent (ACL) — **open deviation** | Matching reads `PB_Advisors` (advisor domain) by importing its ORM model — README mandates cross-domain via REST + ACL translator | **Accepted for the local MVP** and documented in `discovery_repository.py`; flagged to refactor to ACL/REST in a fuller build |
+| AI scope | No real AI (pgvector/LLM) available | `MockMatchingAI` produces deterministic compatibility/objective/gain per advisor (per docs/mvpspec.md `USE_MOCKS`) |
+| Encoding | Advisor names with accents arrived mojibake over the API | Set `client_encoding=utf8` on the SQLAlchemy engine; verified "Luis Vargas Núñez" renders correctly in the browser |
+
+> Next 2B slices: matching **swipe** (write → `PB_Matches`), then Messaging and Dashboard
+> backends, each with `/backend-agent`, `/database-agent`, `/testing-agent`, `/security-review`.
