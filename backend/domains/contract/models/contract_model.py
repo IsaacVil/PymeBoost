@@ -1,14 +1,16 @@
-from sqlalchemy import Column, String, Float, DateTime
-from sqlalchemy.orm import DeclarativeBase
+"""ORM model for PB_Contracts (negotiation thread per match)."""
+from sqlalchemy import Column, DateTime, text
+from sqlalchemy.dialects.postgresql import UUID
 
-class Base(DeclarativeBase):
-    pass
+from backend.shared.database.base import Base
+
 
 class ContractModel(Base):
-    __tablename__ = "contracts"
-    id = Column(String, primary_key=True)
-    match_id = Column(String, nullable=False)
-    status = Column(String, nullable=False)
-    budget = Column(Float, nullable=True)
-    duration_days = Column(String, nullable=True)
-    created_at = Column(DateTime, nullable=False)
+    __tablename__ = "PB_Contracts"
+
+    id = Column("id", UUID(as_uuid=False), primary_key=True, server_default=text("gen_random_uuid()"))
+    match_id = Column("matchId", UUID(as_uuid=False), nullable=False, unique=True)
+    contract_status_id = Column("contractStatusId", UUID(as_uuid=False), nullable=False)
+    current_version_id = Column("currentVersionId", UUID(as_uuid=False), nullable=True)
+    created_at = Column("createdAt", DateTime(timezone=True), server_default=text("now()"))
+    updated_at = Column("updatedAt", DateTime(timezone=True), server_default=text("now()"))

@@ -1,7 +1,9 @@
 from pydantic import BaseModel
 
+
 class MessageResponse(BaseModel):
     id: str
     content: str
-    sender_id: str
-    sent_at: str
+    sender: str  # 'pyme' | 'advisor' | 'system'
+    message_type: str  # 'user' | 'system'
+    created_at: str

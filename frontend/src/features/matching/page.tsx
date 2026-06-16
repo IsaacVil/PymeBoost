@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/shared/components/layouts/DashboardLayout";
 import { Avatar } from "@/shared/components/ui/Avatar";
 import { useAuthStore } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
+import { OpportunitiesAdvisor } from "./components/OpportunitiesAdvisor";
 import { SwipeDeck } from "./components/SwipeDeck";
 import { DeckAdvisor } from "./data/advisors";
 import { matchingService } from "./services/matchingService";
@@ -27,14 +28,18 @@ const HOW_IT_WORKS: [string, string][] = [
 export default function MatchingPage() {
   const { publish: notify } = useNotificationStore();
   const pymeId = useAuthStore((s) => s.session.userId) ?? "";
+  const isAdvisor = useAuthStore((s) => s.session.role) === "ADVISOR";
 
   const { data: advisors = [], isLoading } = useQuery({
     queryKey: ["recommendations", pymeId],
     queryFn: () => matchingService.getRecommendations(pymeId),
-    enabled: !!pymeId,
+    enabled: !!pymeId && !isAdvisor, // advisors don't swipe — they receive opportunities
   });
 
   const onDecision = (dir: "left" | "right", advisor: DeckAdvisor) => {
+    if (pymeId) {
+      void matchingService.swipe(pymeId, advisor.id, dir === "right");
+    }
     if (dir === "right") {
       notify({
         type: "success",
@@ -44,6 +49,15 @@ export default function MatchingPage() {
       });
     }
   };
+
+  // Advisor flow (Journey 2): receives opportunities, does not swipe.
+  if (isAdvisor) {
+    return (
+      <DashboardLayout>
+        <OpportunitiesAdvisor />
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

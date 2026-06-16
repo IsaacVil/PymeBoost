@@ -80,6 +80,7 @@ const DELIVERABLES: Deliverable[] = [
   { label: "Análisis de ROI del proyecto", done: false },
 ];
 
+// PYME view: the counterpart shown is the advisor.
 export const PROJECT: ProjectMatch = {
   advisor: { name: "Mariana Solís", monogram: "MS", role: "Marketing Digital & Performance Ads", accent: "primary" },
   contract: {
@@ -102,4 +103,10 @@ export const PROJECT: ProjectMatch = {
     kpis: KPIS,
     deliverables: DELIVERABLES,
   },
+};
+
+// Advisor view: same active project, but the counterpart shown is the PYME.
+export const PROJECT_ADVISOR: ProjectMatch = {
+  advisor: { name: "Hilo & Aguja", monogram: "HA", role: "Retail / Moda · San José, CR", accent: "primary" },
+  contract: PROJECT.contract,
 };

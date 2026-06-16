@@ -17,6 +17,18 @@ from backend.domains.user.controllers.login_controller import router as login_ro
 from backend.domains.matching.controllers.get_recommendations_controller import (
     router as matching_recommendations_router,
 )
+from backend.domains.matching.controllers.create_swipe_decision_controller import (
+    router as matching_swipe_router,
+)
+from backend.domains.communication.controllers.get_messages_controller import (
+    router as messages_get_router,
+)
+from backend.domains.communication.controllers.send_message_controller import (
+    router as messages_send_router,
+)
+from backend.domains.contract.controllers.get_contract_controller import (
+    router as contract_get_router,
+)
 
 router = APIRouter()
 router.include_router(health_router)
@@ -28,5 +40,13 @@ router.include_router(create_advisor_router)
 
 # --- Matching domain ---
 router.include_router(matching_recommendations_router)
+router.include_router(matching_swipe_router)
+
+# --- Communication domain ---
+router.include_router(messages_get_router)
+router.include_router(messages_send_router)
+
+# --- Contract domain ---
+router.include_router(contract_get_router)
 
 # More domain controllers are mounted here as features land (Fase 2).

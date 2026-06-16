@@ -140,9 +140,9 @@ function LoginPanel({ goRegister }: { goRegister: () => void }) {
 
       {/* Demo credentials helper */}
       <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-soft)", lineHeight: 1.5, background: "var(--paper)", border: "1.5px solid var(--ink-faint)", borderRadius: "var(--r-sm)", padding: "9px 11px" }}>
-        <div className="eyebrow" style={{ marginBottom: 4 }}>Cuenta demo</div>
-        <div>correo: <b style={{ color: "var(--ink)" }}>maria@cafedelvalle.cr</b></div>
-        <div>contraseña: <b style={{ color: "var(--ink)" }}>DemoPass123!</b></div>
+        <div className="eyebrow" style={{ marginBottom: 4 }}>Cuentas demo · contraseña <b style={{ color: "var(--ink)" }}>DemoPass123!</b></div>
+        <div>PYME: <b style={{ color: "var(--ink)" }}>maria@cafedelvalle.cr</b></div>
+        <div>Advisor: <b style={{ color: "var(--ink)" }}>ana@asesores.cr</b></div>
       </div>
     </form>
   );
@@ -229,6 +229,15 @@ function PymeRegister() {
   );
 }
 
+// Use-case template blocks the AI normalizes uploaded success stories into.
+const USE_CASE_BLOCKS: [string, string][] = [
+  ["Company Information", "Empresa · industria · tamaño · empleados"],
+  ["Contexto y Problema", "Situación inicial · problema · objetivos medibles"],
+  ["Solución Implementada", "Acciones · procesos optimizados · tecnologías"],
+  ["Métricas y Resultados", "Ventas · revenue · tiempo · costos · conversión"],
+  ["Impacto del Negocio", "% crecimiento · KPI's · tiempo a resultados"],
+];
+
 function AdvisorRegister() {
   const { registerAdvisor, isRegisteringAdvisor, registerAdvisorError } = useAuth();
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterAdvisorInput>({ resolver: zodResolver(registerAdvisorSchema) });
@@ -252,21 +261,58 @@ function AdvisorRegister() {
           <AInput placeholder="https://linkedin.com/in/…" {...register("linkedin_url")} />
         </AField>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {/* Documento de identidad: ilustrativo en la demo (no se envía al backend) */}
+          <AField label="Documento de identidad" optional>
+            <AInput placeholder="0-0000-0000" />
+          </AField>
           <AField label="Tarifa base (₡)" optional error={errors.base_rate?.message}>
             <AInput type="number" placeholder="50000" {...register("base_rate")} />
           </AField>
-          <AField label="Contraseña" error={errors.password?.message}>
-            <AInput type="password" placeholder="••••••••" {...register("password")} />
-          </AField>
+        </div>
+        <AField label="Contraseña" error={errors.password?.message}>
+          <AInput type="password" placeholder="••••••••" {...register("password")} />
+        </AField>
+      </div>
+
+      <SectionTitle n="2" title="Enriquecimiento con IA" desc="LinkedIn + CV → experiencia, industrias, certificaciones y especialización." />
+      <div style={{ display: "grid", gap: 12 }}>
+        <FakeUpload label="Subir CV (PDF)" accept="PDF" note="La IA extrae años de experiencia, industrias, certificaciones y áreas de especialización." />
+        <FakeUpload label="Subir casos de éxito" accept="PDF · PPT · DOCX" note="Mejoran tu perfil inicial. La IA normaliza el documento a la plantilla de Use Cases." />
+        <div style={{ border: "1.5px solid var(--ink)", borderRadius: "var(--r-md)", overflow: "hidden" }}>
+          <div className="eyebrow" style={{ padding: "8px 12px", background: "var(--paper)", borderBottom: "1.5px solid var(--ink)" }}>Plantilla de Use Cases</div>
+          {USE_CASE_BLOCKS.map(([t, d], i) => (
+            <div key={t} style={{ padding: "8px 12px", borderTop: i ? "1.5px solid rgba(33,27,18,.1)" : "none", display: "flex", gap: 10, alignItems: "baseline" }}>
+              <span style={{ fontSize: 12.5, fontWeight: 700, flex: "0 0 150px" }}>{t}</span>
+              <span className="font-mono" style={{ fontSize: 10, color: "var(--ink-soft)" }}>{d}</span>
+            </div>
+          ))}
         </div>
       </div>
 
-      <SectionTitle n="2" title="Enriquecimiento con IA" desc="LinkedIn + CV → experiencia, industrias y especialización." />
-      <FakeUpload label="Subir CV (PDF)" accept="PDF" note="La IA extrae años de experiencia, industrias y áreas de especialización." />
+      <SectionTitle n="3" title="Método de pago" />
+      <PaymentFields membership="Advisor Pro · $15/mes" />
 
       {registerAdvisorError && <p style={{ fontSize: 13, color: "var(--danger)" }}>{registerAdvisorError.message}</p>}
       <SubmitBtn loading={isRegisteringAdvisor}>✦ Registrarse como Advisor</SubmitBtn>
     </form>
+  );
+}
+
+// Payment fields — illustrative in the demo (not sent to the backend).
+function PaymentFields({ membership }: { membership: string }) {
+  return (
+    <div style={{ display: "grid", gap: 12 }}>
+      <div className="font-mono" style={{ fontSize: 10.5, color: "var(--ink-soft)", lineHeight: 1.45, background: "var(--paper)", border: "1.5px solid var(--ink-faint)", borderRadius: "var(--r-sm)", padding: "8px 11px" }}>
+        Se usa para la <b style={{ color: "var(--ink)" }}>membresía {membership}</b> y, en caso de PYME, las comisiones de los contratos cerrados dentro de PymeBoost.
+      </div>
+      <AField label="Número de tarjeta"><AInput placeholder="4242 4242 4242 4242" inputMode="numeric" /></AField>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.3fr", gap: 10 }}>
+        <AField label="Vence"><AInput placeholder="MM/AA" /></AField>
+        <AField label="CVC"><AInput placeholder="123" /></AField>
+        <AField label="Nombre en tarjeta"><AInput placeholder="Como aparece" /></AField>
+      </div>
+      <AField label="Información de facturación"><AInput placeholder="Dirección / razón social / ID fiscal" /></AField>
+    </div>
   );
 }
 

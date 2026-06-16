@@ -22,16 +22,17 @@ function timeRemaining(deadline: string) {
 const calcProgress = (phases: ProjectPhase[]) =>
   phases.length ? Math.round((phases.filter((p) => p.status === "completed").length / phases.length) * 100) : 0;
 
-export function ContractDashboard({ match }: { match: ProjectMatch }) {
+export function ContractDashboard({ match, role = "pyme" }: { match: ProjectMatch; role?: "pyme" | "advisor" }) {
   const c = match.contract;
+  const title = role === "advisor" ? `Proyecto Activo · ${match.advisor.name}` : "Mi Contrato Activo";
   return (
     <div style={{ maxWidth: 1060, margin: "0 auto" }}>
       <div style={{ marginBottom: 16 }}>
         <div className="eyebrow">Dashboard de seguimiento</div>
-        <h2 className="display" style={{ fontSize: 34, lineHeight: 1.1, marginTop: 4 }}>Mi Contrato Activo</h2>
+        <h2 className="display" style={{ fontSize: 34, lineHeight: 1.1, marginTop: 4 }}>{title}</h2>
       </div>
 
-      <ContractBanner match={match} />
+      <ContractBanner match={match} role={role} />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 284px", gap: 20, alignItems: "start" }}>
         {/* main column */}
@@ -89,7 +90,7 @@ function ProgressRing({ pct, size = 84, stroke = 8 }: { pct: number; size?: numb
 }
 
 // ── Contract banner ──────────────────────────────────────────────────────────────
-function ContractBanner({ match }: { match: ProjectMatch }) {
+function ContractBanner({ match, role }: { match: ProjectMatch; role: "pyme" | "advisor" }) {
   const c = match.contract;
   const pct = calcProgress(c.phases);
   const tr = timeRemaining(c.deadline);
@@ -101,7 +102,7 @@ function ContractBanner({ match }: { match: ProjectMatch }) {
         <div style={{ display: "flex", alignItems: "center", gap: 14, flex: "1 1 180px", minWidth: 0 }}>
           <Avatar text={match.advisor.monogram} accent={match.advisor.accent} size={52} square />
           <div style={{ minWidth: 0 }}>
-            <div className="eyebrow" style={{ marginBottom: 2 }}>Advisor</div>
+            <div className="eyebrow" style={{ marginBottom: 2 }}>{role === "advisor" ? "PYME" : "Advisor"}</div>
             <h3 style={{ fontSize: 18, lineHeight: 1.15 }}>{match.advisor.name}</h3>
             <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-soft)", marginTop: 2 }}>{match.advisor.role}</div>
           </div>
