@@ -126,7 +126,13 @@ navegable (login real, resto con mock data); Fase 2B = cablear backend por featu
   ownership (`ForbiddenException`→403), `ContractResponse` DTO. Verificado: 200 (negotiating,
   ₡800k/₡150k/5%/objetivo) / chat ajeno 403. El tracking de proyecto (fases/KPIs) sigue mock
   (requiere seed de proyecto activo).
-- 🎉 **Fase 2B (lecturas/escrituras core) cubierta**: Matching (discovery+swipe), Messaging, Contract.
+- ✅ **Dashboard · project tracking** — `GET /api/projects/active/tracking` (+ `/match/{id}/tracking`).
+  Seed de proyecto activo (fases/subfases/KPIs en `seed_dev.sql` §8). Backend project domain
+  (models PB_Projects/RoadmapPhases/SubPhases/KpiValidations/ContractMetrics, repo, service con
+  ownership y counterpart role-aware). Frontend dashboard cableado a datos reales. Verificado:
+  PYME 200 (Ana López, 3 fases, 2 KPIs) / advisor 200 (Cafetería del Valle) / sin proyecto 404.
+- 🎉 **Fase 2B core completa**: Auth · Matching (discovery+swipe) · Messaging · Contract · Dashboard,
+  todos con datos reales en Postgres.
 
 ### (Pendiente histórico) Próximo paso del port visual
 - ▶️ **Continuar port visual: Messaging + contratos** (prototype/app/messaging.jsx) — chat con

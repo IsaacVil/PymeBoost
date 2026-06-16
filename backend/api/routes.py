@@ -29,6 +29,9 @@ from backend.domains.communication.controllers.send_message_controller import (
 from backend.domains.contract.controllers.get_contract_controller import (
     router as contract_get_router,
 )
+from backend.domains.project.controllers.get_dashboard_controller import (
+    router as project_dashboard_router,
+)
 
 router = APIRouter()
 router.include_router(health_router)
@@ -48,5 +51,8 @@ router.include_router(messages_send_router)
 
 # --- Contract domain ---
 router.include_router(contract_get_router)
+
+# --- Project domain (dashboard tracking) ---
+router.include_router(project_dashboard_router)
 
 # More domain controllers are mounted here as features land (Fase 2).

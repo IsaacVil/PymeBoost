@@ -163,7 +163,6 @@ No significant usability issues detected in this task.
 
 No corrections were required for this task.
 
-
 #### User Rating — "How clear was the advisor information for making a match decision?"
 *Scale: 1 = Very confusing, 5 = Very clear*
 
@@ -6472,6 +6471,26 @@ that power the dashboard "Mi Contrato" banner/financials.
 | Backend Agent (Guard/ownership) | Participant-only read | `get_current_principal` + ownership in the service (`ForbiddenException`→403) |
 | Accepted deviations (same as prior slices) | cross-domain `PB_Matches` read; status code via `text()`; direct instantiation vs `Depends` | Accepted for MVP; documented; refactor to ACL/REST + DI when hardened |
 
-Verified end-to-end: GET → 200 (negotiating, ₡800k budget, ₡150k retainer, 5% commission,
-objective); foreign match → 403. Project tracking (phases/KPIs/deliverables — project domain)
-remains mock in the dashboard; wiring it needs seeded active-project data (next step).
+Verified end-to-end: GET → 200; foreign match → 403.
+
+### Dashboard — project tracking (project domain, Fase 2B)
+
+Generated with the **`backend-agent`** pattern. Endpoints:
+`GET /api/projects/active/tracking` (resolves the principal's active project) and
+`GET /api/projects/match/{match_id}/tracking`. Returns the full dashboard payload
+(counterpart, contract terms, roadmap phases with subphases as objectives, KPI
+validations, derived deliverables).
+
+| Agent / check | Finding | Applied correction / decision |
+| --- | --- | --- |
+| Seed | No active project existed (contract was negotiating) | Seeded an accepted contract → active `PB_Projects` with roadmap phases, subphases, contract metrics and KPI validations (persisted in `seed_dev.sql` §8) |
+| Backend (ownership/role) | Participant-only; counterpart is role-aware | Ownership in service (`ForbiddenException`→403); counterpart = advisor for a PYME, PYME for an advisor (both verified) |
+| Accepted deviations | reads matching/contract/advisor/pyme models; status codes via `text()`; direct instantiation | Accepted for MVP (same documented deviations) |
+
+Verified end-to-end: PYME → 200 (counterpart "Ana López", 3 phases, 2 KPIs); advisor →
+200 (counterpart "Cafetería del Valle"); advisor without an active project → 404. The
+frontend dashboard now fetches `dashboardService.getActiveTracking()` and renders real
+phases/KPIs/financials — confirmed in the browser.
+
+> Fase 2B complete for the core flows: Auth · Matching (discovery+swipe) · Messaging ·
+> Contract · Dashboard tracking — all reading/writing real data in Postgres.

@@ -264,6 +264,48 @@ INSERT INTO "PB_Promises" (
     93.00, TRUE
 );
 
+-- ----------------------------------------------------------------------------
+-- 8. Tracking de proyecto del match m1 (contrato aceptado → proyecto activo)
+--    Alimenta el dashboard "Mi Contrato" con fases/subfases/KPIs reales.
+-- ----------------------------------------------------------------------------
+UPDATE "PB_Contracts"
+   SET "contractStatusId" = (SELECT "id" FROM "PB_ContractStatus" WHERE "code" = 'accepted')
+ WHERE "id" = '55555555-5555-5555-5555-555555555501';
+
+UPDATE "PB_ContractVersions"
+   SET "contractVersionStatusId" = (SELECT "id" FROM "PB_ContractVersionStatus" WHERE "code" = 'accepted')
+ WHERE "id" = '66666666-6666-6666-6666-666666666601';
+
+INSERT INTO "PB_ContractMetrics" ("id", "contractVersionId", "name", "metricValueTypeId", "target", "baselineValue") VALUES
+('77770000-0000-0000-0000-000000000001', '66666666-6666-6666-6666-666666666601', 'Conversión de campañas', (SELECT "id" FROM "PB_MetricValueTypes" WHERE "code" = 'percentage'), 25.0000, 2.1000),
+('77770000-0000-0000-0000-000000000002', '66666666-6666-6666-6666-666666666601', 'Retención de clientes',  (SELECT "id" FROM "PB_MetricValueTypes" WHERE "code" = 'percentage'), 15.0000, 41.0000);
+
+INSERT INTO "PB_ContractRoadmapPhases" ("id", "contractVersionId", "phaseOrder", "name", "description", "completed", "completedAt") VALUES
+('88880000-0000-0000-0000-000000000001', '66666666-6666-6666-6666-666666666601', 1, 'Análisis Inicial',          'Auditoría de campañas y baseline de métricas.', TRUE,  now()),
+('88880000-0000-0000-0000-000000000002', '66666666-6666-6666-6666-666666666601', 2, 'Optimización de Campañas',  'Segmentación, rediseño de anuncios y retargeting.', TRUE, now()),
+('88880000-0000-0000-0000-000000000003', '66666666-6666-6666-6666-666666666601', 3, 'Optimización de Conversión', 'Velocidad del sitio y checkout.', FALSE, NULL);
+
+INSERT INTO "PB_ContractSubPhases" ("phaseId", "name", "completed", "completedAt") VALUES
+('88880000-0000-0000-0000-000000000001', 'Auditoría de campañas actuales',     TRUE,  now()),
+('88880000-0000-0000-0000-000000000001', 'Identificación de público objetivo', TRUE,  now()),
+('88880000-0000-0000-0000-000000000001', 'Análisis de métricas históricas',    TRUE,  now()),
+('88880000-0000-0000-0000-000000000002', 'Nueva segmentación implementada',    TRUE,  now()),
+('88880000-0000-0000-0000-000000000002', 'Rediseño de anuncios',               TRUE,  now()),
+('88880000-0000-0000-0000-000000000002', 'Configuración de retargeting',       TRUE,  now()),
+('88880000-0000-0000-0000-000000000003', 'Mejorar velocidad del sitio',        FALSE, NULL),
+('88880000-0000-0000-0000-000000000003', 'Optimizar formularios de compra',    FALSE, NULL),
+('88880000-0000-0000-0000-000000000003', 'Simplificar el proceso de checkout', FALSE, NULL);
+
+INSERT INTO "PB_Projects" ("id", "contractVersionId", "projectStatusId") VALUES
+('99990000-0000-0000-0000-000000000001', '66666666-6666-6666-6666-666666666601', (SELECT "id" FROM "PB_ProjectStatus" WHERE "code" = 'active'));
+
+INSERT INTO "PB_ProjectHealthHistory" ("projectId", "projectHealthStatusId", "completedSubPhases", "totalSubPhases", "healthScore", "timeProgressRatio") VALUES
+('99990000-0000-0000-0000-000000000001', (SELECT "id" FROM "PB_ProjectHealthStatus" WHERE "code" = 'on_track'), 6, 9, 67.00, 0.50000);
+
+INSERT INTO "PB_ProjectKpiValidations" ("projectId", "contractMetricId", "metricsBefore", "metricsAfter", "finalImprovementPct", "met") VALUES
+('99990000-0000-0000-0000-000000000001', '77770000-0000-0000-0000-000000000001', 2.1000, 3.4000, 25.0000, TRUE),
+('99990000-0000-0000-0000-000000000001', '77770000-0000-0000-0000-000000000002', 41.0000, 47.0000, 14.6300, FALSE);
+
 -- ============================================================================
 -- FIN DEL SEED DE DESARROLLO
 -- ============================================================================

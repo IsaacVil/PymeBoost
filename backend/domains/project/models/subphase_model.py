@@ -1,15 +1,14 @@
-from sqlalchemy import Column, String, Boolean, DateTime
-from sqlalchemy.orm import DeclarativeBase
+"""ORM model for PB_ContractSubPhases (work units within a roadmap phase)."""
+from sqlalchemy import Boolean, Column, Text, text
+from sqlalchemy.dialects.postgresql import UUID
 
-
-class Base(DeclarativeBase):
-    pass
+from backend.shared.database.base import Base
 
 
 class SubphaseModel(Base):
-    __tablename__ = "subphases"
-    id = Column(String, primary_key=True)
-    project_id = Column(String, nullable=False)
-    title = Column(String, nullable=False)
-    completed = Column(Boolean, default=False)
-    due_date = Column(DateTime, nullable=True)
+    __tablename__ = "PB_ContractSubPhases"
+
+    id = Column("id", UUID(as_uuid=False), primary_key=True, server_default=text("gen_random_uuid()"))
+    phase_id = Column("phaseId", UUID(as_uuid=False), nullable=False)
+    name = Column("name", Text, nullable=False)
+    completed = Column("completed", Boolean, nullable=False, server_default=text("false"))
