@@ -394,7 +394,7 @@ The architecture supports:
 
 PymeBoost is built around these core features:
 
-- **Matching:** Advisor discovery, recommendations, swipe decisions, match creation.
+- **Matching:** Advisor discovery, recommendation, swipe decisions, match creation.
 - **Contracts:** Contract negotiation, proposal submission, acceptance, tracking.
 - **Messaging:** Real-time chat between PYME and advisors, message history.
 - **Dashboard:** Project overview, metrics, status tracking.
