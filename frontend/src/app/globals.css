@@ -1,31 +1,79 @@
 @import "tailwindcss";
 
+/* ============================================================================
+   Retro "paper & ink" design system (mirrors prototype/PymeBoost.html).
+   We remap the Tailwind tokens the components already use so the whole app
+   adopts the palette/fonts/shadows without editing every className.
+   ========================================================================== */
+@theme {
+  /* paper / ink surfaces */
+  --color-stone-100: #faf5ec; /* paper — main background */
+  --color-stone-200: #f3ecdd; /* paper-2 */
+  --color-zinc-50: #ffffff; /* surface — cards/panels */
+  --color-zinc-100: #f3ecdd; /* paper-2 — hover background */
+  --color-zinc-400: #9c9384; /* ink-faint */
+  --color-zinc-500: #6b6253; /* ink-soft — muted text */
+  --color-zinc-600: #6b6253; /* ink-soft */
+  --color-zinc-700: #211b12; /* ink */
+  --color-zinc-800: #211b12; /* ink / line — borders */
+  --color-zinc-900: #211b12; /* ink — primary text */
+
+  /* primary (CTAs, active states) — blue, per prototype */
+  --color-teal-500: #3b82f6;
+  --color-teal-600: #1e5fd6;
+  --color-cyan-100: #e7eefc; /* soft primary surface */
+
+  /* secondary accent — violet */
+  --color-violet-500: #8b5cf6;
+  --color-violet-600: #6d3fe0;
+
+  /* semantic */
+  --color-green-600: #16a34a;
+  --color-amber-500: #d97706;
+  --color-amber-600: #b25e04;
+  --color-red-600: #dc2626;
+
+  /* fonts (vars injected by next/font in layout.tsx) */
+  --font-sans: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-display: var(--font-macondo), cursive;
+
+  /* hard offset retro shadows */
+  --shadow-sm: 3px 4px 0 rgba(33, 27, 18, 0.18), 0 1px 0 rgba(33, 27, 18, 0.22);
+  --shadow-md: 4px 5px 0 rgba(33, 27, 18, 0.2);
+  --shadow-lg: 5px 6px 0 rgba(33, 27, 18, 0.22);
+  --shadow-xl: 6px 8px 0 rgba(33, 27, 18, 0.3);
+}
+
 @layer base {
-  :root {
-    --color-background:   #F5F1E8;
-    --color-surface:      #FCFCFA;
-    --color-primary:      #17B6B0;
-    --color-primary-dark: #12918C;
-    --color-accent:       #D97706;
-    --color-text:         #161616;
-    --color-text-muted:   #6B6B6B;
-    --color-border:       #262626;
-    --color-success:      #20B15A;
-    --color-warning:      #F59E0B;
-    --color-danger:       #DC2626;
-  }
-
   body {
-    background-color: var(--color-background);
-    color: var(--color-text);
-    font-family: "Inter", sans-serif;
+    background-color: #faf5ec;
+    color: #211b12;
+    font-family: var(--font-sans);
+    /* dotted paper texture */
+    background-image: radial-gradient(rgba(33, 27, 18, 0.05) 1px, transparent 1.4px);
+    background-size: 22px 22px;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: "Poppins", sans-serif;
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.01em;
   }
+}
 
-  code, pre {
-    font-family: "JetBrains Mono", monospace;
-  }
+/* Brand wordmark + metadata labels (from the prototype design language). */
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+
+@utility eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b6253;
 }

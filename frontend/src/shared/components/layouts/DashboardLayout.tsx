@@ -12,7 +12,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="min-h-screen bg-stone-100 flex">
         <aside className="w-64 bg-zinc-50 border-r-2 border-zinc-800 flex-shrink-0">
           <div className="p-6 border-b-2 border-zinc-800">
-            <span className="text-xl font-bold text-teal-500">PymeBoost</span>
+            <span className="display text-2xl text-zinc-900">
+              Pyme<span className="text-teal-500">Boost</span>
+            </span>
           </div>
           <Navigation />
         </aside>

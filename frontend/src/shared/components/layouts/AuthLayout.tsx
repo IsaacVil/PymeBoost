@@ -9,7 +9,9 @@ export function AuthLayout({ children }: AuthLayoutProps) {
     <div className="min-h-screen bg-stone-100 flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-zinc-50 border-2 border-zinc-800 rounded-lg p-8 shadow-sm">
         <div className="mb-8 text-center">
-          <span className="text-2xl font-bold text-teal-500">PymeBoost</span>
+          <span className="display text-3xl text-zinc-900">
+            Pyme<span className="text-teal-500">Boost</span>
+          </span>
         </div>
         {children}
       </div>

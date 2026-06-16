@@ -1,25 +1,38 @@
-// Singleton Pattern: Single source of truth for authentication state
-// Zustand enforces one instance automatically
-// Why: Multiple instances would cause token mismatches and silent feature breakage
+// Singleton Pattern: Single source of truth for authentication state.
+// Persisted to localStorage so the session survives reloads and the apiClient can
+// read the JWT outside React. `isLoading` stays true until rehydration completes,
+// which keeps AuthGuard from redirecting before the stored session is restored.
 
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 
-interface AuthSession {
+export type UserRole = "SME" | "ADVISOR" | null;
+
+export interface AuthSession {
   userId: string | null;
   email: string | null;
-  role: "SME" | "ADVISOR" | null;
+  role: UserRole;
   token: string | null;
   refreshToken: string | null;
   permissions: string[];
   expiresAt: number | null;
 }
 
+const EMPTY_SESSION: AuthSession = {
+  userId: null,
+  email: null,
+  role: null,
+  token: null,
+  refreshToken: null,
+  permissions: [],
+  expiresAt: null,
+};
+
 interface AuthStore {
   session: AuthSession;
   isAuthenticated: boolean;
   isLoading: boolean;
 
-  // Actions
   setSession: (session: AuthSession) => void;
   logout: () => void;
   updateToken: (token: string) => void;
@@ -27,59 +40,38 @@ interface AuthStore {
   isTokenExpired: () => boolean;
 }
 
-// Singleton: Only one instance exists globally
-export const useAuthStore = create<AuthStore>((set, get) => ({
-  session: {
-    userId: null,
-    email: null,
-    role: null,
-    token: null,
-    refreshToken: null,
-    permissions: [],
-    expiresAt: null,
-  },
-  isAuthenticated: false,
-  isLoading: true,
-
-  setSession: (session: AuthSession) => {
-    set({
-      session,
-      isAuthenticated: !!session.token,
-      isLoading: false,
-    });
-  },
-
-  logout: () => {
-    set({
-      session: {
-        userId: null,
-        email: null,
-        role: null,
-        token: null,
-        refreshToken: null,
-        permissions: [],
-        expiresAt: null,
-      },
+export const useAuthStore = create<AuthStore>()(
+  persist(
+    (set, get) => ({
+      session: EMPTY_SESSION,
       isAuthenticated: false,
-    });
-    // TODO: Clear localStorage, notify backend
-  },
+      isLoading: true,
 
-  updateToken: (token: string) => {
-    const { session } = get();
-    set({
-      session: { ...session, token },
-    });
-  },
+      setSession: (session) =>
+        set({ session, isAuthenticated: !!session.token, isLoading: false }),
 
-  hasPermission: (permission: string) => {
-    const { session } = get();
-    return session.permissions.includes(permission);
-  },
+      logout: () => set({ session: EMPTY_SESSION, isAuthenticated: false, isLoading: false }),
 
-  isTokenExpired: () => {
-    const { session } = get();
-    if (!session.expiresAt) return false;
-    return Date.now() > session.expiresAt;
-  },
-}));
+      updateToken: (token) => set((s) => ({ session: { ...s.session, token } })),
+
+      hasPermission: (permission) => get().session.permissions.includes(permission),
+
+      isTokenExpired: () => {
+        const { expiresAt } = get().session;
+        return expiresAt ? Date.now() > expiresAt : false;
+      },
+    }),
+    {
+      name: "pymeboost-auth",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (s) => ({ session: s.session }),
+      onRehydrateStorage: () => (state) => {
+        // Runs on the client once the persisted session is restored.
+        if (state) {
+          state.isAuthenticated = !!state.session.token;
+          state.isLoading = false;
+        }
+      },
+    },
+  ),
+);

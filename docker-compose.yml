@@ -1,0 +1,43 @@
+# ============================================================================
+#  PymeBoost — Data layer local (MVP / WS-2)
+#  Postgres 16 + pgvector. El schema usa vector(32)/vector(768), por lo que la
+#  imagen DEBE traer la extensión pgvector (ver docs/mvpspec.md §1 "Motor Postgres").
+#
+#  Los scripts de database/scripts/ se montan en /docker-entrypoint-initdb.d y
+#  Postgres los ejecuta UNA sola vez, en orden alfabético, al inicializar un
+#  volumen vacío:
+#    01_creation      -> creationScript.sql  (tablas, dominios, triggers, índices)
+#    02_seed_catalogs -> seed.sql            (catálogos / lookup tables)
+#    03_auth_local    -> auth_local.sql      (extensión credenciales perfil local)
+#    04_seed_dev      -> seed_dev.sql        (datos transaccionales demo + bcrypt)
+#
+#  Uso:
+#    docker compose up -d           # levanta la BD e inicializa schema + seed
+#    docker compose down            # detiene (conserva datos)
+#    docker compose down -v         # detiene y BORRA datos (fuerza re-init/re-seed)
+# ============================================================================
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: pymeboost-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pymeboost
+      POSTGRES_PASSWORD: pymeboost
+      POSTGRES_DB: pymeboost
+    ports:
+      - "5432:5432"
+    volumes:
+      - pymeboost_pgdata:/var/lib/postgresql/data
+      - ./database/scripts/creationScript.sql:/docker-entrypoint-initdb.d/01_creation.sql:ro
+      - ./database/scripts/seed.sql:/docker-entrypoint-initdb.d/02_seed_catalogs.sql:ro
+      - ./database/scripts/auth_local.sql:/docker-entrypoint-initdb.d/03_auth_local.sql:ro
+      - ./database/scripts/seed_dev.sql:/docker-entrypoint-initdb.d/04_seed_dev.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pymeboost -d pymeboost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pymeboost_pgdata:

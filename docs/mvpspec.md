@@ -11,6 +11,92 @@
 
 ---
 
+## 0. Estado actual / Bitácora de progreso
+
+_Última actualización: 2026-06-15_
+
+### Punto de partida (heredado)
+- **Fase 1 (Agentes) — COMPLETA:** los 8 agentes existen como slash commands en
+  `.claude/commands/` (`solid`, `dry`, `cohesion`, `architecture`, `frontend`,
+  `backend`, `database`, `testing`) y como skills.
+- **Arquitectura documentada:** `README.md` (~344 KB) con stack, DDD backend,
+  feature-based frontend, schema DBML, índices, workflows, C4.
+- **Estructura de carpetas creada** (`backend/domains/*`, `frontend/src/features/*`)
+  pero con **stubs** (ej. `def get_matches(...): pass`). El MVP = rellenar stubs,
+  NO reorganizar.
+- **Data layer base:** `database/scripts/creationScript.sql`, `seed.sql`, DBML.
+
+### Hecho en esta línea de trabajo
+- ✅ Definido el alcance del MVP (§5) y la estrategia de perfil local (§2).
+- ✅ Confirmadas las decisiones (§1): esqueleto existente · Postgres Docker ·
+  mock JWT con bcrypt · SQL scripts · 6 features core · git en `main`/commits a pedido.
+- ✅ Entorno verificado: Docker 29, Python 3.13, Node 24.
+- ✅ **WS-2 (Data layer local) COMPLETO y verificado en runtime** — ver §3.
+- ✅ **WS-1 (Backend ejecutable) COMPLETO y verificado en runtime** — ver §3.
+  `uvicorn backend.main:app` arranca y `GET /health` → 200 conectado a la BD.
+- ✅ **WS-3 (Auth mock bcrypt) COMPLETO y verificado en runtime** — ver §3.
+  login/register/`/me` funcionando con JWT local (HS256) y bcrypt contra `PB_AuthCredentials`.
+- ✅ **WS-4 (Frontend ejecutable) COMPLETO y verificado en runtime** — ver §3.
+  `npm install` OK y `next dev` sirve `/` (200) y `/login` (200).
+- ✅ **WS-5 (Documentación) COMPLETO** — sección `# MVP` en `README.md` (ejecución, env vars,
+  data init, scope, Agent Validations). Ver §3.
+
+### 🎉 FASE 1 COMPLETA — el andamio completo corre en local (BD + backend + frontend).
+
+### Fase 2 — enfoque elegido: **frontend-first**
+La UI de features ya existía pero **no estaba enrutada** (las pantallas vivían en
+`features/*/page.tsx`, que Next no enruta). Fase 2A = enrutar + dejar toda la interfaz
+navegable (login real, resto con mock data); Fase 2B = cablear backend por feature.
+
+- ✅ **Fase 2A COMPLETA y verificada en navegador (Edge):**
+  - **Login REAL** end-to-end: `LoginForm` (React Hook Form + Zod) → `useAuth` (TanStack
+    mutation) → `authService` → backend; `authStore` persistido (localStorage) + token
+    inyectado en `apiClient`; `RegisterForm` PYME/Advisor también real.
+  - **Toda la UI enrutada**: route group `src/app/(app)/` con `dashboard`, `matching`,
+    `contracts`, `messaging`, `reports` + rutas `(auth)/login` y `(auth)/register`.
+  - Fixes: `AuthGuard` redirige a `/login` (era `/auth/login` 404) y navega en `useEffect`
+    (no en render); `apiClient` lee el token del `authStore`; matching con mock data (2A).
+  - Verificación browser (PASS): login→/dashboard · nav→/matching (3 cards) · sign out→/login
+    · guard /dashboard→/login · password incorrecta→error.
+
+- ✅ **Restyle a la estética del prototipo (retro "paper & ink")** — el frontend implementado
+  seguía el design system teal del README §1.4, que difería del prototipo probado en UX.
+  Decisión: el prototipo es la fuente de verdad. Se reescribió el design system:
+  - `globals.css` con tokens retro + **remap de tokens Tailwind** (`teal-500`→azul, `stone-100`→papel,
+    `zinc-*`→tinta, `shadow-sm`→sombra dura) → reskin global sin tocar cada componente.
+  - Fuentes Space Grotesk + JetBrains Mono + Macondo (`layout.tsx`); primitivas Button/Badge y
+    wordmark al estilo retro; **README §1.4 reescrito** (doc = impl = prototipo).
+  - Verificado en navegador (Edge): `/login` y `/register` con papel/tinta, sombras duras,
+    wordmark Macondo, botón azul mono. Las demás pantallas heredan vía el remap.
+
+### Próximo paso inmediato
+- ▶️ **Fase 2B — cablear backend por feature** (empezando por Matching): rellenar dominio
+  backend + reemplazar mock del service del frontend por llamadas reales, con agentes
+  `/backend-agent` → `/database-agent` → `/solid-validator` → `/testing-agent` + `/security-review`.
+
+### Orden restante
+**Fase 2B** (Matching → Messaging → Contracts → Dashboard → Reports), cada una con el
+workflow de agentes (§4). Auth ya quedó real (backend WS-3 + frontend 2A).
+
+### Cómo correr el stack (local)
+```
+# 1) Base de datos (WS-2)
+docker compose up -d
+
+# 2) Backend (WS-1/WS-3) — desde la raíz
+cd backend && python -m venv .venv                      # una vez
+./.venv/Scripts/python.exe -m pip install -r requirements.txt
+cd .. && backend/.venv/Scripts/python.exe -m uvicorn backend.main:app --reload --port 8000
+# → http://localhost:8000/health  y  /docs
+
+# 3) Frontend (WS-4)
+cd frontend && npm install                              # una vez
+npm run dev
+# → http://localhost:3000  (login demo: maria@cafedelvalle.cr / DemoPass123!)
+```
+
+---
+
 ## 1. Decisiones confirmadas
 
 | Tema | Decisión | Justificación |
@@ -75,42 +161,60 @@ divergir.
 
 Objetivo: dejar el andamio **corriendo en local** (sin features todavía). En orden:
 
-### WS-1 · Backend ejecutable
-- [ ] `requirements.txt`: agregar `alembic`, `psycopg2-binary`, `python-jose[cryptography]`,
-      `passlib[bcrypt]`, `python-multipart`.
-- [ ] DB layer real:
-  - `shared/database/connection.py` → `create_engine(settings.DATABASE_URL)`.
+### WS-1 · Backend ejecutable ✅ COMPLETO
+- [x] `requirements.txt` (runtime) split de `requirements-dev.txt` (test tooling, README §2.17):
+      `psycopg2-binary`, `python-jose[cryptography]`, `passlib[bcrypt]`, `python-multipart`, `uvicorn`.
+      _Nota: `alembic` se omite — el MVP usa SQL scripts (decisión §1), no migraciones._
+- [x] DB layer real:
+  - `shared/database/connection.py` → `get_engine()` lazy singleton con `pool_pre_ping`.
   - `shared/database/session.py` → `sessionmaker` + dependency `get_db()`.
-  - Centralizar `Base` en `shared/database` (hoy cada modelo redefine su propio `Base`).
-- [ ] `main.py` + `api/routes.py`: montar el router e incluir `GET /health`.
-- [ ] `config.py`: defaults locales + flag `USE_MOCKS`; cloud vars opcionales en local.
-- [ ] `backend/.env.example`: perfil local completo (no existe hoy).
+  - `shared/database/base.py` → **Base declarativa canónica única** (fuente de verdad).
+    Los 26 stubs de modelos migran a este `Base` al rellenarse en Fase 2 (no se churnean ahora).
+- [x] `main.py` (app factory + CORS) + `api/routes.py` (router raíz) + `api/health.py`
+      (`GET /health` con chequeo real de BD; 200 si up, 503 si down).
+- [x] `config.py`: defaults locales + `USE_MOCKS` + vars JWT + `cors_origins`; cloud vars opcionales.
+- [x] `backend/.env.example` (perfil local) + `.gitignore` raíz (`.venv`, `.env`, `__pycache__`, `node_modules`…).
+- [x] Verificado en runtime: venv aislado, deps instaladas, `uvicorn backend.main:app` arranca
+      y `GET /health` → `200 {"status":"ok","database":"up",...}`; `/openapi.json` → 200.
 
-### WS-2 · Data layer local
-- [ ] `docker-compose.yml` con imagen `pgvector/pgvector:pg16` + volumen + montaje de init scripts.
-- [ ] Init order: `creationScript.sql` → `seed.sql` (catálogos) → `seed_dev.sql` (demo transaccional).
-- [ ] Crear `seed_dev.sql` con usuarios/advisors/matches demo (incluye credenciales bcrypt).
-- [ ] Verificar que `creationScript.sql` está alineado con el DBML actual.
+### WS-2 · Data layer local ✅ COMPLETO
+- [x] `docker-compose.yml` con imagen `pgvector/pgvector:pg16` + volumen + montaje de init scripts.
+- [x] Init order: `01_creation` (creationScript.sql) → `02_seed_catalogs` (seed.sql) → `03_auth_local` (auth_local.sql) → `04_seed_dev` (seed_dev.sql).
+- [x] `auth_local.sql`: extensión `PB_AuthCredentials` (perfil local, bcrypt) — la columna de password no existía (diseño Auth0).
+- [x] `seed_dev.sql` con PYMEs/advisors/matches/chat/contrato demo + credenciales bcrypt (vía pgcrypto `crypt`+`gen_salt('bf')`). Password demo: `DemoPass123!`.
+- [x] Verificado en runtime: 69 tablas, extensiones `vector`+`pgcrypto`, datos demo cargados, hashes `$2a$10$` validan password OK y rechazan incorrecta.
 
-### WS-3 · Auth mock JWT (bcrypt)
-- [ ] Extender schema: almacenamiento de credenciales (hash bcrypt) — desviación documentada (§2.3).
-- [ ] Flujo `register` + `login` que verifica password con bcrypt y emite JWT (HS256, `JWT_SECRET`).
-- [ ] `shared/auth/jwt_validator.py`: validar JWT local.
-- [ ] `permission_checker.py`: guard por rol (PYME / Asesor).
+### WS-3 · Auth mock JWT (bcrypt) ✅ COMPLETO
+- [x] Schema de credenciales (bcrypt) — hecho en WS-2 (`PB_AuthCredentials` / auth_local.sql).
+- [x] `shared/auth/password_hasher.py` (bcrypt directo; verifica los `$2a$` de pgcrypto y hashea nuevos).
+- [x] `shared/auth/jwt_validator.py` — emite + valida JWT local (HS256, `JWT_SECRET`); `create_access_token` + `validate`.
+- [x] `shared/auth/permission_checker.py` — `get_current_principal` (authn) + `require_account_type` (authz por rol pyme/advisor) + `Principal`.
+- [x] Dominio User: `auth_credential_model` + `pyme_model`/`advisor_model` (reescritos a tablas reales `PB_*` sobre el `Base` canónico), `user_repository`, `auth_service` (login + register PYME/Advisor), schemas (login/auth_response/create_*), controllers (`/api/auth/login`, `/api/auth/me`, `/api/sme/accounts`, `/api/advisor/accounts`).
+- [x] Exception handlers centralizados en `main.py` (AuthException→401, ValidationException→400, NotFound→404, Domain→400) → controllers delgados.
+- [x] Verificado en runtime: login seed→200+JWT; `/me`→200; password incorrecta→401; sin token→403;
+      register PYME/Advisor→201+token (login posterior OK); email duplicado→400; `company_size` inválido→400; password <8→422.
 
-### WS-4 · Frontend ejecutable
-- [ ] `frontend/package.json`: **está vacío (0 bytes)** → crear real con el stack del
-      README §1.1 (Next 15, React 19, TanStack Query, Zustand, Tailwind, Radix,
-      Heroicons, Zod, Vitest, Playwright).
-- [ ] `next.config.js`: configuración mínima (está vacío).
-- [ ] `frontend/.env.example` / `.env.local`: `NEXT_PUBLIC_API_URL` + auth (vacíos hoy).
-- [ ] `npm install` y `next dev` levanta la home.
+### WS-4 · Frontend ejecutable ✅ COMPLETO
+- [x] `frontend/package.json` con el stack exacto del README §1.1 (Next 15.3.3, React 19.1.0,
+      TanStack Query 5.76.1, Zustand 5.0.5, Zod 3.23.8, React Hook Form 7.57.0, Framer Motion 12.15.0,
+      @radix-ui/react-dialog; dev: TS 5.8.3, Tailwind v4 + @tailwindcss/postcss, Vitest 2.1.8,
+      Playwright 1.58.2, ESLint/Prettier).
+- [x] Configs completados: `postcss.config.mjs` (Tailwind v4), `next.config.js`, `tailwind.config.js`,
+      `.eslintrc.json`, `.prettierrc`, `.env.example`/`.env.local` (`NEXT_PUBLIC_API_URL=http://localhost:8000`).
+- [x] `src/app/providers.tsx` creado (faltaba; lo importa `layout.tsx`) → `QueryClientProvider` con el singleton.
+- [x] `package.json` raíz (estaba vacío → warning de Browserslist) ahora es marker del monorepo.
+- [x] Fix: link "Get Started" de la landing apuntaba a `/auth/login` (404) → `/login` (route group `(auth)`).
+- [x] Verificado en runtime: `npm install` (513 paquetes OK), `next dev` levanta; `/` → 200 con el H1,
+      `/login` → 200 ("Sign in to PymeBoost").
+- ⚠️ Nota: `next@15.3.3` (versión del README) tiene aviso CVE-2025-66478; se mantiene por fidelidad al
+      README (MVP local). Evaluar bump a 15.x parcheado al alinear versiones.
 
-### WS-5 · Documentación
-- [ ] Sección **MVP** en `README.md`: ejecución FE, BE, DB; env vars; dependencias;
-      inicialización de datos.
-- [ ] Sección **MVP Scope** en `README.md` (ver §5).
-- [ ] Sección **Agent Validations** en `README.md` (se va llenando en Fase 2).
+### WS-5 · Documentación ✅ COMPLETO
+- [x] Sección **`# MVP`** en `README.md` (entre UX y `# Frontend`): perfil local + mapeo cloud→local,
+      ejecución DB/BE/FE con comandos verificados, env vars (BE y FE), dependencias, inicialización de
+      datos (automática vía init scripts), credenciales demo.
+- [x] **MVP Scope** resumido en el README + enlace a este spec §5 para el detalle completo.
+- [x] **Agent Validations** abierta en el README (tabla placeholder; se llena por feature en Fase 2).
 
 ### Definition of Done — Fase 1
 - [ ] `uvicorn` levanta y `GET /health` responde `200`.

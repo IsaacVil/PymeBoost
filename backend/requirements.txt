@@ -1,8 +1,11 @@
+# Runtime dependencies only (see README §2.17). Test/lint tooling lives in
+# requirements-dev.txt so it never ships in the production image.
 fastapi==0.115.4
 pydantic==2.10.2
 pydantic-settings==2.7.0
-sqlalchemy==2.0.36
-pytest==8.3.3
-pytest-cov==6.0.0
-httpx==0.28.1
+SQLAlchemy==2.0.36
+psycopg2-binary==2.9.10
+python-jose[cryptography]==3.3.0
+bcrypt==4.2.1
+python-multipart==0.0.20
 uvicorn==0.34.0

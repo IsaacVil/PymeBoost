@@ -13,7 +13,7 @@ export default function LandingPage() {
         </p>
         <div className="flex gap-4 justify-center">
           <Link
-            href="/auth/login"
+            href="/login"
             className="bg-teal-500 hover:bg-teal-600 text-white px-6 py-3 rounded-md font-medium transition-colors"
           >
             Get Started

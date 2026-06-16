@@ -2,6 +2,8 @@
 // Reused by all feature services (matchingService, contractService, etc.)
 // This eliminates duplicate error handling, JWT injection, and retry logic across services
 
+import { useAuthStore } from "@/store/authStore";
+
 interface RequestOptions {
   method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
   headers?: Record<string, string>;
@@ -20,7 +22,7 @@ export class ApiClient {
   private maxRetries = 3;
   private retryDelay = 1000;
 
-  constructor(baseUrl: string = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api") {
+  constructor(baseUrl: string = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000") {
     this.baseUrl = baseUrl;
   }
 
@@ -80,7 +82,17 @@ export class ApiClient {
 
   protected async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      // Surface the backend's `detail` message when present (FastAPI error shape).
+      let detail = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const body = await response.json();
+        if (body?.detail) {
+          detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
+        }
+      } catch {
+        // non-JSON error body — keep the status line
+      }
+      throw new Error(detail);
     }
     return response.json();
   }
@@ -93,13 +105,12 @@ export class ApiClient {
   }
 
   private getAuthToken(): string {
-    if (typeof window === "undefined") return "";
-    // TODO: Get from authStore (Zustand singleton)
-    return localStorage.getItem("auth_token") || "";
+    // Read the JWT from the persisted authStore (Zustand singleton).
+    return useAuthStore.getState().session.token ?? "";
   }
 
   private generateTraceId(): string {
-    return `trace-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `trace-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   }
 }
 
