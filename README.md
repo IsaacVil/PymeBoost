@@ -2739,7 +2739,22 @@ Shared infrastructure lives in `backend/shared/` and is used by all domains:
 - Authentication delegated to Auth0 with Google OAuth 
 - JWT tokens validated on every request; expiration: 1 hour, automatic rotation with refresh token
 - Four roles with role-based access control: `pyme_owner`, `advisor`, `admin`, `system_agent`
-- Per-endpoint authorization enforced using role claims from JWT payload
+- **Roles are managed exclusively in the database** via `PB_Roles` (catalog), `PB_PymeRoles` (N:M with PYMEs) and `PB_AdvisorRoles` (N:M with Advisors). Roles are **not** stored as JSON in JWT claims, in JSONB columns, nor in the Auth0 user metadata.
+- Per-endpoint authorization enforced by querying `PB_PymeRoles` / `PB_AdvisorRoles` after JWT validation — roles are resolved from the database on every authenticated request, never from the token payload.
+
+**Role Model (N:M):**
+- A PYME can hold multiple roles (e.g., `pyme_owner` + `admin` for a platform manager).
+- A role can be assigned to multiple PYMEs or Advisors.
+- The same N:M design applies to Advisors via `PB_AdvisorRoles`.
+- Role assignment/revocation takes effect immediately; no token re-issuance required.
+
+**Workflow Role Verification:**
+Every protected endpoint follows this sequence:
+1. Validate JWT signature against JWKS cache → extract `auth0Id`.
+2. Load `pymeId` or `advisorId` from `PB_Sessions` (matched by `auth0Id`).
+3. Query `PB_PymeRoles` or `PB_AdvisorRoles` to resolve the active roles for this user.
+4. Compare resolved roles against the endpoint's required roles; return `403 Forbidden` if insufficient.
+5. Validate resource ownership at the service layer (user must own or participate in the resource).
 
 **Permission Matrix:**
 
@@ -2892,55 +2907,78 @@ Shared infrastructure lives in `backend/shared/` and is used by all domains:
 
 ### CI/CD Tool
 * GitHub Actions: Automates build, test, and deployment from code repository
-* Trigger: Automatic on push to develop (Dev) and main (Staging → Prod)
- 
+* Trigger: Automatic on push to `develop` (Dev) and on PR merge to `main` (Staging → Prod)
+
+### Branch & Environment Strategy
+
+Three environments map to two branches. **The same Docker image is promoted across environments** — behavior differs only via GitHub Environment variables (`ENVIRONMENT`, `DATABASE_URL`, `LOG_LEVEL`, etc.) injected at deploy time.
+
+| Branch | GitHub Environment | Cloud Run Instance | Approval | Tests run |
+|--------|-------------------|--------------------|----------|-----------|
+| `develop` (feature branches merge here) | Development | 1 min instance | Automatic | Unit only |
+| `main` (PR merge from `develop`) | Staging | 2 min instances | Automatic | Unit + Integration |
+| `main` (manual tag `v*`) | Production | 1–10 auto-scale | **Manual** | Smoke (post-deploy) |
+
+**Why the same image?** Building a separate image per environment risks "works in staging, broken in prod" divergence. Artifact Registry stores one tagged image; GitHub Environments swap the variables that control database, Auth0 tenant, log level, and bucket names.
+
 ### CI/CD Pipeline
 
-Workflow file: [backend-tests.yml](.github/workflows/backend-tests.yml)
-
-On every push to the working branch, GitHub Actions runs the jobs in order:
-
-1. `unit-tests` runs [run_unit_tests.sh](backend/tests/unit/run_unit_tests.sh) (includes API, contract, and health checks) with coverage.
-2. `integration-tests` runs [run_integration_tests.sh](backend/tests/integration/run_integration_tests.sh) with coverage.
-3. `coverage-gate` fails the pipeline if total coverage is below 80%.
-4. `promote-to-main` runs only if all previous jobs pass and promotes the current branch into `main`.
-
-The `promote-to-main` job is the last step because the hosting service builds the production image from `main`. A branch only reaches `main`, and therefore production, after every test passes and the coverage gate is met.
-
-#### GitHub Actions Workflows
-
 Workflow file: [backend-ci.yml](.github/workflows/backend-ci.yml)
-**On every push to working branch:**
+
+#### On push to `develop` (Dev environment)
 
 1. **Unit Tests** (Pytest)
    - Run [run_unit_tests.sh](backend/tests/unit/run_unit_tests.sh) (includes API, contract, and health check suites)
-   - Report coverage with --cov-report=term-missing
+   - Report coverage with `--cov-report=term-missing`
    - Fail if < 80% coverage
+
+2. **Build & Push Docker Image** (Google Artifact Registry)
+   - Build image tagged `dev-<sha>`
+   - Push to Artifact Registry; automatic vulnerability scan
+   - Pipeline fails on any critical CVE
+
+3. **Deploy to Dev** (Cloud Run — `development` GitHub Environment)
+   - Pull `dev-<sha>` image; inject Development variables
+   - `LOG_LEVEL=DEBUG`, dev Cloud SQL instance, dev Auth0 tenant
+   - Automatic, no approval gate
+
+#### On PR merge to `main` (Staging environment)
+
+1. **Unit Tests** — same as above
 
 2. **Integration Tests** (Pytest)
    - Run [run_integration_tests.sh](backend/tests/integration/run_integration_tests.sh)
    - Real PostgreSQL test database, in-memory event bus, external providers stubbed
    - Fail if < 80% coverage
 
-3. **Coverage Gate** 
-   - Aggregate (Combines coverage from unit testing and integration testing) coverage total.
+3. **Coverage Gate**
+   - Aggregate unit + integration coverage
    - Fail pipeline if total drops below 80%
 
-4. **Build Docker Image** (Google Artifact Registry)
-   - Build production Docker image
-   - Push to Artifact Registry with automatic vulnerability scanning
-   - Binary authorization approval required before deploy
+4. **Build & Push Docker Image**
+   - Build image tagged `staging-<sha>` (re-tagged as `prod-<sha>` on promotion)
+   - Vulnerability scan; binary authorization required before any deploy
 
-5. **Promote to main ** (runs only if all jobs above pass)
-   - Merge working branch into `main`
-   - Triggers staging deployment
+5. **Deploy to Staging** (Cloud Run — `staging` GitHub Environment)
+   - Pull `staging-<sha>` image; inject Staging variables
+   - `LOG_LEVEL=INFO`, staging Cloud SQL instance, staging Auth0 tenant
+   - Automatic, no approval gate
 
-**On PR merge to main:**
+6. **Smoke Tests** (Playwright `@smoke` tag)
+   - Run against the staging URL post-deploy
+   - Fail pipeline if any smoke test fails (blocks production promotion)
 
-5. **Deploy to Production** (Google Cloud Run)
-   - Deploy to production
-   - Monitor Cloud Logging + Cloud Monitoring for 10 min post-deploy
-   - Rollback to previous image if critical errors detected
+#### On manual tag `v*` (Production environment)
+
+7. **Promote image** — re-tag `staging-<sha>` as `prod-<sha>` in Artifact Registry; **no rebuild**
+
+8. **Deploy to Production** (Cloud Run — `production` GitHub Environment)
+   - **Manual approval required** from a team lead in GitHub Environments
+   - Inject Production variables: `LOG_LEVEL=WARNING`, prod Cloud SQL, prod Auth0 tenant, prod Secret Manager refs
+   - Blue-green deployment: new revision receives 0 % traffic until smoke tests pass, then switches 100 %
+
+9. **Post-deploy monitoring** — Cloud Logging + Cloud Monitoring watched for 10 min
+   - Auto-rollback to previous revision if error rate > 5 % or unhandled exception spike detected
 
 ### Testing Strategies
 
@@ -3277,7 +3315,7 @@ PymeBoost implements a robust caching strategy at the backend to guarantee avail
 **Redis TTL:**
 - **3 hours** (equal to maximum JWT TTL with grace): Maximum duration session data is stored in Redis.
 - Purpose: Keep session data synchronized with maximum JWT validity, even if Auth0 is down.
-- Content stored: User ID, permissions, roles, session metadata.
+- Content stored: User ID, account type, session metadata. Roles are **not** cached in Redis; they are resolved on each request from `PB_PymeRoles` / `PB_AdvisorRoles`.
 - Benefit: If Auth0 is down for 2 hours then recovers, Redis still has session data available for fast validation.
 
 **Automatic Cleanup:**
@@ -3635,25 +3673,39 @@ ProxyCurl is a third-party REST API (by Nubela) that receives a LinkedIn profile
 
 ---
 
+
+---
+
 #### Advisor Uploads Use Cases
 
 Implementation: [backend/domains/user/controllers/upload_use_cases_controller.py](backend/domains/user/controllers/upload_use_cases_controller.py)
 
-An advisor uploads one or more PDF use case files. No additional form fields are required — all information is extracted from the PDF content. Each PDF must follow the defined structure below. The system stores the files, extracts and classifies the content via OCR and embeddings, and associates the processed use cases with the advisor's profile.
+An advisor uploads one or more PDF use case files. No additional form fields are required — all information is extracted from the PDF content by the AI processor. Each PDF must follow the defined structure and field size constraints below. The system stores the files, extracts and classifies the content via OCR and embeddings, and associates the processed use cases with the advisor's profile.
 
-**Expected PDF Structure:**
+**Expected PDF Structure & Field Constraints:**
 
-Each uploaded PDF must contain the following information:
+| Section | Field | Max size | Notes |
+|---------|-------|----------|-------|
+| **1. Company Information** | Company name | 100 chars · ~16 words (`name`) | Must match a recognizable entity name |
+| | Industry | 50 chars · ~8 words (`code`) | Must match a value in the `PB_Industries` catalog |
+| | Company size | 50 chars · ~8 words (`code`) | One of: `Small`, `Medium`, `Large` |
+| **2. Company Context** | Business model / market description | 500 chars · ~83 words (`standard`) | Market position, main challenges at the time |
+| **3. Initial Situation** | Problem / opportunity description | 500 chars · ~83 words (`standard`) | Specific trigger for the engagement |
+| **4. Actions Performed** | Methodology & interventions | 2 000 chars · ~333 words (`content`) | Steps, tools, and activities the advisor executed |
+| **5. Metric Used** | Metric name | 100 chars · ~16 words (`name`) | Primary KPI tracked (e.g., "Monthly Revenue") |
+| | Value before (numeric) | — | Stored as `NUMERIC(14,4)`; no text limit |
+| | Value after (numeric) | — | Stored as `NUMERIC(14,4)`; no text limit |
+| **6. Metrics Before** | KPI baseline description | 300 chars · ~50 words (`brief`) | Qualitative context for the baseline figure |
+| **7. Metrics After** | KPI result description | 300 chars · ~50 words (`brief`) | Qualitative context for the final figure |
 
-| Section | Description |
-|---|---|
-| 1. Company Information | Name, industry (categorical — from predefined catalog), company size (categorical: `Small` | `Medium` | `Large`) |
-| 2. Company Context | Business model, market position, main challenges at the time |
-| 3. Initial Situation | Specific problem or opportunity that triggered the engagement |
-| 4. Actions Performed | Steps, methodologies, and interventions executed by the advisor |
-| 5. Metric Used | Name of the primary metric tracked during this engagement, the value before the intervention, and the value after |
-| 6. Metrics Before | Quantitative baseline — revenue, costs, conversion rates, or other KPIs |
-| 7. Metrics After | Quantitative results after the engagement — same KPIs as Metrics Before |
+**File-level constraints (validated by FastAPI before GCS storage):**
+
+| Constraint | Limit |
+|------------|-------|
+| File type | PDF only (`application/pdf`) |
+| Max file size | 10 MB per file |
+| Max files per request | 3 |
+| Original filename | 200 chars · ~33 words (`title` tier) |
 
 **Workflow:**
 
@@ -3662,7 +3714,7 @@ Each uploaded PDF must contain the following information:
 3. Google Cloud API Gateway validates the endpoint and applies rate limiting.
 4. Google Cloud API Gateway routes the request to Cloud Run.
 5. FastAPI validates the JWT using Auth0 JWKS and verifies the file type (PDF only) and file size limit.
-6. Each PDF is stored in Google Cloud Storage under the advisor's namespace. The file reference is recorded in the database with status `PENDING`.
+6. Each PDF is stored in Google Cloud Storage under the advisor's namespace. A `PV_MediaFiles` entry is created for each file (path, size, encoding, uploader `auth0Id`); then a `PB_Documents` record is created with `documentTypeId = use_case`, status `PENDING`, and `mediafileId` referencing the new `PV_MediaFiles` row.
 7. A `UseCaseUploaded` event is published to Google Cloud Pub/Sub for each uploaded file.
 8. The system returns an immediate confirmation that the files were received. Processing continues asynchronously.
 9. For each file, the `Use Case PDF Processing` workflow is triggered by the Pub/Sub subscriber.
@@ -3806,8 +3858,60 @@ Triggered by the `PromiseTextUpdated` Pub/Sub event, published whenever an advis
 ### Notifications Domain Workflows
 
 #### Project Status Notifications
+
+Triggered by the `ProjectStatusChanged`, `SubphaseCompleted`, `BaselineSubmitted`, and `ProjectCompleted` Pub/Sub events.
+
+**ProjectStatusChanged** — published by the project health monitor whenever the health label changes (`on_track → at_risk`, `at_risk → off_track`, etc.).
+
+1. The Notification Domain receives the event containing `project_id`, `pyme_id`, `advisor_id`, and the new `health_status` code.
+2. A `project_status_changed` in-app notification is sent to **both** the PYME and the Advisor, including the new status label and a link to the project dashboard.
+
+**SubphaseCompleted** — published when the Advisor marks a subphase as done.
+
+1. The Notification Domain receives the event containing `project_id`, `pyme_id`, and the completed subphase name.
+2. A `subphase_completed` in-app notification is sent to the **PYME**, informing them a milestone was completed and showing the updated roadmap progress.
+
+**BaselineSubmitted** — published when the PYME uploads the baseline document.
+
+1. The Notification Domain receives the event containing `project_id` and `advisor_id`.
+2. A `baseline_submitted` in-app notification is sent to the **Advisor**, signaling that the baseline metrics are available and work can begin.
+
+**ProjectCompleted** — published after the AI Domain validates the KPIs from the completion document.
+
+1. The Notification Domain receives the event containing `project_id`, `pyme_id`, and `advisor_id`.
+2. A `project_completed` in-app notification is sent to **both** parties, informing them the project is officially closed and reviews can now be submitted.
+
+---
+
 #### Messages Notifications
+
+Triggered by the `MessageSent` Pub/Sub event, published by the Communication Domain each time a user (PYME or Advisor) sends a message in a chat session.
+
+1. The Notification Domain receives the event containing `chat_session_id`, `sender_account_type` (`pyme` or `advisor`), and the recipient IDs (`pyme_id` and `advisor_id`).
+2. The **recipient** (the party that did not send the message) is identified from `sender_account_type`.
+3. A `message_received` in-app notification is dispatched to the recipient with a preview of the message content (truncated to 120 characters) and a deep link to the chat.
+4. If the recipient has the `email` channel enabled in their `PB_NotificationPreferences`, an email notification is also enqueued via the email provider.
+
+> System messages (`message_type = system`) do not trigger this workflow; they are informational and require no push.
+
+---
+
 #### Advisor Selection Notifications
+
+Covers two lifecycle events in the matching flow: a PYME matching with an Advisor, and an Advisor cancelling a match.
+
+**MatchCreated** — published when a PYME swipes right and a match row is created.
+
+1. The Notification Domain receives the event containing `match_id`, `pyme_id`, and `advisor_id`.
+2. A `match_created` in-app notification is sent to the **Advisor**, informing them that a PYME selected them and that a chat session is now open.
+3. A `match_created` in-app notification is also sent to the **PYME**, confirming the match and providing a link to the new chat.
+
+**MatchCancelled** — published when the Advisor cancels an existing match.
+
+1. The Notification Domain receives the event containing `match_id`, `pyme_id`, and `advisor_id`.
+2. A `match_cancelled` in-app notification is sent to the **PYME**, informing them that the Advisor has withdrawn and the match is no longer active.
+
+---
 
 #### Use Case Processing Notification
 
@@ -4201,13 +4305,26 @@ Implementation: [backend/domains/project/controllers/submit_baseline_controller.
 
 Triggered when a project is created. The PYME must submit a PDF documenting the current state of each contracted metric before the project work begins. Subphase validation is blocked until this document is processed successfully.
 
-The PDF must follow this structure:
+The PDF must follow this structure and respect the field constraints from the [File Upload Text Field Constraints](#file-upload-text-field-constraints) reference:
 
-| Section | Description |
-|---|---|
-| 1. Company Information | Name, industry, company size |
-| 2. Current Situation | Brief description of the business context at project start |
-| 3. Metrics | One entry per contracted metric: metric name, current value, and unit of measurement |
+| Section | Field | Max size | Notes |
+|---------|-------|----------|-------|
+| **1. Company Information** | Company name | 100 chars · ~16 words (`name`) | |
+| | Industry | 50 chars · ~8 words (`code`) | Must match `PB_Industries` catalog |
+| | Company size | 50 chars · ~8 words (`code`) | `Small`, `Medium`, or `Large` |
+| **2. Current Situation** | Business context description | 500 chars · ~83 words (`standard`) | State of the business at project start |
+| **3. Metrics** | Metric name (per entry) | 100 chars · ~16 words (`name`) | Must match a name in `PB_ContractMetrics` for this contract |
+| | Current value | — | Numeric (`NUMERIC(14,4)`); no text limit |
+| | Unit of measurement | 200 chars · ~33 words (`title`) | e.g., "CRC", "units/month", "%" |
+
+**File-level constraints:**
+
+| Constraint | Limit |
+|------------|-------|
+| File type | PDF only (`application/pdf`) |
+| Max file size | 10 MB |
+| Max files per request | 1 |
+| Original filename | 200 chars · ~33 words (`title` tier) |
 
 Each metric entry in section 3 must match by name the metrics defined in `PB_ContractMetrics` for this contract version. For example, if the contract defines a metric named `monthly_sales`, the PDF must include a `monthly_sales` entry with its current numeric value. The AI extracts these as key/value pairs and sets the `baselineValue` on each matching `PB_ContractMetrics` record.
 
@@ -4216,7 +4333,7 @@ Each metric entry in section 3 must match by name the metrics defined in `PB_Con
 3. Google Cloud API Gateway routes the request to Cloud Run.
 4. FastAPI validates the JWT using Auth0 JWKS and extracts the `pyme_id`.
 5. The system verifies the requesting user is the PYME owner of this project and that the project status is `ACTIVE` with no baseline already submitted. If not, `403 Forbidden` or `409 Conflict` is returned.
-6. The PDF is stored in Google Cloud Storage under the project's namespace. The file reference is recorded in `PB_Documents` with `documentTypeId = baseline` and status `PENDING`.
+6. The PDF is stored in Google Cloud Storage under the project's namespace. A `PV_MediaFiles` entry is created with the GCS path, size, and encoding metadata; then a `PB_Documents` record is created with `documentTypeId = baseline`, status `PENDING`, and `mediafileId` pointing to the new `PV_MediaFiles` row (1 `PV_MediaFile` → N `PB_Documents`).
 7. A `BaselinePdfUploaded` event is published to Pub/Sub, triggering the `Baseline PDF Processing` workflow in the AI Domain.
 8. The project status remains `ACTIVE` — subphase validation is blocked until a `BaselinePdfProcessed` event with `status: PROCESSED` is received and all `baselineValue` fields on the contract metrics are populated.
 
@@ -4277,17 +4394,30 @@ Triggered by the `AllPhasesCompleted` event.
 
 Upon receiving the `AllPhasesCompleted` event, the Project Domain sets the project status to `AWAITING_COMPLETION_DOCUMENT` and notifies the advisor to submit the final document.
 
-The completion document follows the same PDF structure as the advisor's use case files:
+The completion document follows the same PDF structure and field constraints as the advisor's use case files (see [File Upload Text Field Constraints](#file-upload-text-field-constraints)):
 
-| Section | Description |
-|---|---|
-| 1. Company Information | Name, industry, company size |
-| 2. Company Context | Business model and starting context |
-| 3. Initial Situation | Problem or opportunity that triggered the engagement |
-| 4. Actions Performed | Steps and interventions executed during the project |
-| 5. Metric Used | Name of the primary metric tracked, value before the project, and value after |
-| 6. Metrics Before | Baseline KPI values at project start |
-| 7. Metrics After | Final KPI values at project end |
+| Section | Field | Max size | Notes |
+|---------|-------|----------|-------|
+| **1. Company Information** | Company name | 100 chars · ~16 words (`name`) | |
+| | Industry | 50 chars · ~8 words (`code`) | Must match `PB_Industries` catalog |
+| | Company size | 50 chars · ~8 words (`code`) | `Small`, `Medium`, or `Large` |
+| **2. Company Context** | Business model / market description | 500 chars · ~83 words (`standard`) | |
+| **3. Initial Situation** | Problem / opportunity description | 500 chars · ~83 words (`standard`) | |
+| **4. Actions Performed** | Methodology & interventions | 2 000 chars · ~333 words (`content`) | Main narrative of what the advisor did |
+| **5. Metric Used** | Metric name | 100 chars · ~16 words (`name`) | Must match the metric name in `PB_ContractMetrics` |
+| | Value before (numeric) | — | `NUMERIC(14,4)` |
+| | Value after (numeric) | — | `NUMERIC(14,4)` |
+| **6. Metrics Before** | KPI baseline description | 300 chars · ~50 words (`brief`) | Qualitative context only; numeric values go in section 5 |
+| **7. Metrics After** | KPI result description | 300 chars · ~50 words (`brief`) | Qualitative context only |
+
+**File-level constraints:**
+
+| Constraint | Limit |
+|------------|-------|
+| File type | PDF only (`application/pdf`) |
+| Max file size | 10 MB |
+| Max files per request | 1 |
+| Original filename | 200 chars · ~33 words (`title` tier) |
 
 1. The advisor sends a POST request to `/api/projects/{project_id}/completion-document` with the PDF file attached (multipart/form-data).
 2. Google Cloud API Gateway validates the endpoint and applies rate limiting.
@@ -5122,6 +5252,30 @@ All `id` columns use UUID v4 strings. In PostgreSQL, these are stored as `VARCHA
 
 Status columns use CHECK constraints to enforce valid values at the database level, preventing invalid states even if application validation is bypassed.
 
+### Media Files & Document Relationship
+
+Platform-level file metadata lives in two `PV_` tables (same prefix as the logging subsystem — these are infrastructure concerns, not business-domain entities):
+
+| Table | PK type | Purpose |
+|-------|---------|---------|
+| `PV_MediaTypes` | `SERIAL` | Catalog of media types (PDF, Image, Video, Audio, Spreadsheet). Each entry defines the `playerImpl` key that tells the frontend which viewer to use. |
+| `PV_MediaFiles` | `SERIAL` | Registry of every file uploaded to the platform. Stores the GCS path, size, encoding, sample rate, language, and the Auth0 user who uploaded it. |
+
+**1 → N relationship — `PV_MediaFiles` → `PB_Documents`:**
+
+`PB_Documents` holds the **business interpretation** of a file (document type, processing status, who uploaded it as a PYME or Advisor). `PV_MediaFiles` holds the **physical file descriptor** (path, size, encoding).
+
+```
+PV_MediaFiles (1) ──────< PB_Documents (N)
+         mediafileid  ←── mediafileId (nullable FK)
+```
+
+One `PV_MediaFile` can produce multiple `PB_Documents` — for example, a single uploaded PDF that is catalogued both as a `use_case` document and later re-catalogued as a `baseline` document, or the same file referenced under different processing statuses across versions. The FK is nullable to preserve backward compatibility with document records created before this relationship existed; new uploads always populate `mediafileId`.
+
+On `PV_MediaFiles` deletion the FK on `PB_Documents.mediafileId` is set to `NULL` (`ON DELETE SET NULL`) — the business document record remains intact even if the platform file registry entry is removed.
+
+---
+
 ### Cross-Domain Reference Strategy
 
 Per the DDD architecture (§2.2), domains do not share database tables and do not create cross-domain foreign keys. When a table in one domain needs to reference an entity in another domain, it stores the entity's ID as a plain `VARCHAR` without a `FOREIGN KEY` constraint. Referential integrity for cross-domain references is enforced at the service layer via synchronous REST queries or event-driven eventual consistency.
@@ -5168,6 +5322,8 @@ Each database table maps to a SQLAlchemy model file in the backend:
 | `use_cases` | [`backend/domains/ai/models/use_case_model.py`](backend/domains/ai/models/use_case_model.py) |
 | `recommendation_results` | [`backend/domains/ai/models/recommendation_result_model.py`](backend/domains/ai/models/recommendation_result_model.py) |
 | `domain_events` | [`backend/domains/event/models/domain_event_model.py`](backend/domains/event/models/domain_event_model.py) |
+| `PV_MediaTypes` | [`backend/shared/media/models/media_type_model.py`](backend/shared/media/models/media_type_model.py) |
+| `PV_MediaFiles` | [`backend/shared/media/models/media_file_model.py`](backend/shared/media/models/media_file_model.py) |
 
 
 

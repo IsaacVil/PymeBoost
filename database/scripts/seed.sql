@@ -21,6 +21,12 @@ INSERT INTO "PB_AccountTypes" ("code", "name", "description") VALUES
     ('advisor', 'Advisor', 'Asesor de negocios que ofrece servicios de consultoría'),
     ('system',  'System',  'Actor del sistema para eventos automatizados');
 
+INSERT INTO "PB_Roles" ("code", "name", "description") VALUES
+    ('pyme_owner',   'PYME Owner',         'Propietario o representante de una PYME registrada en la plataforma'),
+    ('advisor',      'Advisor',            'Asesor de negocios registrado y verificado en la plataforma'),
+    ('admin',        'Administrador',      'Administrador interno con acceso total a la plataforma'),
+    ('system_agent', 'Agente del Sistema', 'Actor automatizado para ejecución de pipelines y tareas programadas');
+
 INSERT INTO "PB_CompanySizes" ("code", "name", "description") VALUES
     ('small',  'Pequeña', 'Hasta 30 empleados'),
     ('medium', 'Mediana', 'Entre 31 y 100 empleados'),
@@ -397,6 +403,57 @@ INSERT INTO "PB_EventTypes" ("code", "name", "description") VALUES
     ('ReviewSubmitted',            'Review Submitted',              'Un participante dejó una reseña al otro al cierre del proyecto; actualiza reputación'),
     ('AdvisorReputationUpdated',   'Advisor Reputation Updated',    'La puntuación de reputación del advisor fue recalculada tras una nueva reseña'),
     ('PymeReputationUpdated',      'Pyme Reputation Updated',       'La puntuación de reputación de la PYME fue recalculada tras una nueva reseña');
+
+-- ============================================================================
+-- 12. MEDIA FILES
+-- ============================================================================
+
+INSERT INTO "PV_MediaTypes" ("name", "playerImpl") VALUES
+    ('PDF',         'pdf_viewer'),
+    ('Image',       'image_viewer'),
+    ('Video',       'video_player'),
+    ('Audio',       'audio_player'),
+    ('Spreadsheet', 'spreadsheet_viewer');
+
+-- Archivos de ejemplo que pueden originar documentos de negocio en PB_Documents.
+-- mediapath refleja la ruta GCS donde se almacena el archivo fisico.
+INSERT INTO "PV_MediaFiles" ("mediapath", "deleted", "lastupdate", "userid", "mediatypeid", "sizeMB", "encoding", "samplerate", "languagecode") VALUES
+    (
+        'gs://pymeboost-docs/advisors/auth0|advisor001/use_cases/caso_exito_tecnologia.pdf',
+        FALSE, now(), 'auth0|advisor001',
+        (SELECT "mediaTypeId" FROM "PV_MediaTypes" WHERE "name" = 'PDF'),
+        1.840, 'UTF-8', NULL, 'es'
+    ),
+    (
+        'gs://pymeboost-docs/advisors/auth0|advisor001/use_cases/caso_exito_finanzas.pdf',
+        FALSE, now(), 'auth0|advisor001',
+        (SELECT "mediaTypeId" FROM "PV_MediaTypes" WHERE "name" = 'PDF'),
+        2.310, 'UTF-8', NULL, 'es'
+    ),
+    (
+        'gs://pymeboost-docs/pymes/auth0|pyme001/baseline/linea_base_proyecto.pdf',
+        FALSE, now(), 'auth0|pyme001',
+        (SELECT "mediaTypeId" FROM "PV_MediaTypes" WHERE "name" = 'PDF'),
+        0.950, 'UTF-8', NULL, 'es'
+    ),
+    (
+        'gs://pymeboost-docs/pymes/auth0|pyme002/baseline/reporte_inicial.xlsx',
+        FALSE, now(), 'auth0|pyme002',
+        (SELECT "mediaTypeId" FROM "PV_MediaTypes" WHERE "name" = 'Spreadsheet'),
+        0.420, 'UTF-8', NULL, 'es'
+    ),
+    (
+        'gs://pymeboost-docs/advisors/auth0|advisor002/profile/intro_video.mp4',
+        FALSE, now(), 'auth0|advisor002',
+        (SELECT "mediaTypeId" FROM "PV_MediaTypes" WHERE "name" = 'Video'),
+        45.700, 'H.264/AAC', '48000Hz', 'es'
+    ),
+    (
+        'gs://pymeboost-docs/advisors/auth0|advisor001/use_cases/caso_exito_tecnologia_v2.pdf',
+        TRUE,  now(), 'auth0|advisor001',
+        (SELECT "mediaTypeId" FROM "PV_MediaTypes" WHERE "name" = 'PDF'),
+        1.920, 'UTF-8', NULL, 'es'
+    );
 
 -- ============================================================================
 -- FIN DEL SCRIPT

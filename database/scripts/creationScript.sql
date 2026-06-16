@@ -71,6 +71,16 @@ CREATE TABLE "PB_AccountTypes" (
     "description" shorttext_t
 );
 
+-- Catalogo de roles del sistema (pyme_owner | advisor | admin | system_agent) -
+CREATE TABLE "PB_Roles" (
+    "id"          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "code"        code_t      NOT NULL UNIQUE,
+    "name"        name_t      NOT NULL,
+    "description" shorttext_t,
+    "isActive"    BOOLEAN     NOT NULL DEFAULT TRUE,
+    "createdAt"   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Tamano de empresa (Small | Medium | Large) --------------------------------
 CREATE TABLE "PB_CompanySizes" (
     "id"          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -362,15 +372,32 @@ CREATE TABLE "PB_AdvisorSubIndustryScores" (
 );
 CREATE INDEX "idx_advisorSubScores_subindustry" ON "PB_AdvisorSubIndustryScores"("subIndustryId");
 
+-- Roles asignados a una PYME (N:M PB_Pymes <-> PB_Roles) -------------------
+CREATE TABLE "PB_PymeRoles" (
+    "pymeId"     UUID        NOT NULL REFERENCES "PB_Pymes"("id")  ON DELETE CASCADE,
+    "roleId"     UUID        NOT NULL REFERENCES "PB_Roles"("id"),
+    "assignedAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY ("pymeId", "roleId")
+);
+CREATE INDEX "idx_pymeRoles_role" ON "PB_PymeRoles"("roleId");
+
+-- Roles asignados a un Advisor (N:M PB_Advisors <-> PB_Roles) --------------
+CREATE TABLE "PB_AdvisorRoles" (
+    "advisorId"  UUID        NOT NULL REFERENCES "PB_Advisors"("id") ON DELETE CASCADE,
+    "roleId"     UUID        NOT NULL REFERENCES "PB_Roles"("id"),
+    "assignedAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY ("advisorId", "roleId")
+);
+CREATE INDEX "idx_advisorRoles_role" ON "PB_AdvisorRoles"("roleId");
+
 -- Sesiones (persistencia/auditoria de sesiones Auth0; runtime en Redis) -----
+-- Los roles se resuelven desde PB_PymeRoles / PB_AdvisorRoles; no se persisten como JSON.
 CREATE TABLE "PB_Sessions" (
     "id"              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "auth0Id"         auth0_id_t  NOT NULL,
     "accountTypeId"   UUID        NOT NULL REFERENCES "PB_AccountTypes"("id"),
     "pymeId"          UUID        REFERENCES "PB_Pymes"("id")    ON DELETE CASCADE,
     "advisorId"       UUID        REFERENCES "PB_Advisors"("id") ON DELETE CASCADE,
-    "roles"           JSONB       NOT NULL DEFAULT '[]'::jsonb,
-    "permissions"     JSONB       NOT NULL DEFAULT '[]'::jsonb,
     "sessionStatusId" UUID        NOT NULL REFERENCES "PB_SessionStatus"("id"),
     "ipAddress"       VARCHAR(45),
     "userAgent"       shorttext_t,
@@ -479,8 +506,11 @@ CREATE TABLE "PB_NeedsAssessmentSubIndustries" (
 -- ============================================================================
 
 -- Referencia a archivo en Google Cloud Storage -----------------------------
+-- "mediafileId" apunta al registro PV_MediaFiles que origino este documento.
+-- Un PV_MediaFile puede dar lugar a N PB_Documents (relacion 1 -> N).
 CREATE TABLE "PB_Documents" (
     "id"                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "mediafileId"            INT         REFERENCES "PV_MediaFiles"("mediafileid") ON DELETE SET NULL,
     "gcsBucket"              name_t      NOT NULL,
     "gcsObjectPath"          url_t       NOT NULL,
     "originalFilename"       shorttext_t NOT NULL,
@@ -497,8 +527,9 @@ CREATE TABLE "PB_Documents" (
      OR ("uploadedByPymeId" IS NULL     AND "uploadedByAdvisorId" IS NOT NULL)
     )
 );
-CREATE INDEX "idx_documents_type"   ON "PB_Documents"("documentTypeId");
-CREATE INDEX "idx_documents_status" ON "PB_Documents"("documentStatusId");
+CREATE INDEX "idx_documents_mediafile" ON "PB_Documents"("mediafileId");
+CREATE INDEX "idx_documents_type"      ON "PB_Documents"("documentTypeId");
+CREATE INDEX "idx_documents_status"    ON "PB_Documents"("documentStatusId");
 
 -- Use case del advisor (1 PDF procesado) ------------------------------------
 CREATE TABLE "PB_UseCases" (
@@ -893,7 +924,38 @@ CREATE INDEX "idx_events_aggregate" ON "PB_DomainEvents"("aggregateType","aggreg
 CREATE INDEX "idx_events_occurred"  ON "PB_DomainEvents"("occurredAt");
 
 -- ============================================================================
--- 13. LOGS
+-- 13. MEDIA FILES (PV_ = plataforma; independiente del dominio de negocio)
+-- ============================================================================
+
+-- Catalogo de tipos de medio: define el reproductor/visor a usar ------------
+CREATE TABLE "PV_MediaTypes" (
+    "mediaTypeId" SERIAL       PRIMARY KEY,
+    "name"        VARCHAR(30),
+    "playerImpl"  VARCHAR(100)
+);
+
+-- Registro de archivos multimedia subidos a la plataforma -------------------
+-- userid referencia el auth0Id del usuario que subio el archivo.
+-- Un registro PV_MediaFiles puede originar 1..N registros PB_Documents
+-- (un mismo archivo puede catalogarse como distintos tipos de documento).
+CREATE TABLE "PV_MediaFiles" (
+    "mediafileid"  SERIAL       PRIMARY KEY,
+    "mediapath"    VARCHAR(500) NOT NULL,
+    "deleted"      BOOLEAN      NOT NULL DEFAULT FALSE,
+    "lastupdate"   TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    "userid"       VARCHAR(64)  NOT NULL,
+    "mediatypeid"  INT          NOT NULL REFERENCES "PV_MediaTypes"("mediaTypeId"),
+    "sizeMB"       NUMERIC(10,3),
+    "encoding"     VARCHAR(100),
+    "samplerate"   VARCHAR(50),
+    "languagecode" VARCHAR(10)
+);
+CREATE INDEX "idx_mediafiles_type"    ON "PV_MediaFiles"("mediatypeid");
+CREATE INDEX "idx_mediafiles_userid"  ON "PV_MediaFiles"("userid");
+CREATE INDEX "idx_mediafiles_deleted" ON "PV_MediaFiles"("deleted");
+
+-- ============================================================================
+-- 14. LOGS
 -- ============================================================================
 
 CREATE TABLE "PV_LogTypes" (
@@ -933,7 +995,7 @@ CREATE TABLE "PV_Logs" (
 );
 
 -- ============================================================================
--- 14. INDICES VECTORIALES (pgvector / HNSW, cosine)
+-- 15. INDICES VECTORIALES (pgvector / HNSW, cosine)
 -- ============================================================================
 CREATE INDEX "idx_blocks_embedding_hnsw"
     ON "PB_DocumentBlocks" USING hnsw ("embedding" vector_cosine_ops);

@@ -6,6 +6,15 @@
 
 // ── CATALOGOS ────────────────────────────────────────────────────────────────
 
+Table PB_Roles {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  code        varchar(50) [not null, unique, note: 'pyme_owner | advisor | admin | system_agent']
+  name        varchar(100)[not null]
+  description varchar(255)
+  isActive    boolean     [not null, default: true]
+  createdAt   timestamptz [not null, default: `now()`]
+}
+
 Table PB_AccountTypes {
   id          uuid [pk, default: `gen_random_uuid()`]
   code        varchar(50)  [not null, unique, note: 'pyme | advisor | system']
@@ -263,14 +272,36 @@ Table PB_AdvisorSubIndustryScores {
   }
 }
 
+Table PB_PymeRoles {
+  pymeId     uuid        [not null, ref: > PB_Pymes.id]
+  roleId     uuid        [not null, ref: > PB_Roles.id]
+  assignedAt timestamptz [not null, default: `now()`]
+
+  indexes {
+    (pymeId, roleId) [pk]
+  }
+
+  note: 'N:M — una PYME puede tener N roles; un rol puede asignarse a N PYMEs'
+}
+
+Table PB_AdvisorRoles {
+  advisorId  uuid        [not null, ref: > PB_Advisors.id]
+  roleId     uuid        [not null, ref: > PB_Roles.id]
+  assignedAt timestamptz [not null, default: `now()`]
+
+  indexes {
+    (advisorId, roleId) [pk]
+  }
+
+  note: 'N:M — un Advisor puede tener N roles; un rol puede asignarse a N Advisors'
+}
+
 Table PB_Sessions {
   id              uuid        [pk, default: `gen_random_uuid()`]
   auth0Id         varchar(64) [not null]
   accountTypeId   uuid        [not null, ref: > PB_AccountTypes.id]
   pymeId          uuid        [ref: > PB_Pymes.id]
   advisorId       uuid        [ref: > PB_Advisors.id]
-  roles           json        [not null, default: `'[]'`]
-  permissions     json        [not null, default: `'[]'`]
   sessionStatusId uuid        [not null, ref: > PB_SessionStatus.id]
   ipAddress       varchar(45)
   userAgent       varchar(255)
@@ -279,7 +310,7 @@ Table PB_Sessions {
   expiresAt       timestamptz [not null, note: 'TTL 3h — max JWT + grace']
   createdAt       timestamptz [not null, default: `now()`]
 
-  note: 'CHECK: exactamente uno de pymeId/advisorId es NOT NULL'
+  note: 'CHECK: exactamente uno de pymeId/advisorId es NOT NULL. Roles resueltos desde PB_PymeRoles / PB_AdvisorRoles — no se persisten como JSON.'
 }
 
 // ── DOMINIO ADVISOR ──────────────────────────────────────────────────────────
@@ -367,6 +398,7 @@ Table PB_NeedsAssessmentSubIndustries {
 
 Table PB_Documents {
   id                      uuid         [pk, default: `gen_random_uuid()`]
+  mediafileId             integer      [ref: > PV_MediaFiles.mediafileid, note: 'FK al archivo multimedia origen (1 PV_MediaFile → N PB_Documents). NULL en registros previos a la integración.']
   gcsBucket               varchar(100) [not null]
   gcsObjectPath           varchar(500) [not null]
   originalFilename        varchar(255) [not null]
@@ -379,7 +411,7 @@ Table PB_Documents {
   uploadedByAdvisorId     uuid         [ref: > PB_Advisors.id]
   uploadedAt              timestamptz  [not null, default: `now()`]
 
-  note: 'CHECK: exactamente uno de uploadedByPymeId/uploadedByAdvisorId es NOT NULL'
+  note: 'CHECK: exactamente uno de uploadedByPymeId/uploadedByAdvisorId es NOT NULL. Relación 1→N con PV_MediaFiles: un archivo puede originar múltiples registros de documento.'
 }
 
 Table PB_UseCases {
@@ -720,6 +752,35 @@ Table PB_DomainEvents {
   occurredAt    timestamptz [not null, default: `now()`]
   publishedAt   timestamptz
   createdAt     timestamptz [not null, default: `now()`]
+}
+
+// ── MEDIA FILES (plataforma — independiente del dominio de negocio) ──────────
+
+Table PV_MediaTypes {
+  mediaTypeId integer     [pk, increment]
+  name        varchar(30) [note: 'Nombre del tipo: PDF, Image, Video, Audio, Spreadsheet, etc.']
+  playerImpl  varchar(100)[note: 'Clase o clave del visor/reproductor: pdf_viewer, image_viewer, video_player, …']
+}
+
+Table PV_MediaFiles {
+  mediafileid  integer      [pk, increment]
+  mediapath    varchar(500) [not null, note: 'Ruta completa al archivo en GCS o sistema de archivos']
+  deleted      boolean      [not null, default: false]
+  lastupdate   timestamptz  [not null, default: `now()`]
+  userid       varchar(64)  [not null, note: 'auth0Id del usuario que subió el archivo']
+  mediatypeid  integer      [not null, ref: > PV_MediaTypes.mediaTypeId]
+  sizeMB       decimal(10,3)[note: 'Tamaño del archivo en megabytes']
+  encoding     varchar(100) [note: 'Codificación del archivo (UTF-8, H.264, AAC, etc.)']
+  samplerate   varchar(50)  [note: 'Frecuencia de muestreo para audio/video (44100Hz, 48000Hz, etc.)']
+  languagecode varchar(10)  [note: 'Código ISO 639-1 del idioma del contenido (es, en, pt, etc.)']
+
+  indexes {
+    (mediatypeid) [name: 'idx_mediafiles_type']
+    (userid)      [name: 'idx_mediafiles_userid']
+    (deleted)     [name: 'idx_mediafiles_deleted']
+  }
+
+  note: '1→N con PB_Documents: un archivo multimedia puede originar N registros de documento (diferentes tipos o versiones de procesamiento)'
 }
 
 // ── LOGS (sistema interno) ───────────────────────────────────────────────────
