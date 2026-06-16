@@ -60,7 +60,7 @@ export function useAuth() {
 
   const signOut = () => {
     logout();
-    router.push("/login");
+    router.push("/"); // back to the landing (integrated login/register)
   };
 
   const hasRole = (role: UserRole) => session.role === role;

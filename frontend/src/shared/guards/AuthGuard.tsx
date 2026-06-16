@@ -34,7 +34,7 @@ export function AuthGuard({
   useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated || !session.token) {
-      router.replace("/login");
+      router.replace("/"); // landing has the integrated login/register
     } else if (requiredRole != null && session.role !== requiredRole) {
       router.replace("/unauthorized");
     } else if (requiredPermission != null && !hasPermission(requiredPermission)) {

@@ -69,8 +69,35 @@ navegable (login real, resto con mock data); Fase 2B = cablear backend por featu
   - Verificado en navegador (Edge): `/login` y `/register` con papel/tinta, sombras duras,
     wordmark Macondo, botón azul mono. Las demás pantallas heredan vía el remap.
 
+- 🎨 **Port visual fiel al prototipo (en curso, frontend-first con mock data):**
+  - ✅ **Landing COMPLETA** (`app/page.tsx`) — port fiel de `prototype/app/auth.jsx` (AuthScreen):
+    split-screen con **login/registro integrado y cableado al backend** (tabs Iniciar sesión/Crear cuenta,
+    registro PYME/Advisor con campos reales + password), panel de marca oscuro, y al scrollear las
+    secciones **Características · Proceso · Precios · CTA+footer**. `AuthHero` + `landing/LandingSections`.
+    Guards redirigen a `/` (login en la pantalla principal). Verificado en navegador: login desde la
+    landing → `/dashboard` (PASS).
+  - ✅ **Matching** — card tipo Tinder portada (`AdvisorCard` Classic) + `SwipeDeck` con drag/rotación,
+    stamps APPROVED/REJECTED y fly-out (pointer events); paneles laterales (contexto PYME + cómo funciona).
+    Primitivas nuevas TS: `Avatar`, `Stars`, `CompatDots`, `lib/format.crc`. Tokens retro crudos en `globals.css :root`.
+  - Verificado en navegador (Edge): landing y matching fieles al prototipo.
+  - ✅ **Messaging + contratos** — port fiel de `prototype/app/messaging.jsx`: `ChatView` (escaneo de
+    contacto que bloquea correos/teléfonos/redes, respuestas simuladas), `MessageBubble` (texto/system
+    blocked/married/advisor-decision/proposal), **propuesta de contrato embebida** en el chat, modal
+    **NegotiateContract** (form editable: presupuesto/retainer/gamas+slider/objetivo/métricas/plan IA +
+    resumen y comisión), **MarryModal** (Marry the Prospect), unmatch. Modelo de contrato compartido en
+    `features/contracts/data/contractModel.ts`. Verificado en navegador.
+  - ✅ **Dashboard** — port fiel de `prototype/app/dashboard.jsx` (vista PYME, contrato activo):
+    banner con **anillo de progreso SVG**, fases colapsables (`PhaseCard`) con reportes del advisor,
+    tabla de **KPIs**, **Distribución financiera**, **Entregables**, **Tiempo restante** (Meter) y metas.
+    Data mock en `features/dashboard/data/projectMock.ts`. Verificado en navegador.
+  - ✅ **Reports retirado del menú** (decisión del usuario): `Navigation` ya no lista Reports
+    (archivos/ruta conservados, no se usan). Labels del menú traducidos al español.
+  - 🎉 **Port visual del prototipo COMPLETO**: Landing · Matching (swipe) · Messaging+Contratos · Dashboard.
+
 ### Próximo paso inmediato
-- ▶️ **Fase 2B — cablear backend por feature** (empezando por Matching): rellenar dominio
+- ▶️ **Continuar port visual: Messaging + contratos** (prototype/app/messaging.jsx) — chat con
+  propuestas de contrato embebidas, Negotiate Contract y Marry the Prospect. Luego Dashboard y Reports.
+  Después, **Fase 2B — cablear backend por feature** (empezando por Matching): rellenar dominio
   backend + reemplazar mock del service del frontend por llamadas reales, con agentes
   `/backend-agent` → `/database-agent` → `/solid-validator` → `/testing-agent` + `/security-review`.
 

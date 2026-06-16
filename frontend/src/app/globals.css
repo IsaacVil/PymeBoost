@@ -18,10 +18,10 @@
   --color-zinc-800: #211b12; /* ink / line — borders */
   --color-zinc-900: #211b12; /* ink — primary text */
 
-  /* primary (CTAs, active states) — blue, per prototype */
-  --color-teal-500: #3b82f6;
-  --color-teal-600: #1e5fd6;
-  --color-cyan-100: #e7eefc; /* soft primary surface */
+  /* primary (CTAs, active states) — turquoise */
+  --color-teal-500: #17b6b0;
+  --color-teal-600: #12918c;
+  --color-cyan-100: #dff4f3; /* soft primary surface */
 
   /* secondary accent — violet */
   --color-violet-500: #8b5cf6;
@@ -43,6 +43,35 @@
   --shadow-md: 4px 5px 0 rgba(33, 27, 18, 0.2);
   --shadow-lg: 5px 6px 0 rgba(33, 27, 18, 0.22);
   --shadow-xl: 6px 8px 0 rgba(33, 27, 18, 0.3);
+}
+
+/* Raw retro tokens (mirror prototype/PymeBoost.html, "balanced" intensity).
+   Used by faithfully-ported prototype components (landing, matching deck, …)
+   that style with inline `var(--token)` for pixel fidelity. */
+:root {
+  --paper: #faf5ec;
+  --paper-2: #f3ecdd;
+  --surface: #ffffff;
+  --ink: #211b12;
+  --ink-soft: #6b6253;
+  --ink-faint: #9c9384;
+  --primary: #17b6b0;
+  --primary-deep: #12918c;
+  --secondary: #8b5cf6;
+  --secondary-deep: #6d3fe0;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --accent: var(--primary);
+  --accent-deep: var(--primary-deep);
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --bd: 2px;
+  --sh: 3px 3px 0 rgba(33, 27, 18, 0.85);
+  --sh-pop: 3px 4px 0 rgba(33, 27, 18, 0.95);
+  --sh-card: 4px 5px 0 rgba(33, 27, 18, 0.2), 0 1px 0 rgba(33, 27, 18, 0.3);
 }
 
 @layer base {
