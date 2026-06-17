@@ -787,7 +787,7 @@ Tailwind classes; the `@theme` mapping gives them the retro palette globally.
 
 | Element | Font | Notes |
 |---------|------|-------|
-| Brand wordmark | Macondo (display) | "PymeBoost" logo only |
+| Brand wordmark | Righteous | "PymeBoost" logo only |
 | Headings (H1–H4) | Space Grotesk | weight 600, tight tracking |
 | Body / Small | Space Grotesk | weight 400 |
 | Buttons | JetBrains Mono | semibold, wide tracking |
