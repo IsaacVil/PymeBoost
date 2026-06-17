@@ -4206,15 +4206,15 @@ Implementation: [backend/domains/communication/controllers/send_message_controll
 
 The primary collaboration space between the PYME and the advisor after a match is established. Beyond messaging, the chat UI surfaces the action that initiates contract negotiation.
 
-1. The user sends a POST request to `/api/chat/{match_id}/messages` with: `sender_id` and `content`.
+1. The user sends a POST request to `/api/chat/{match_id}/messages` with: `content` (and the JWT extracts the sender type and ID).
 2. Google Cloud API Gateway validates that the endpoint exists and applies rate limiting.
 3. Google Cloud API Gateway routes the request to Cloud Run.
 4. FastAPI validates the JWT using Auth0 JWKS and extracts the `user_id`.
 5. The system validates chat access — verifies that the user is a participant of the match and that the match status permits messaging (`ACTIVE` or `FINALIZED`).
 6. The chat session for the match is retrieved.
 7. The `Blocked Content Validation` workflow is executed against the message content. If blocked content is detected, the request is rejected.
-8. The message record is persisted with `session_id`, `sender_id`, `content`, and `sent_at`.
-9. A `MessageSent` event is published to the event bus with `message_id`, `session_id`, and `sender_id`.
+8. The message record is persisted with `chat_session_id`, `sender_pyme_id` (or `sender_advisor_id`), `content`, and `created_at` (polymorphic sender based on account type).
+9. A `MessageSent` event is published to the event bus with `message_id`, `chat_session_id`, and sender account type.
 10. The Notification Domain receives the `MessageSent` event and notifies the other participant of the incoming message.
 
 ---
@@ -5293,7 +5293,7 @@ This schema is also available in pdf format for better and easier viewing. You c
 
 ### Primary Key Format
 
-All `id` columns use UUID v4 strings. In PostgreSQL, these are stored as `VARCHAR` with a `DEFAULT gen_random_uuid()::text` or generated application-side via Python's `uuid.uuid4()`.
+All `id` columns use UUID v4 format. In PostgreSQL, these are stored as native `UUID` type with `DEFAULT gen_random_uuid()` via SQLAlchemy's `UUID(as_uuid=False)` column type, ensuring referential integrity at the database level.
 
 ### ON DELETE Policies
 
@@ -5303,9 +5303,29 @@ All `id` columns use UUID v4 strings. In PostgreSQL, these are stored as `VARCHA
 | `RESTRICT` | Records where deletion of the parent should be blocked if children exist (e.g., `contracts` → `matches`, `projects` → `contracts`) |
 | `SET NULL` | Optional references where the child can exist independently (e.g., `project_health_history.current_subphase_id`) |
 
+### Status & Type Fields (Enumeration via Catalog Tables)
+
+Instead of CHECK constraints or string enums, PymeBoost uses **catalog lookup tables** for all status and type fields:
+
+| Catalog Table | References | Examples |
+|---|---|---|
+| `PB_MatchStatus` | `PB_Matches.match_status_id` | `waiting_swipe`, `match`, `not_swiped`, `unmatch`, `finalized` |
+| `PB_ContractStatus` | `PB_Contracts.contract_status_id` | `proposed`, `accepted`, `rejected`, `completed` |
+| `PB_AdvisorStatus` | `PB_Advisors.advisor_status_id` | `active`, `inactive`, `paused` |
+| `PB_MessageTypes` | `PB_Messages.message_type_id` | `user_message`, `system`, `notification` |
+| `PB_AccountTypes` | Sessions, requests | `pyme`, `advisor` |
+
+This approach provides:
+- **Type safety:** Foreign keys prevent invalid status values at the database level
+- **Flexibility:** Add new statuses by inserting catalog rows (no code changes)
+- **Auditability:** Track which status values exist and when they were added
+- **UUID consistency:** All status fields use UUID references instead of string enums
+
+Catalog rows are seeded on database initialization via [`backend/shared/database/seeders/`](backend/shared/database/seeders/).
+
 ### CHECK Constraints
 
-Status columns use CHECK constraints to enforce valid values at the database level, preventing invalid states even if application validation is bypassed.
+Domain-specific business rules use CHECK constraints to enforce invariants at the database level. For example, numeric ranges on scores, date logic, and logical consistency across columns.
 
 ### Media Files & Document Relationship
 
@@ -5360,6 +5380,7 @@ Each database table maps to a SQLAlchemy model file in the backend:
 | `question_catalog` | [`backend/domains/pyme/models/question_catalog_model.py`](backend/domains/pyme/models/question_catalog_model.py) |
 | `needs_vectors` | [`backend/domains/pyme/models/needs_vector_model.py`](backend/domains/pyme/models/needs_vector_model.py) |
 | `PB_Advisors` | [`backend/domains/advisor/models/advisor_model.py`](backend/domains/advisor/models/advisor_model.py) |
+| `PB_AdvisorStatus` | Catalog (lookup) — no model file, managed via seed data |
 | `specializations` | [`backend/domains/advisor/models/specialization_model.py`](backend/domains/advisor/models/specialization_model.py) |
 | `reputations` | [`backend/domains/advisor/models/reputation_model.py`](backend/domains/advisor/models/reputation_model.py) |
 | `PB_Matches` | [`backend/domains/matching/models/match_model.py`](backend/domains/matching/models/match_model.py) |
@@ -5367,8 +5388,10 @@ Each database table maps to a SQLAlchemy model file in the backend:
 | `swipes` | [`backend/domains/matching/models/swipe_model.py`](backend/domains/matching/models/swipe_model.py) |
 | `PB_ChatSessions` | [`backend/domains/communication/models/chat_session_model.py`](backend/domains/communication/models/chat_session_model.py) |
 | `PB_Messages` | [`backend/domains/communication/models/message_model.py`](backend/domains/communication/models/message_model.py) |
+| `PB_MessageTypes` | Catalog (lookup) — no model file, managed via seed data |
 | `PB_Contracts` | [`backend/domains/contract/models/contract_model.py`](backend/domains/contract/models/contract_model.py) |
 | `PB_ContractVersions` | [`backend/domains/contract/models/contract_version_model.py`](backend/domains/contract/models/contract_version_model.py) |
+| `PB_ContractStatus` | Catalog (lookup) — no model file, managed via seed data |
 | `negotiations` | [`backend/domains/contract/models/negotiation_model.py`](backend/domains/contract/models/negotiation_model.py) |
 | `projects` | [`backend/domains/project/models/project_model.py`](backend/domains/project/models/project_model.py) |
 | `project_health` | [`backend/domains/project/models/project_health_model.py`](backend/domains/project/models/project_health_model.py) |
@@ -6067,7 +6090,7 @@ Always review auto-generated migrations:
 # - CREATE/ALTER statements are correct
 # - Indexes are added for new columns
 # - Foreign keys include ON DELETE policy
-# - CHECK constraints are present for status columns
+# - Status fields have FK references to catalog tables (PB_*Status, PB_*Types) instead of CHECK constraints
 # - updated_at columns have trigger or application-level handling
 # - Downgrade function is the exact inverse
 ```
