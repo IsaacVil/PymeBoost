@@ -85,6 +85,12 @@ export class MatchingService {
     });
   }
 
+  // Either participant cancels the match (drops it from the chat list).
+  async unmatch(matchId: string): Promise<void> {
+    const res = await apiClient.request(`/api/matching/matches/${matchId}/unmatch`, { method: "POST" });
+    if (!res.success) throw new Error(res.error ?? "No se pudo deshacer el match");
+  }
+
   async executeSwipe(command: SwipeCommand): Promise<void> {
     await command.execute();
   }

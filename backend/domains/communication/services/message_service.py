@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from backend.domains.communication.events.message_sent_event import MessageSentEvent
 from backend.domains.communication.models.message_model import MessageModel
 from backend.domains.communication.repositories.message_repository import MessageRepository
+from backend.domains.communication.schemas.conversation_response import ConversationResponse
 from backend.domains.communication.schemas.message_response import MessageResponse
 from backend.domains.communication.services.contact_scanner import ContactScanner
 from backend.shared.auth.permission_checker import Principal
@@ -23,6 +24,10 @@ logger = get_logger(__name__)
 class MessageService:
     def __init__(self, repository: MessageRepository | None = None) -> None:
         self._repo = repository or MessageRepository()
+
+    def list_conversations(self, db: Session, principal: Principal) -> list[ConversationResponse]:
+        rows = self._repo.list_conversations(db, principal.account_type, principal.subject_id)
+        return [self._to_conversation_dto(r) for r in rows]
 
     def list_messages(self, db: Session, match_id: str, principal: Principal) -> list[MessageResponse]:
         self._assert_participant(db, match_id, principal)
@@ -69,6 +74,40 @@ class MessageService:
         return self._to_dto(message, user_type_id)
 
     # --- helpers -----------------------------------------------------------
+    _ACCENTS = ("primary", "secondary", "success", "warning", "danger")
+
+    @classmethod
+    def _to_conversation_dto(cls, row) -> ConversationResponse:
+        name = row["counterpart_name"] or "Contraparte"
+        married = bool(row["married"])
+        contract_status = row["contract_status"]
+        if married:
+            label = "Contrato activo"
+        elif contract_status == "negotiating":
+            label = "Negociando"
+        elif contract_status == "accepted":
+            label = "Propuesta aceptada"
+        elif contract_status == "rejected":
+            label = "Propuesta rechazada"
+        else:
+            label = "Nuevo match"
+        return ConversationResponse(
+            match_id=str(row["match_id"]),
+            counterpart_name=name,
+            counterpart_monogram=cls._monogram(name),
+            counterpart_role=row["counterpart_role"] or "—",
+            accent=cls._ACCENTS[sum(map(ord, name)) % len(cls._ACCENTS)],
+            status=label,
+            contract_status=contract_status,
+            married=married,
+            last_message=row["last_message"],
+        )
+
+    @staticmethod
+    def _monogram(name: str) -> str:
+        parts = [p for p in name.split() if p]
+        return (parts[0][0] + parts[1][0]).upper() if len(parts) >= 2 else name[:2].upper()
+
     def _assert_participant(self, db: Session, match_id: str, principal: Principal) -> None:
         match = self._repo.find_match(db, match_id)
         if match is None:

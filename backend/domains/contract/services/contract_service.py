@@ -42,6 +42,7 @@ class ContractService:
             id=str(contract.id),
             match_id=match_id,
             status=status,
+            proposed_by="pyme" if version.proposed_by_pyme_id else "advisor",
             budget=float(version.implementation_budget),
             retainer=float(version.monthly_retainer),
             commission_pct=float(version.commission_pct),

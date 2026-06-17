@@ -46,3 +46,41 @@ class MessageRepository:
             text('SELECT "id" FROM "PB_AccountTypes" WHERE "code" = :code'), {"code": code}
         ).scalar_one_or_none()
         return str(row) if row is not None else None
+
+    def list_conversations(self, db: Session, account_type: str, subject_id: str) -> list:
+        """Matched chats of the principal with counterpart, contract status,
+        whether a project exists (married) and the last message preview.
+
+        Cross-domain read of matches/contracts/projects/profiles — accepted MVP
+        deviation (README Agent Validations).
+        """
+        if account_type == "pyme":
+            owner_col, cp_table, cp_name = 'm."pymeId"', '"PB_Advisors"', 'a."fullName"'
+        else:
+            owner_col, cp_table, cp_name = 'm."advisorId"', '"PB_Pymes"', 'a."companyName"'
+        cp_join = 'm."advisorId"' if account_type == "pyme" else 'm."pymeId"'
+        sql = text(
+            f"""
+            SELECT m."id"                AS match_id,
+                   {cp_name}             AS counterpart_name,
+                   a."description"       AS counterpart_role,
+                   cs."code"            AS contract_status,
+                   (p."id" IS NOT NULL)  AS married,
+                   (SELECT msg."content"
+                      FROM "PB_Messages" msg
+                      JOIN "PB_ChatSessions" sess ON sess."id" = msg."chatSessionId"
+                     WHERE sess."matchId" = m."id"
+                     ORDER BY msg."createdAt" DESC
+                     LIMIT 1)            AS last_message
+              FROM "PB_Matches" m
+              JOIN "PB_MatchStatus" mst ON mst."id" = m."matchStatusId"
+              JOIN {cp_table} a ON a."id" = {cp_join}
+              LEFT JOIN "PB_Contracts" c  ON c."matchId" = m."id"
+              LEFT JOIN "PB_ContractStatus" cs ON cs."id" = c."contractStatusId"
+              LEFT JOIN "PB_Projects" p ON p."contractVersionId" = c."currentVersionId"
+             WHERE {owner_col} = :sid
+               AND mst."code" IN ('match', 'finalized')
+             ORDER BY m."createdAt"
+            """
+        )
+        return list(db.execute(sql, {"sid": subject_id}).mappings().all())

@@ -1,140 +1,137 @@
 "use client";
-// Chat thread with contract negotiation — ported from prototype/app/messaging.jsx.
-import { useEffect, useRef, useState } from "react";
+// Chat thread + contract negotiation, wired to the real backend (Fase 2B).
+// Messages, proposals, accept/reject and Marry the Prospect all persist server-side;
+// the advisor on the other side sees the same state (no simulated replies).
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ReactNode, useEffect, useRef, useState } from "react";
 
-import { Contract, standardContract } from "@/features/contracts/data/contractModel";
+import { AdvisorAccent } from "@/features/matching/data/advisors";
+import { matchingService } from "@/features/matching/services/matchingService";
+import { Contract, commissionForMonths } from "@/features/contracts/data/contractModel";
+import { crc } from "@/lib/format";
 import { Avatar } from "@/shared/components/ui/Avatar";
 import { Button } from "@/shared/components/ui/Button";
 import { useNotificationStore } from "@/store/notificationStore";
-import { Conversation, Message } from "../data/conversations";
+import { Conversation } from "../data/conversations";
+import { ContractDTO, MessageDTO, messagingService, toUiContract } from "../services/messagingService";
 import { MarryModal } from "./MarryModal";
-import { MessageBubble } from "./MessageBubble";
 import { NegotiateContract } from "./NegotiateContract";
 
 type Role = "pyme" | "advisor";
-type Updater = (m: Conversation) => Conversation;
 
-const CONTACT_PATTERNS: { re: RegExp; what: string }[] = [
-  { re: /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i, what: "un correo electrónico" },
-  { re: /(?:\+?\d[\s-]?){8,}/, what: "un número telefónico" },
-  { re: /(?:wa\.me|whats\s?app|telegram|t\.me|instagram|insta\b|@[a-z0-9_.]{3,}|facebook|tiktok)/i, what: "una red social o contacto externo" },
-  { re: /https?:\/\/|www\./i, what: "un enlace externo" },
-];
-function scanContact(text: string): string | null {
-  for (const p of CONTACT_PATTERNS) if (p.re.test(text)) return p.what;
-  return null;
+interface Counterpart {
+  name: string;
+  monogram: string;
+  role: string;
+  accent: AdvisorAccent;
 }
-const now = () => new Date().toLocaleTimeString("es-CR", { hour: "2-digit", minute: "2-digit" });
-const REPLIES = [
-  "Perfecto, lo tomo en cuenta. ¿Querés que armemos el plan por fases en el contrato?",
-  "De acuerdo. Puedo arrancar la auditoría esta semana si formalizamos.",
-  "Buenísimo. Mi enfoque sería separar público nuevo de recurrente desde el día uno.",
-  "Eso encaja con lo que vi antes. Podemos fijar la conversión como meta principal.",
-];
 
 interface ChatViewProps {
-  match: Conversation;
+  matchId: string;
   role: Role;
-  onUpdate: (updater: Updater) => void;
-  onUnmatch: (id: string) => void;
+  counterpart: Counterpart;
+  married: boolean;
 }
 
-export function ChatView({ match, role, onUpdate, onUnmatch }: ChatViewProps) {
+const fmt = (iso: string) =>
+  iso ? new Date(iso).toLocaleTimeString("es-CR", { hour: "2-digit", minute: "2-digit" }) : "";
+
+export function ChatView({ matchId, role, counterpart, married }: ChatViewProps) {
+  const qc = useQueryClient();
   const { publish: notify } = useNotificationStore();
   const [text, setText] = useState("");
   const [showContract, setShowContract] = useState(false);
-  const [marry, setMarry] = useState<Contract | null>(null);
-  const [confirmUnmatch, setConfirmUnmatch] = useState(false);
   const [viewProposal, setViewProposal] = useState<Contract | null>(null);
+  const [showMarry, setShowMarry] = useState(false);
+  const [confirmUnmatch, setConfirmUnmatch] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Poll so the other party's messages, proposals and accept/marry state appear
+  // without a manual reload.
+  const { data: messages = [] } = useQuery({
+    queryKey: ["messages", matchId],
+    queryFn: () => messagingService.getMessages(matchId),
+    refetchInterval: 4000,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+  });
+  const { data: contract } = useQuery({
+    queryKey: ["contract", matchId],
+    queryFn: () => messagingService.getContract(matchId),
+    refetchInterval: 4000,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+  });
 
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [match.messages, match.id]);
+  }, [messages]);
 
-  const push = (msg: Message) => onUpdate((m) => ({ ...m, messages: [...m.messages, msg] }));
+  const refetchAll = () => {
+    qc.invalidateQueries({ queryKey: ["messages", matchId] });
+    qc.invalidateQueries({ queryKey: ["contract", matchId] });
+    qc.invalidateQueries({ queryKey: ["conversations"] });
+    qc.invalidateQueries({ queryKey: ["dashboard-tracking"] });
+  };
+
+  const sendMutation = useMutation({
+    mutationFn: (content: string) => messagingService.sendMessage(matchId, content),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["messages", matchId] }),
+    onError: (e: Error) => notify({ type: "error", title: "No se envió el mensaje", message: e.message, duration: 4000 }),
+  });
+
+  const proposeMutation = useMutation({
+    mutationFn: (c: Contract) => messagingService.propose(matchId, c),
+    onSuccess: () => { setShowContract(false); refetchAll(); notify({ type: "success", title: "Propuesta de contrato enviada", message: "📄", duration: 3000 }); },
+    onError: (e: Error) => notify({ type: "error", title: "No se envió la propuesta", message: e.message, duration: 4000 }),
+  });
+
+  const decideMutation = useMutation({
+    mutationFn: (decision: "accept" | "reject") =>
+      decision === "accept" ? messagingService.accept(matchId) : messagingService.reject(matchId),
+    onSuccess: (_d, decision) => { refetchAll(); notify(decision === "accept" ? { type: "success", title: "Propuesta aceptada", message: "✓", duration: 3000 } : { type: "error", title: "Propuesta rechazada", message: "✕", duration: 3000 }); },
+    onError: (e: Error) => notify({ type: "error", title: "No se pudo procesar", message: e.message, duration: 4000 }),
+  });
+
+  const activateMutation = useMutation({
+    mutationFn: () => messagingService.activate(matchId),
+    onSuccess: () => { setShowMarry(false); refetchAll(); notify({ type: "success", title: `¡Contrato activo con ${counterpart.name.split(" ")[0]}! 💍`, message: "", duration: 3500 }); },
+    onError: (e: Error) => notify({ type: "error", title: "No se pudo activar", message: e.message, duration: 4000 }),
+  });
+
+  const unmatchMutation = useMutation({
+    mutationFn: () => matchingService.unmatch(matchId),
+    onSuccess: () => { setConfirmUnmatch(false); qc.invalidateQueries({ queryKey: ["conversations"] }); notify({ type: "success", title: `Match con ${counterpart.name.split(" ")[0]} eliminado`, message: "", duration: 3000 }); },
+    onError: (e: Error) => notify({ type: "error", title: "No se pudo deshacer el match", message: e.message, duration: 4000 }),
+  });
 
   const send = () => {
     const t = text.trim();
     if (!t) return;
-    const bad = scanContact(t);
-    if (bad) {
-      push({ from: "system", kind: "blocked", text: `Mensaje bloqueado: parece contener ${bad}. Toda la comunicación debe ocurrir dentro de PymeBoost.`, t: now() });
-      setText("");
-      notify({ type: "error", title: "Contacto externo bloqueado", message: "🚫", duration: 3000 });
-      return;
-    }
-    push({ from: "me", text: t, t: now() });
+    sendMutation.mutate(t);
     setText("");
-    if (role === "pyme") {
-      setTimeout(() => onUpdate((m) => ({ ...m, messages: [...m.messages, { from: "them", text: REPLIES[Math.floor(Math.random() * REPLIES.length)], t: now() }] })), 900);
-    }
   };
 
-  const propose = (c: Contract) => {
-    onUpdate((m) => ({ ...m, contract: c, status: "Negociando", messages: [...m.messages, { from: "me", kind: "proposal", contract: c, t: now() }] }));
-    setShowContract(false);
-    notify({ type: "success", title: "Propuesta de contrato enviada", message: "📄", duration: 3000 });
-    if (role === "pyme") {
-      setTimeout(() => onUpdate((m) => ({
-        ...m, status: "Propuesta aceptada",
-        messages: [...m.messages,
-          { from: "them", text: "Revisé la propuesta. Los términos me cierran bien. La acepto.", t: now() },
-          { from: "system", kind: "advisor-decision", decision: "accepted", t: now() },
-        ],
-      })), 1500);
-    }
-  };
-
-  const confirmMarry = () => {
-    const c = marry!;
-    onUpdate((m) => ({ ...m, contract: c, status: "Contrato activo", married: true, messages: [...m.messages, { from: "system", kind: "married", contract: c, t: now() }] }));
-    setMarry(null);
-    notify({ type: "success", title: `¡Contrato activo con ${match.advisor.name.split(" ")[0]}! 💍`, message: "", duration: 3000 });
-  };
-
-  // Advisor responds to the PYME's pending proposal (cannot Marry — that's PYME-only).
-  const pendingIdx =
-    role === "advisor"
-      ? match.messages.findIndex((m) => m.kind === "proposal" && m.from === "them" && !m.decided)
-      : -1;
-
-  const decideProposal = (decision: "accepted" | "rejected") => {
-    onUpdate((m) => {
-      const msgs = m.messages.map((msg, i) => (i === pendingIdx ? { ...msg, decided: decision } : msg));
-      return {
-        ...m,
-        status: decision === "accepted" ? "Propuesta aceptada" : "Propuesta rechazada",
-        contract: decision === "accepted" ? (m.messages[pendingIdx]?.contract ?? m.contract) : m.contract,
-        messages: [...msgs, { from: "system", kind: "advisor-decision", decision, t: now() }],
-      };
-    });
-    notify(
-      decision === "accepted"
-        ? { type: "success", title: "Propuesta aceptada · la PYME puede formalizar", message: "✓", duration: 3000 }
-        : { type: "error", title: "Propuesta rechazada", message: "✕", duration: 3000 },
-    );
-  };
-
-  const showNegotiate = !match.married;
+  const uiContract = contract ? toUiContract(contract) : null;
+  const busy = proposeMutation.isPending || decideMutation.isPending || activateMutation.isPending;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--surface)" }}>
       {/* header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", borderBottom: "var(--bd) solid var(--ink)", background: "var(--paper)" }}>
-        <Avatar text={match.advisor.monogram} accent={match.advisor.accent} size={40} />
+        <Avatar text={counterpart.monogram} accent={counterpart.accent} size={40} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <h4 style={{ fontSize: 16, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{match.advisor.name}</h4>
-            <StatusBadge married={match.married} status={match.status} />
+            <h4 style={{ fontSize: 16, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{counterpart.name}</h4>
+            <StatusBadge married={married} contract={contract ?? null} />
           </div>
-          <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{match.advisor.role}</div>
+          <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{counterpart.role}</div>
         </div>
-        {showNegotiate && (
+        {!married && (
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            <Button variant="secondary" size="sm" onClick={() => setShowContract(true)}>📄 Negotiate</Button>
-            <Button variant="ghost" size="sm" onClick={() => setConfirmUnmatch(true)}>✕ Unmatch</Button>
+            <Button variant="secondary" size="sm" onClick={() => setShowContract(true)} disabled={busy}>📄 Negociar</Button>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmUnmatch(true)} disabled={busy}>✕ Unmatch</Button>
           </div>
         )}
       </div>
@@ -149,38 +146,41 @@ export function ChatView({ match, role, onUpdate, onUnmatch }: ChatViewProps) {
 
       {/* messages */}
       <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: 18, display: "flex", flexDirection: "column", gap: 10, background: "var(--paper)" }}>
-        {match.messages.map((m, i) => (
-          <MessageBubble key={i} m={m} mine={m.from === "me"} onViewDetails={(c) => setViewProposal(c)} />
+        {messages.map((m) => (
+          <MessageItem key={m.id} m={m} mine={m.sender === role} />
         ))}
       </div>
 
-      {/* Advisor action bar: pending proposal from the PYME */}
-      {!match.married && role === "advisor" && pendingIdx >= 0 && (
-        <div style={{ padding: "12px 18px", borderTop: "var(--bd) solid var(--ink)", background: "color-mix(in srgb, var(--accent) 6%, var(--surface))", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 140 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 700 }}>Propuesta de contrato recibida</div>
-            <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-soft)", marginTop: 2 }}>Revisá los términos y decidí.</div>
+      {/* current proposal card */}
+      {uiContract && contract && !married && (
+        <div style={{ padding: "10px 18px", borderTop: "1.5px dashed var(--ink-faint)", background: "color-mix(in srgb, var(--accent) 5%, var(--surface))", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 180 }}>
+            <span style={{ fontSize: 16 }}>📄</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>Propuesta actual · {ContractStatusLabel(contract.status)}</div>
+              <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-soft)", marginTop: 1 }}>
+                {crc(contract.budget)} · retainer {crc(contract.retainer)} · comisión {commissionForMonths(uiContract.durationMonths)}%
+              </div>
+            </div>
           </div>
-          <Button size="sm" onClick={() => decideProposal("accepted")}>✓ Aceptar</Button>
-          <Button variant="secondary" size="sm" onClick={() => setShowContract(true)}>Re-negociar</Button>
-          <Button variant="danger" size="sm" onClick={() => decideProposal("rejected")}>✕ Rechazar</Button>
+          <Button variant="ghost" size="sm" onClick={() => setViewProposal(uiContract)}>Ver detalles</Button>
         </div>
       )}
 
-      {/* Marry CTA (PYME, after advisor accepted) */}
-      {!match.married && match.status === "Propuesta aceptada" && role === "pyme" && (
-        <div style={{ padding: "12px 18px", borderTop: "var(--bd) solid var(--ink)", background: "color-mix(in srgb, var(--success) 8%, var(--surface))", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 160 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 700 }}>El advisor aceptó la propuesta</div>
-            <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-soft)", marginTop: 2 }}>Podés formalizar el contrato y activar el proyecto.</div>
-          </div>
-          <Button size="sm" onClick={() => setMarry(match.contract ?? standardContract())}>💍 Marry the Prospect</Button>
-          <Button variant="secondary" size="sm" onClick={() => setShowContract(true)}>Re-negociar</Button>
-        </div>
-      )}
+      {/* action bar */}
+      <ActionBar
+        role={role}
+        married={married}
+        contract={contract ?? null}
+        busy={busy}
+        onNegotiate={() => setShowContract(true)}
+        onAccept={() => decideMutation.mutate("accept")}
+        onReject={() => decideMutation.mutate("reject")}
+        onMarry={() => setShowMarry(true)}
+      />
 
       {/* input / active footer */}
-      {match.married ? (
+      {married ? (
         <div style={{ padding: "14px 18px", borderTop: "var(--bd) solid var(--ink)", textAlign: "center", background: "var(--paper)" }}>
           <span className="font-mono" style={{ fontSize: 12, color: "var(--ink-soft)" }}>Contrato activo · seguimiento disponible en el dashboard del proyecto.</span>
         </div>
@@ -193,14 +193,33 @@ export function ChatView({ match, role, onUpdate, onUnmatch }: ChatViewProps) {
             placeholder="Escribí un mensaje…"
             style={{ fontFamily: "var(--font-sans)", fontSize: 13.5, fontWeight: 500, flex: 1, borderRadius: 999, padding: "11px 16px", border: "var(--bd) solid var(--ink)", background: "var(--surface)", color: "var(--ink)", outline: "none" }}
           />
-          <Button size="sm" onClick={send}>➤ Enviar</Button>
+          <Button size="sm" onClick={send} isLoading={sendMutation.isPending}>➤ Enviar</Button>
         </div>
       )}
 
       {/* modals */}
-      {showContract && <NegotiateContract match={match} onClose={() => setShowContract(false)} onPropose={propose} />}
-      {viewProposal && <NegotiateContract match={{ ...match, contract: viewProposal }} readOnly onClose={() => setViewProposal(null)} />}
-      {marry && <MarryModal match={match} contract={marry} onConfirm={confirmMarry} onClose={() => setMarry(null)} />}
+      {showContract && (
+        <NegotiateContract
+          match={modalMatch(matchId, counterpart, uiContract, married)}
+          onClose={() => setShowContract(false)}
+          onPropose={(c) => proposeMutation.mutate(c)}
+        />
+      )}
+      {viewProposal && (
+        <NegotiateContract
+          match={modalMatch(matchId, counterpart, viewProposal, married)}
+          readOnly
+          onClose={() => setViewProposal(null)}
+        />
+      )}
+      {showMarry && uiContract && (
+        <MarryModal
+          match={modalMatch(matchId, counterpart, uiContract, married)}
+          contract={uiContract}
+          onConfirm={() => activateMutation.mutate()}
+          onClose={() => setShowMarry(false)}
+        />
+      )}
 
       {confirmUnmatch && (
         <div onClick={() => setConfirmUnmatch(false)} style={{ position: "fixed", inset: 0, background: "rgba(33,27,18,.45)", backdropFilter: "blur(2px)", display: "grid", placeItems: "center", zIndex: 140, padding: 20 }}>
@@ -208,14 +227,14 @@ export function ChatView({ match, role, onUpdate, onUnmatch }: ChatViewProps) {
             <div style={{ background: "var(--danger)", color: "#fff", padding: "18px 20px", textAlign: "center", borderBottom: "2px solid var(--ink)" }}>
               <div style={{ fontSize: 30 }}>✕</div>
               <h3 className="display" style={{ fontSize: 24, marginTop: 4 }}>Unmatch</h3>
-              <p className="font-mono" style={{ fontSize: 11, opacity: 0.9, marginTop: 4 }}>Eliminar match con {match.advisor.name.split(" ")[0]}</p>
+              <p className="font-mono" style={{ fontSize: 11, opacity: 0.9, marginTop: 4 }}>Eliminar match con {counterpart.name.split(" ")[0]}</p>
             </div>
             <div style={{ padding: 22 }}>
               <p style={{ fontSize: 13, color: "var(--ink-soft)", textAlign: "center", lineHeight: 1.5 }}>
                 Si no llegaron a un acuerdo podés eliminar este match. Esta acción <b style={{ color: "var(--ink)" }}>no se puede deshacer</b>.
               </p>
               <div style={{ display: "grid", gap: 9, marginTop: 18 }}>
-                <Button variant="danger" onClick={() => { setConfirmUnmatch(false); onUnmatch(match.id); }}>✕ Confirmar Unmatch</Button>
+                <Button variant="danger" onClick={() => unmatchMutation.mutate()} isLoading={unmatchMutation.isPending}>✕ Confirmar Unmatch</Button>
                 <Button variant="ghost" onClick={() => setConfirmUnmatch(false)}>Cancelar</Button>
               </div>
             </div>
@@ -226,15 +245,109 @@ export function ChatView({ match, role, onUpdate, onUnmatch }: ChatViewProps) {
   );
 }
 
-function StatusBadge({ married, status }: { married: boolean; status: string }) {
+// Build the minimal Conversation shape the modals consume.
+function modalMatch(matchId: string, cp: Counterpart, contract: Contract | null, married: boolean): Conversation {
+  return { id: matchId, advisor: cp, status: "", married, contract, messages: [] };
+}
+
+function ContractStatusLabel(status: ContractDTO["status"]): string {
+  return status === "negotiating" ? "en negociación" : status === "accepted" ? "aceptada" : status === "rejected" ? "rechazada" : "anulada";
+}
+
+function MessageItem({ m, mine }: { m: MessageDTO; mine: boolean }) {
+  if (m.message_type === "system" || m.sender === "system") {
+    return (
+      <div style={{ alignSelf: "center", maxWidth: "88%", background: "var(--surface)", border: "1.5px solid var(--ink-faint)", borderRadius: "var(--r-md)", padding: "8px 14px", textAlign: "center" }}>
+        <span className="font-mono" style={{ fontSize: 11.5, color: "var(--ink-soft)", fontWeight: 600 }}>{m.content}</span>
+      </div>
+    );
+  }
+  return (
+    <div style={{ alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "76%" }}>
+      <div style={{
+        background: mine ? "var(--accent)" : "var(--surface)", color: mine ? "#fff" : "var(--ink)",
+        border: "var(--bd) solid var(--ink)", borderRadius: "var(--r-lg)",
+        borderBottomRightRadius: mine ? 4 : "var(--r-lg)", borderBottomLeftRadius: mine ? "var(--r-lg)" : 4,
+        padding: "9px 13px", fontSize: 13.5, lineHeight: 1.45, boxShadow: "var(--sh-pop)",
+      }}>
+        {m.content}
+      </div>
+      <div className="font-mono" style={{ fontSize: 10, color: "var(--ink-faint)", marginTop: 3, textAlign: mine ? "right" : "left" }}>{fmt(m.created_at)}</div>
+    </div>
+  );
+}
+
+interface ActionBarProps {
+  role: Role;
+  married: boolean;
+  contract: ContractDTO | null;
+  busy: boolean;
+  onNegotiate: () => void;
+  onAccept: () => void;
+  onReject: () => void;
+  onMarry: () => void;
+}
+
+function ActionBar({ role, married, contract, busy, onNegotiate, onAccept, onReject, onMarry }: ActionBarProps) {
+  if (married) return null;
+  const wrap = (bg: string, children: ReactNode) => (
+    <div style={{ padding: "12px 18px", borderTop: "var(--bd) solid var(--ink)", background: bg, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>{children}</div>
+  );
+  const info = (title: string, sub: string) => (
+    <div style={{ flex: 1, minWidth: 160 }}>
+      <div style={{ fontSize: 13.5, fontWeight: 700 }}>{title}</div>
+      <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-soft)", marginTop: 2 }}>{sub}</div>
+    </div>
+  );
+
+  // No contract yet, or the last one was rejected → invite a (new) proposal.
+  if (!contract || contract.status === "rejected") {
+    return wrap("var(--surface)", <>
+      {info(contract?.status === "rejected" ? "Propuesta rechazada" : "Aún no hay contrato", "Enviá una propuesta para formalizar la asesoría.")}
+      <Button size="sm" onClick={onNegotiate} disabled={busy}>📄 {contract?.status === "rejected" ? "Nueva propuesta" : "Proponer contrato"}</Button>
+    </>);
+  }
+
+  if (contract.status === "negotiating") {
+    if (contract.proposed_by !== role) {
+      return wrap("color-mix(in srgb, var(--accent) 6%, var(--surface))", <>
+        {info("Propuesta de contrato recibida", "Revisá los términos y decidí.")}
+        <Button size="sm" onClick={onAccept} disabled={busy}>✓ Aceptar</Button>
+        <Button variant="secondary" size="sm" onClick={onNegotiate} disabled={busy}>Re-negociar</Button>
+        <Button variant="danger" size="sm" onClick={onReject} disabled={busy}>✕ Rechazar</Button>
+      </>);
+    }
+    return wrap("var(--surface)", <>
+      {info("Esperando respuesta de la contraparte", "Tu propuesta fue enviada. Podés ajustarla mientras tanto.")}
+      <Button variant="secondary" size="sm" onClick={onNegotiate} disabled={busy}>Re-negociar</Button>
+    </>);
+  }
+
+  // accepted (by the counterpart) → PYME formalizes with Marry.
+  if (contract.status === "accepted") {
+    if (role === "pyme") {
+      return wrap("color-mix(in srgb, var(--success) 8%, var(--surface))", <>
+        {info("La propuesta fue aceptada", "Formalizá el contrato y activá el proyecto.")}
+        <Button size="sm" onClick={onMarry} disabled={busy}>💍 Marry the Prospect</Button>
+        <Button variant="secondary" size="sm" onClick={onNegotiate} disabled={busy}>Re-negociar</Button>
+      </>);
+    }
+    return wrap("color-mix(in srgb, var(--success) 8%, var(--surface))",
+      info("Propuesta aceptada", "La PYME va a formalizar el contrato (Marry the Prospect)."));
+  }
+  return null;
+}
+
+function StatusBadge({ married, contract }: { married: boolean; contract: ContractDTO | null }) {
+  const label = married ? "● Activo" : contract?.status === "negotiating" ? "Negociando" : contract?.status === "accepted" ? "Aceptada" : contract?.status === "rejected" ? "Rechazada" : "Match";
   const [bg, fg] = married
     ? ["var(--success)", "#fff"]
-    : status === "Negociando"
+    : contract?.status === "negotiating"
       ? ["color-mix(in srgb, var(--warning) 16%, #fff)", "var(--warning)"]
       : ["color-mix(in srgb, var(--accent) 14%, #fff)", "var(--accent-deep)"];
   return (
     <span className="font-mono" style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", borderRadius: 999, padding: "2px 9px", border: "1.5px solid var(--ink)", background: bg, color: fg }}>
-      {married ? "● Activo" : status}
+      {label}
     </span>
   );
 }

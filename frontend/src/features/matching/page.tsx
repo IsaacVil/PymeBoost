@@ -1,5 +1,5 @@
 "use client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { DashboardLayout } from "@/shared/components/layouts/DashboardLayout";
 import { Avatar } from "@/shared/components/ui/Avatar";
@@ -27,6 +27,7 @@ const HOW_IT_WORKS: [string, string][] = [
 
 export default function MatchingPage() {
   const { publish: notify } = useNotificationStore();
+  const queryClient = useQueryClient();
   const pymeId = useAuthStore((s) => s.session.userId) ?? "";
   const isAdvisor = useAuthStore((s) => s.session.role) === "ADVISOR";
 
@@ -38,7 +39,11 @@ export default function MatchingPage() {
 
   const onDecision = (dir: "left" | "right", advisor: DeckAdvisor) => {
     if (pymeId) {
-      void matchingService.swipe(pymeId, advisor.id, dir === "right");
+      // Persist the swipe, then refresh the chat list so a new match shows up in
+      // Mensajes without a manual reload.
+      void matchingService.swipe(pymeId, advisor.id, dir === "right").then(() => {
+        if (dir === "right") queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      });
     }
     if (dir === "right") {
       notify({

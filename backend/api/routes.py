@@ -20,14 +20,23 @@ from backend.domains.matching.controllers.get_recommendations_controller import 
 from backend.domains.matching.controllers.create_swipe_decision_controller import (
     router as matching_swipe_router,
 )
+from backend.domains.matching.controllers.unmatch_controller import (
+    router as matching_unmatch_router,
+)
 from backend.domains.communication.controllers.get_messages_controller import (
     router as messages_get_router,
 )
 from backend.domains.communication.controllers.send_message_controller import (
     router as messages_send_router,
 )
+from backend.domains.communication.controllers.list_conversations_controller import (
+    router as conversations_router,
+)
 from backend.domains.contract.controllers.get_contract_controller import (
     router as contract_get_router,
+)
+from backend.domains.contract.controllers.contract_negotiation_controller import (
+    router as contract_negotiation_router,
 )
 from backend.domains.project.controllers.get_dashboard_controller import (
     router as project_dashboard_router,
@@ -44,13 +53,16 @@ router.include_router(create_advisor_router)
 # --- Matching domain ---
 router.include_router(matching_recommendations_router)
 router.include_router(matching_swipe_router)
+router.include_router(matching_unmatch_router)
 
 # --- Communication domain ---
+router.include_router(conversations_router)
 router.include_router(messages_get_router)
 router.include_router(messages_send_router)
 
 # --- Contract domain ---
 router.include_router(contract_get_router)
+router.include_router(contract_negotiation_router)
 
 # --- Project domain (dashboard tracking) ---
 router.include_router(project_dashboard_router)

@@ -1,0 +1,24 @@
+INFO:     127.0.0.1:51919 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51945 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51945 - "GET /api/communication/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51945 - "GET /api/projects/active/tracking HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51945 - "POST /api/contracts/match/33333333-3333-3333-3333-333333333301/propose HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51945 - "POST /api/contracts/match/33333333-3333-3333-3333-333333333301/accept HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:51945 - "POST /api/contracts/match/33333333-3333-3333-3333-333333333301/activate HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:51945 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51945 - "POST /api/contracts/match/33333333-3333-3333-3333-333333333301/accept HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51945 - "POST /api/contracts/match/33333333-3333-3333-3333-333333333301/activate HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:51945 - "POST /api/contracts/match/33333333-3333-3333-3333-333333333301/activate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51945 - "GET /api/projects/active/tracking HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51945 - "GET /api/projects/active/tracking HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51945 - "GET /api/communication/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57170 - "OPTIONS /api/communication/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57170 - "GET /api/communication/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58158 - "GET /api/communication/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58158 - "OPTIONS /api/communication/chats/33333333-3333-3333-3333-333333333301/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58158 - "OPTIONS /api/contracts/match/33333333-3333-3333-3333-333333333301 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58158 - "GET /api/communication/chats/33333333-3333-3333-3333-333333333301/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58158 - "GET /api/contracts/match/33333333-3333-3333-3333-333333333301 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58158 - "GET /api/communication/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58158 - "GET /api/communication/chats/33333333-3333-3333-3333-333333333301/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59829 - "GET /api/contracts/match/33333333-3333-3333-3333-333333333301 HTTP/1.1" 200 OK

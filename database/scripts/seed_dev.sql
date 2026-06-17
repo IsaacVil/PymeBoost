@@ -138,7 +138,9 @@ INSERT INTO "PB_MatchStatusHistory" ("matchId", "matchStatusId") VALUES
 -- 5. Chat del match m1 + mensajes
 -- ----------------------------------------------------------------------------
 INSERT INTO "PB_ChatSessions" ("id", "matchId", "isActive") VALUES
-('44444444-4444-4444-4444-444444444401', '33333333-3333-3333-3333-333333333301', TRUE);
+('44444444-4444-4444-4444-444444444401', '33333333-3333-3333-3333-333333333301', TRUE),
+-- Chat del match m3 (TechSoluciones ↔ Luis) — recién hecho match, solo saludo de sistema
+('44444444-4444-4444-4444-444444444403', '33333333-3333-3333-3333-333333333303', TRUE);
 
 INSERT INTO "PB_Messages" (
     "chatSessionId", "messageTypeId", "senderAccountTypeId",
@@ -158,30 +160,18 @@ INSERT INTO "PB_Messages" (
  NULL, '22222222-2222-2222-2222-222222222201',
  '¡Hola María! Claro, te preparo una propuesta de tarifa y alcance.');
 
--- ----------------------------------------------------------------------------
--- 6. Contrato del match m1 (en negociación, propuesta del advisor)
--- ----------------------------------------------------------------------------
-INSERT INTO "PB_Contracts" ("id", "matchId", "contractStatusId", "currentVersionId") VALUES
-('55555555-5555-5555-5555-555555555501', '33333333-3333-3333-3333-333333333301',
- (SELECT "id" FROM "PB_ContractStatus" WHERE "code" = 'negotiating'), NULL);
+-- Saludo de sistema del match m3 (sin negociación todavía)
+INSERT INTO "PB_Messages" ("chatSessionId", "messageTypeId", "content") VALUES
+('44444444-4444-4444-4444-444444444403', (SELECT "id" FROM "PB_MessageTypes" WHERE "code" = 'system'),
+ '¡Hicieron match! Pueden coordinar los detalles de la asesoría por este chat.');
 
-INSERT INTO "PB_ContractVersions" (
-    "id", "contractId", "versionNumber", "proposedByAccountTypeId",
-    "proposedByPymeId", "proposedByAdvisorId", "contractVersionStatusId",
-    "implementationBudget", "monthlyRetainer", "startDate", "endDate",
-    "commissionPct", "mainObjective", "advisorResultProfit"
-) VALUES
-('66666666-6666-6666-6666-666666666601', '55555555-5555-5555-5555-555555555501', 1,
- (SELECT "id" FROM "PB_AccountTypes" WHERE "code" = 'advisor'),
- NULL, '22222222-2222-2222-2222-222222222201',
- (SELECT "id" FROM "PB_ContractVersionStatus" WHERE "code" = 'pending_proposal'),
- 800000.00, 150000.00, '2026-07-01', '2026-12-31',
- 5.0000, 'Aumentar las ventas mensuales de la cafetería en un 20% en 6 meses.', NULL);
-
--- Enlazar la versión actual del contrato
-UPDATE "PB_Contracts"
-   SET "currentVersionId" = '66666666-6666-6666-6666-666666666601'
- WHERE "id" = '55555555-5555-5555-5555-555555555501';
+-- ----------------------------------------------------------------------------
+-- 6. (Sin contrato sembrado a propósito)
+--    El flujo real de contrato se ejecuta desde la app: la PYME propone en el
+--    chat → el advisor acepta → la PYME formaliza con "Marry the Prospect", lo que
+--    crea el contrato, el proyecto y el tracking del dashboard. Sembrar un contrato
+--    aquí haría que el dashboard mostrara algo que el usuario no generó.
+-- ----------------------------------------------------------------------------
 
 -- ----------------------------------------------------------------------------
 -- 7. Promesas de éxito de los advisors
@@ -265,46 +255,12 @@ INSERT INTO "PB_Promises" (
 );
 
 -- ----------------------------------------------------------------------------
--- 8. Tracking de proyecto del match m1 (contrato aceptado → proyecto activo)
---    Alimenta el dashboard "Mi Contrato" con fases/subfases/KPIs reales.
+-- 8. (Sin proyecto/tracking sembrado a propósito)
+--    El proyecto activo y su roadmap/KPIs se crean cuando la PYME formaliza el
+--    contrato con "Marry the Prospect" (POST /api/contracts/match/{id}/activate),
+--    no en el seed. Así el dashboard arranca vacío ("Sin contrato activo") hasta
+--    que el usuario completa el flujo real.
 -- ----------------------------------------------------------------------------
-UPDATE "PB_Contracts"
-   SET "contractStatusId" = (SELECT "id" FROM "PB_ContractStatus" WHERE "code" = 'accepted')
- WHERE "id" = '55555555-5555-5555-5555-555555555501';
-
-UPDATE "PB_ContractVersions"
-   SET "contractVersionStatusId" = (SELECT "id" FROM "PB_ContractVersionStatus" WHERE "code" = 'accepted')
- WHERE "id" = '66666666-6666-6666-6666-666666666601';
-
-INSERT INTO "PB_ContractMetrics" ("id", "contractVersionId", "name", "metricValueTypeId", "target", "baselineValue") VALUES
-('77770000-0000-0000-0000-000000000001', '66666666-6666-6666-6666-666666666601', 'Conversión de campañas', (SELECT "id" FROM "PB_MetricValueTypes" WHERE "code" = 'percentage'), 25.0000, 2.1000),
-('77770000-0000-0000-0000-000000000002', '66666666-6666-6666-6666-666666666601', 'Retención de clientes',  (SELECT "id" FROM "PB_MetricValueTypes" WHERE "code" = 'percentage'), 15.0000, 41.0000);
-
-INSERT INTO "PB_ContractRoadmapPhases" ("id", "contractVersionId", "phaseOrder", "name", "description", "completed", "completedAt") VALUES
-('88880000-0000-0000-0000-000000000001', '66666666-6666-6666-6666-666666666601', 1, 'Análisis Inicial',          'Auditoría de campañas y baseline de métricas.', TRUE,  now()),
-('88880000-0000-0000-0000-000000000002', '66666666-6666-6666-6666-666666666601', 2, 'Optimización de Campañas',  'Segmentación, rediseño de anuncios y retargeting.', TRUE, now()),
-('88880000-0000-0000-0000-000000000003', '66666666-6666-6666-6666-666666666601', 3, 'Optimización de Conversión', 'Velocidad del sitio y checkout.', FALSE, NULL);
-
-INSERT INTO "PB_ContractSubPhases" ("phaseId", "name", "completed", "completedAt") VALUES
-('88880000-0000-0000-0000-000000000001', 'Auditoría de campañas actuales',     TRUE,  now()),
-('88880000-0000-0000-0000-000000000001', 'Identificación de público objetivo', TRUE,  now()),
-('88880000-0000-0000-0000-000000000001', 'Análisis de métricas históricas',    TRUE,  now()),
-('88880000-0000-0000-0000-000000000002', 'Nueva segmentación implementada',    TRUE,  now()),
-('88880000-0000-0000-0000-000000000002', 'Rediseño de anuncios',               TRUE,  now()),
-('88880000-0000-0000-0000-000000000002', 'Configuración de retargeting',       TRUE,  now()),
-('88880000-0000-0000-0000-000000000003', 'Mejorar velocidad del sitio',        FALSE, NULL),
-('88880000-0000-0000-0000-000000000003', 'Optimizar formularios de compra',    FALSE, NULL),
-('88880000-0000-0000-0000-000000000003', 'Simplificar el proceso de checkout', FALSE, NULL);
-
-INSERT INTO "PB_Projects" ("id", "contractVersionId", "projectStatusId") VALUES
-('99990000-0000-0000-0000-000000000001', '66666666-6666-6666-6666-666666666601', (SELECT "id" FROM "PB_ProjectStatus" WHERE "code" = 'active'));
-
-INSERT INTO "PB_ProjectHealthHistory" ("projectId", "projectHealthStatusId", "completedSubPhases", "totalSubPhases", "healthScore", "timeProgressRatio") VALUES
-('99990000-0000-0000-0000-000000000001', (SELECT "id" FROM "PB_ProjectHealthStatus" WHERE "code" = 'on_track'), 6, 9, 67.00, 0.50000);
-
-INSERT INTO "PB_ProjectKpiValidations" ("projectId", "contractMetricId", "metricsBefore", "metricsAfter", "finalImprovementPct", "met") VALUES
-('99990000-0000-0000-0000-000000000001', '77770000-0000-0000-0000-000000000001', 2.1000, 3.4000, 25.0000, TRUE),
-('99990000-0000-0000-0000-000000000001', '77770000-0000-0000-0000-000000000002', 41.0000, 47.0000, 14.6300, FALSE);
 
 -- ============================================================================
 -- FIN DEL SEED DE DESARROLLO
