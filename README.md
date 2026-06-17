@@ -6303,8 +6303,8 @@ Each validation entry must follow this format:
 - **Suggested Correction:** [What the agent recommended]
 - **Applied Correction:** [What was actually changed] — commit [hash]
 ```
-
 ---
+
 
 # MVP
 
@@ -6410,7 +6410,7 @@ Demo accounts are preloaded by `seed_dev.sql`. All use password **`DemoPass123!`
 - PYME: `maria@cafedelvalle.cr`, `carlos@techsoluciones.cr`
 - Advisor: `ana@asesores.cr`, `roberto@asesores.cr`, `luis@asesores.cr`
 
-## Agent Validations
+## 4.2 Agent Validations
 
 Per the agent workflow ([docs/agents&mvpformat.md](docs/agents&mvpformat.md)), each feature
 built in Fase 2 is validated with the specialized agents (`/architecture-validator`,
@@ -6419,6 +6419,8 @@ built in Fase 2 is validated with the specialized agents (`/architecture-validat
 
 > _Fase 1 (executable scaffold) complete: data layer, backend, auth, and frontend run
 > locally. Feature-level agent validations are recorded below as Fase 2 progresses._
+
+---
 
 ### Auth (Fase 2A — frontend wiring + real login)
 
@@ -6454,8 +6456,8 @@ idempotent on `UNIQUE(pymeId, advisorId)`).
 | Backend Agent (Observer) | State change other domains care about (match created) | `MatchingService` publishes `MatchSwiped` (+ `MatchCreated` when approved) **after** `db.commit()` via a minimal in-process `EventBus` (replaces Pub/Sub locally) |
 | Backend Agent (Guard) | Swipe must be JWT-protected + owned by the PYME | `get_current_principal` + ownership (`account_type=="pyme"`, `subject_id==pyme_id`) → 403 otherwise. Verified end-to-end |
 | Architecture Validator (layers/events/DTO) | 4-layer flow, events-after-persistence, DTO-not-model, ORM-only | ✅ Compliant — confirmed by the validator |
-| Architecture Validator (cross-domain) | discovery reads `PB_Advisors` via the advisor ORM model | **Accepted for MVP** (same open deviation as discovery); refactor to ACL/REST later |
-| Architecture Validator (DI) | services/repos instantiated directly instead of FastAPI `Depends` | **Accepted for MVP** simplicity; README prescribes `Depends` injection — flagged to migrate if hardened |
+| Architecture Validator (cross-domain) | discovery reads `PB_Advisors` via the advisor ORM model | See the consolidated "Accepted deviations" subsection below |
+| Architecture Validator (DI) | services/repos instantiated directly instead of FastAPI `Depends` | See the consolidated "Accepted deviations" subsection below |
 | Architecture Validator (ownership location) | ownership checked in the controller, README places it in the service | Low severity — kept as a controller guard for the MVP |
 
 Verified end-to-end: approved → 201 `status:match`; repeat (same pair) → idempotent
@@ -6473,9 +6475,9 @@ Generated with the **`backend-agent`** skill, validated with the
 | Backend Agent (Strategy) | On-platform rule: block external contact sharing in chat (README §1.8) | `ContactScanner` (Strategy) in the service blocks emails/phones/social/links → `DomainException` (400). Verified |
 | Backend Agent (Observer) | Notify other domains a message was sent | `MessageSent` published **after** `db.commit()` via the in-process event bus |
 | Architecture Validator (ownership) | Participant-only access; README places ownership in the service | ✅ Ownership enforced in `MessageService._assert_participant` → new `ForbiddenException` (403). Confirmed compliant (improves on matching, which checked in the controller) |
-| Architecture Validator (cross-domain) | participant check reads `PB_Matches` (matching) via its ORM model | **Accepted for MVP** (same open deviation); refactor to ACL/REST later |
+| Architecture Validator (cross-domain) | participant check reads `PB_Matches` (matching) via its ORM model | See the consolidated "Accepted deviations" subsection below |
 | Architecture Validator (repo raw SQL) | catalog code→id resolved with `text()` instead of ORM | **Accepted** — same documented catalog-lookup pattern as the user domain |
-| Architecture Validator (DI) | services/repos instantiated directly vs `Depends` | **Accepted for MVP**; flagged to migrate if hardened |
+| Architecture Validator (DI) | services/repos instantiated directly vs `Depends` | See the consolidated "Accepted deviations" subsection below |
 
 Verified end-to-end: GET → 200 (4 messages, sender/type derived correctly); POST clean →
 201; POST with an email → 400 blocked; foreign chat → 403. Backend only this slice —
@@ -6492,7 +6494,7 @@ that power the dashboard "Mi Contrato" banner/financials.
 | --- | --- | --- |
 | Backend Agent (layers/DTO) | Stub contract domain; read needed for the dashboard | `ContractModel` + `ContractVersionModel` on shared Base; `ContractRepository` (ORM) + `ContractService` returns `ContractResponse` DTO |
 | Backend Agent (Guard/ownership) | Participant-only read | `get_current_principal` + ownership in the service (`ForbiddenException`→403) |
-| Accepted deviations (same as prior slices) | cross-domain `PB_Matches` read; status code via `text()`; direct instantiation vs `Depends` | Accepted for MVP; documented; refactor to ACL/REST + DI when hardened |
+| Accepted deviations | See the consolidated "Accepted deviations" subsection below | Documented |
 
 Verified end-to-end: GET → 200; foreign match → 403.
 
@@ -6508,7 +6510,17 @@ validations, derived deliverables).
 | --- | --- | --- |
 | Seed | No active project existed (contract was negotiating) | Seeded an accepted contract → active `PB_Projects` with roadmap phases, subphases, contract metrics and KPI validations (persisted in `seed_dev.sql` §8) |
 | Backend (ownership/role) | Participant-only; counterpart is role-aware | Ownership in service (`ForbiddenException`→403); counterpart = advisor for a PYME, PYME for an advisor (both verified) |
-| Accepted deviations | reads matching/contract/advisor/pyme models; status codes via `text()`; direct instantiation | Accepted for MVP (same documented deviations) |
+| Accepted deviations | See the consolidated "Accepted deviations" subsection below | Documented |
+
+---
+
+### Accepted deviations (consolidated)
+
+- Cross-domain ORM reads: some services read other domain ORM models directly (e.g., `PB_Advisors`, `PB_Matches`) rather than using an ACL/REST translator. This is an accepted deviation for the local MVP to speed development; flagged to refactor to ACL/REST for production.
+- Direct instantiation vs DI: a few services/repos are instantiated directly instead of using FastAPI `Depends` injection. Accepted for MVP simplicity; flagged to migrate to DI in a hardening pass.
+- Catalog lookups via raw SQL/text(): a small number of catalog lookups use `text()` or raw SQL instead of a uniform ORM approach. Accepted for MVP but should be standardized later.
+
+> These deviations are documented here to keep the README as the single source of truth for local-profile trade-offs. Each feature's "Agent Validations" entry references this consolidated list.
 
 Verified end-to-end: PYME → 200 (counterpart "Ana López", 3 phases, 2 KPIs); advisor →
 200 (counterpart "Cafetería del Valle"); advisor without an active project → 404. The
