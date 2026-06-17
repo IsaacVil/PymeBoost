@@ -36,7 +36,7 @@
   /* fonts (vars injected by next/font in layout.tsx) */
   --font-sans: var(--font-space-grotesk), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
-  --font-display: var(--font-macondo), cursive;
+  --font-display: var(--font-righteous), cursive;
 
   /* hard offset retro shadows */
   --shadow-sm: 3px 4px 0 rgba(33, 27, 18, 0.18), 0 1px 0 rgba(33, 27, 18, 0.22);

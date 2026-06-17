@@ -538,6 +538,38 @@ CREATE TABLE "PB_NeedsAssessmentSubIndustries" (
 );
 
 -- ============================================================================
+-- 4b. MEDIA FILES (PV_ = plataforma; independiente del dominio de negocio)
+--     Se crea antes del dominio AI porque PB_Documents la referencia.
+-- ============================================================================
+
+-- Catalogo de tipos de medio: define el reproductor/visor a usar ------------
+CREATE TABLE "PV_MediaTypes" (
+    "mediaTypeId" SERIAL       PRIMARY KEY,
+    "name"        VARCHAR(30),
+    "playerImpl"  VARCHAR(100)
+);
+
+-- Registro de archivos multimedia subidos a la plataforma -------------------
+-- userid referencia el auth0Id del usuario que subio el archivo.
+-- Un registro PV_MediaFiles puede originar 1..N registros PB_Documents
+-- (un mismo archivo puede catalogarse como distintos tipos de documento).
+CREATE TABLE "PV_MediaFiles" (
+    "mediafileid"  SERIAL       PRIMARY KEY,
+    "mediapath"    VARCHAR(500) NOT NULL,
+    "deleted"      BOOLEAN      NOT NULL DEFAULT FALSE,
+    "lastupdate"   TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    "userid"       VARCHAR(64)  NOT NULL,
+    "mediatypeid"  INT          NOT NULL REFERENCES "PV_MediaTypes"("mediaTypeId"),
+    "sizeMB"       NUMERIC(10,3),
+    "encoding"     VARCHAR(100),
+    "samplerate"   VARCHAR(50),
+    "languagecode" VARCHAR(10)
+);
+CREATE INDEX "idx_mediafiles_type"    ON "PV_MediaFiles"("mediatypeid");
+CREATE INDEX "idx_mediafiles_userid"  ON "PV_MediaFiles"("userid");
+CREATE INDEX "idx_mediafiles_deleted" ON "PV_MediaFiles"("deleted");
+
+-- ============================================================================
 -- 5. DOMINIO AI — documentos GCS, use cases, bloques (pgvector), recomendaciones
 -- ============================================================================
 
@@ -958,37 +990,6 @@ CREATE TABLE "PB_DomainEvents" (
 CREATE INDEX "idx_events_type"      ON "PB_DomainEvents"("eventTypeId");
 CREATE INDEX "idx_events_aggregate" ON "PB_DomainEvents"("aggregateType","aggregateId");
 CREATE INDEX "idx_events_occurred"  ON "PB_DomainEvents"("occurredAt");
-
--- ============================================================================
--- 13. MEDIA FILES (PV_ = plataforma; independiente del dominio de negocio)
--- ============================================================================
-
--- Catalogo de tipos de medio: define el reproductor/visor a usar ------------
-CREATE TABLE "PV_MediaTypes" (
-    "mediaTypeId" SERIAL       PRIMARY KEY,
-    "name"        VARCHAR(30),
-    "playerImpl"  VARCHAR(100)
-);
-
--- Registro de archivos multimedia subidos a la plataforma -------------------
--- userid referencia el auth0Id del usuario que subio el archivo.
--- Un registro PV_MediaFiles puede originar 1..N registros PB_Documents
--- (un mismo archivo puede catalogarse como distintos tipos de documento).
-CREATE TABLE "PV_MediaFiles" (
-    "mediafileid"  SERIAL       PRIMARY KEY,
-    "mediapath"    VARCHAR(500) NOT NULL,
-    "deleted"      BOOLEAN      NOT NULL DEFAULT FALSE,
-    "lastupdate"   TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    "userid"       VARCHAR(64)  NOT NULL,
-    "mediatypeid"  INT          NOT NULL REFERENCES "PV_MediaTypes"("mediaTypeId"),
-    "sizeMB"       NUMERIC(10,3),
-    "encoding"     VARCHAR(100),
-    "samplerate"   VARCHAR(50),
-    "languagecode" VARCHAR(10)
-);
-CREATE INDEX "idx_mediafiles_type"    ON "PV_MediaFiles"("mediatypeid");
-CREATE INDEX "idx_mediafiles_userid"  ON "PV_MediaFiles"("userid");
-CREATE INDEX "idx_mediafiles_deleted" ON "PV_MediaFiles"("deleted");
 
 -- ============================================================================
 -- 14. LOGS
