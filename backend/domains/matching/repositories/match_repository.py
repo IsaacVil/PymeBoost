@@ -15,6 +15,20 @@ _MATCH_GREETING = (
     "¡Hicieron match! Pueden coordinar los detalles de la asesoría por este chat."
 )
 
+# Demo (ver database/scripts/seed_dev.sql): SOLO la PYME estrella del journey
+# (Emma · Ropa Sol) autocarga un mensaje de contexto al abrirse el chat, para que
+# el advisor reciba de entrada el baseline, el problema, el objetivo con métrica y
+# el presupuesto. El resto de PYMEs abren el chat solo con el saludo del sistema.
+_DEMO_EMMA_PYME_ID = "11111111-1111-1111-1111-111111111101"
+_DEMO_EMMA_INTRO = (
+    "Hola 👋 Soy Emma, de Ropa Sol (tienda de ropa: local físico + catálogo en línea).\n\n"
+    "📊 Baseline actual: ~₡3.0M en ventas mensuales; la pauta digital convierte apenas 2.1%.\n"
+    "🎯 Problema: pocas ventas en campañas pagadas — invertimos en anuncios pero se traduce en pocas compras.\n"
+    "✅ Objetivo: subir la conversión de campañas de 2.1% a 3.4% (+25%) en 4 meses.\n"
+    "💰 Presupuesto: ₡1.2M de implementación + ₡180k/mes de retainer.\n\n"
+    "¿Te calza el reto? Me encantaría que trabajemos juntas. 🚀"
+)
+
 
 class MatchRepository:
     def find_by_pair(self, db: Session, pyme_id: str, advisor_id: str) -> MatchModel | None:
@@ -42,8 +56,12 @@ class MatchRepository:
         db.flush()
         return match
 
-    def ensure_chat_session(self, db: Session, match_id: str) -> None:
-        """Create the match's chat session + system greeting if it doesn't exist."""
+    def ensure_chat_session(self, db: Session, match_id: str, pyme_id: str | None = None) -> None:
+        """Create the match's chat session + system greeting if it doesn't exist.
+
+        For the demo PYME (Emma · Ropa Sol) also autoloads her context message so the
+        advisor sees the baseline/problem/objective/budget the moment the chat opens.
+        """
         existing = db.execute(
             text('SELECT "id" FROM "PB_ChatSessions" WHERE "matchId" = :m'), {"m": match_id}
         ).scalar_one_or_none()
@@ -63,3 +81,26 @@ class MatchRepository:
             ),
             {"s": str(session_id), "t": str(system_type_id), "c": _MATCH_GREETING},
         )
+
+        # Demo: autoload Emma's PYME context message as the first user message.
+        if pyme_id is not None and str(pyme_id) == _DEMO_EMMA_PYME_ID:
+            user_type_id = db.execute(
+                text('SELECT "id" FROM "PB_MessageTypes" WHERE "code" = \'user\'')
+            ).scalar_one()
+            pyme_account_type_id = db.execute(
+                text('SELECT "id" FROM "PB_AccountTypes" WHERE "code" = \'pyme\'')
+            ).scalar_one()
+            db.execute(
+                text(
+                    'INSERT INTO "PB_Messages" '
+                    '("chatSessionId", "messageTypeId", "senderAccountTypeId", "senderPymeId", "content") '
+                    "VALUES (:s, :t, :at, :pid, :c)"
+                ),
+                {
+                    "s": str(session_id),
+                    "t": str(user_type_id),
+                    "at": str(pyme_account_type_id),
+                    "pid": str(pyme_id),
+                    "c": _DEMO_EMMA_INTRO,
+                },
+            )

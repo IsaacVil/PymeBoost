@@ -6374,6 +6374,10 @@ cd backend && python -m venv .venv                       # once
 .venv/Scripts/python -m pip install -r requirements.txt   # Windows
 # (Linux/macOS: source .venv/bin/activate && pip install -r requirements.txt)
 cd .. && backend/.venv/Scripts/python -m uvicorn backend.main:app --reload --port 8000
+
+cd "C:\Users\Christopher\OneDrive\Documents\TEC\I Semestre 2026\DisenoDeSoftware\PymeBoost"
+backend\.venv\Scripts\python -m uvicorn backend.main:app --reload --port 8000
+
 ```
 
 Verify: `http://localhost:8000/health` → `200 {"status":"ok","database":"up",...}` ·

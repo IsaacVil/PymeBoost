@@ -141,8 +141,9 @@ function LoginPanel({ goRegister }: { goRegister: () => void }) {
       {/* Demo credentials helper */}
       <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-soft)", lineHeight: 1.5, background: "var(--paper)", border: "1.5px solid var(--ink-faint)", borderRadius: "var(--r-sm)", padding: "9px 11px" }}>
         <div className="eyebrow" style={{ marginBottom: 4 }}>Cuentas demo · contraseña <b style={{ color: "var(--ink)" }}>DemoPass123!</b></div>
-        <div>PYME: <b style={{ color: "var(--ink)" }}>maria@cafedelvalle.cr</b></div>
-        <div>Advisor: <b style={{ color: "var(--ink)" }}>ana@asesores.cr</b></div>
+        <div>Emma · PYME (Ropa Sol): <b style={{ color: "var(--ink)" }}>emma@ropasol.cr</b></div>
+        <div>Maria · Advisor (marketing): <b style={{ color: "var(--ink)" }}>maria@socialpro.cr</b></div>
+        <div style={{ marginTop: 4, color: "var(--ink-faint)" }}>Ejemplo "Mi Contrato" a mitad de plan: <b style={{ color: "var(--ink)" }}>diego@cafedelvalle.cr</b></div>
       </div>
     </form>
   );

@@ -10,12 +10,12 @@ import { SwipeDeck } from "./components/SwipeDeck";
 import { DeckAdvisor } from "./data/advisors";
 import { matchingService } from "./services/matchingService";
 
-// PYME demo context (Fase 2A mock — ported from prototype/app/data.jsx).
+// PYME demo context — Emma · Ropa Sol (journey principal de la demo).
 const PYME = {
-  name: "Hilo & Aguja",
-  tagline: "Boutique de ropa · San José, CR",
-  problem: "Baja conversión en campañas de pauta digital",
-  objective: "Aumentar ventas de anuncios pagados en un 25%",
+  name: "Ropa Sol",
+  tagline: "Tienda de ropa · San José, CR",
+  problem: "Baja conversión en campañas de pauta digital pagada",
+  objective: "Subir la conversión de campañas de 2.1% a 3.4% (+25%) en 4 meses",
 };
 
 const HOW_IT_WORKS: [string, string][] = [
@@ -86,7 +86,7 @@ export default function MatchingPage() {
         <div style={{ display: "grid", gap: 16, alignContent: "start" }}>
           <Panel>
             <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
-              <Avatar text="HA" accent="primary" size={44} square />
+              <Avatar text="RS" accent="primary" size={44} square />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <h4 style={{ fontSize: 15, lineHeight: 1.15 }}>{PYME.name}</h4>
                 <div className="font-mono" style={{ fontSize: 11, color: "var(--ink-soft)", marginTop: 2 }}>

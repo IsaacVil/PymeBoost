@@ -17,6 +17,17 @@ interface ApiResponse<T> {
   statusCode?: number;
 }
 
+// Thrown by handleResponse for non-2xx responses. Carries the status code so
+// handleError can tell an *expected* HTTP failure (e.g. a 404 "no active
+// project" that the caller turns into an empty state) from a genuine network
+// failure that deserves a loud console.error.
+class ApiHttpError extends Error {
+  constructor(message: string, public readonly statusCode: number) {
+    super(message);
+    this.name = "ApiHttpError";
+  }
+}
+
 export class ApiClient {
   private baseUrl: string;
   private maxRetries = 3;
@@ -92,13 +103,24 @@ export class ApiClient {
       } catch {
         // non-JSON error body — keep the status line
       }
-      throw new Error(detail);
+      throw new ApiHttpError(detail, response.status);
     }
     return response.json();
   }
 
   protected handleError<T>(error: unknown): ApiResponse<T> {
     const message = error instanceof Error ? error.message : "Unknown error";
+
+    if (error instanceof ApiHttpError) {
+      // Expected HTTP failure: the backend answered, the caller already turns
+      // this into `{ success: false }` (empty state, validation message, etc.).
+      // Log quietly so a normal 404 doesn't look like a crash in the console.
+      console.warn(`[ApiClient] HTTP ${error.statusCode}: ${message}`);
+      return { success: false, data: null, error: message, statusCode: error.statusCode };
+    }
+
+    // Unexpected failure (network down, CORS blocked, JSON parse error) — this
+    // is the one worth surfacing loudly.
     console.error("[ApiClient Error]", message);
     // TODO: Log to Sentry
     return { success: false, data: null, error: message };

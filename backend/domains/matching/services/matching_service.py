@@ -41,8 +41,9 @@ class MatchingService:
             self._repo.save(db, match)
 
         # A right swipe opens the chat so the advisor shows up in messaging at once.
+        # pyme_id lets the repo autoload the demo PYME's (Emma) context message.
         if approved:
-            self._repo.ensure_chat_session(db, str(match.id))
+            self._repo.ensure_chat_session(db, str(match.id), pyme_id)
 
         db.commit()
         db.refresh(match)
