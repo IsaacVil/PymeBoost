@@ -1,4 +1,6 @@
-INFO:     Started server process [80280]
+INFO:     Will watch for changes in these directories: ['C:\\Users\\Christopher\\OneDrive\\Documents\\TEC\\I Semestre 2026\\DisenoDeSoftware\\PymeBoost']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [34284] using StatReload
+INFO:     Started server process [37720]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
