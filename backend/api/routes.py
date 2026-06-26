@@ -6,6 +6,7 @@ the whole API with one ``include_router`` call.
 """
 from fastapi import APIRouter
 
+from backend.api.demo import router as demo_router
 from backend.api.health import router as health_router
 from backend.domains.user.controllers.create_advisor_account_controller import (
     router as create_advisor_router,
@@ -44,6 +45,7 @@ from backend.domains.project.controllers.get_dashboard_controller import (
 
 router = APIRouter()
 router.include_router(health_router)
+router.include_router(demo_router)  # demo-only reset (USE_MOCKS)
 
 # --- User domain (auth & account creation) ---
 router.include_router(login_router)

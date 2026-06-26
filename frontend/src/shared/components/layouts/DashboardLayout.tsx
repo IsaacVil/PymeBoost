@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Navigation } from "@/shared/components/Navigation";
+import { DemoResetButton } from "@/shared/components/DemoResetButton";
 import { AuthGuard } from "@/shared/guards/AuthGuard";
 
 interface DashboardLayoutProps {
@@ -29,6 +30,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="max-w-6xl mx-auto p-8">{children}</div>
         </main>
       </div>
+      <DemoResetButton />
     </AuthGuard>
   );
 }
